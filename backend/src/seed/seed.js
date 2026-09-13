@@ -1,4 +1,4 @@
-const { getDb } = require('../config/firebase');
+const { getDb, admin } = require('../config/firebase');
 
 /**
  * Script de carga de datos semilla (Seed) en Firestore.
@@ -92,7 +92,7 @@ async function seedDatabase() {
       correct: true,
       elapsedMs: 24000,
       cohortPercentile: 78,
-      answeredAt: new Date().toISOString(),
+      answeredAt: admin.firestore.Timestamp.now(),
     },
   ];
 
@@ -111,7 +111,7 @@ async function seedDatabase() {
       comment: 'La alternativa correcta debería ser C.',
       status: 'pending',
       potentialReward: { amount: 250 },
-      createdAt: new Date().toISOString(),
+      createdAt: admin.firestore.Timestamp.now(),
       reviewedAt: null,
       reviewedBy: null,
     },
@@ -134,7 +134,7 @@ async function seedDatabase() {
       tier: 'bronze',
       amount: 1,
       referenceId: 'q_lectora_001',
-      createdAt: new Date().toISOString(),
+      createdAt: admin.firestore.Timestamp.now(),
     });
   console.log('[Seed] 1 movimiento de medalla insertado en users/usr_demo/medalLedger');
 
@@ -147,7 +147,7 @@ async function seedDatabase() {
     .set({
       answeredQuestionIds: ['q_lectora_001'],
       lastQuestionId: 'q_lectora_001',
-      lastAnsweredAt: new Date().toISOString(),
+      lastAnsweredAt: admin.firestore.Timestamp.now(),
       activeSessionId: 'sess_demo_01',
     });
   console.log('[Seed] Estado de práctica insertado en users/usr_demo/state/practice');
