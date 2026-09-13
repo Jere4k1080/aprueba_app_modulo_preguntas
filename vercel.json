@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'Sin instalación previa: Flutter se obtiene en el build'",
+  "buildCommand": "if [ ! -d flutter ]; then git clone https://github.com/flutter/flutter.git --depth 1 -b stable; fi && export PATH=\"$PATH:$PWD/flutter/bin\" && flutter --version && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL",
+  "outputDirectory": "build/web",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

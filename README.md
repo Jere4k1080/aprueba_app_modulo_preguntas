@@ -112,3 +112,23 @@ marca la sesión como cerrada y el router redirige al inicio.
   `API_BASE_URL`. Sin backend, las pantallas mostrarán estados de error/caché.
 - Google/Apple/Stripe/Push están integrados de verdad pero requieren las claves
   y la configuración nativa de la sección 3–4 para funcionar.
+
+## 9. Despliegue en Vercel (Web)
+
+La versión web del módulo se compila y despliega automáticamente en Vercel mediante [`vercel.json`](vercel.json):
+
+- **Pipeline de compilación (`buildCommand`):**
+  1. Clona el SDK de Flutter (`stable`) en el contenedor si no existe.
+  2. Agrega Flutter al `PATH`.
+  3. Resuelve dependencias con `flutter pub get`.
+  4. Genera el código Drift con `dart run build_runner build --delete-conflicting-outputs` (necesario para `database.g.dart`).
+  5. Compila la app web en modo release inyectando la variable de entorno: `flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL`.
+- **Directorio de salida (`outputDirectory`):** `build/web`.
+- **Enrutamiento (`rewrites`):** Redirige todas las rutas hacia `/index.html` para permitir la navegación directa del cliente mediante GoRouter.
+
+### Variables de entorno requeridas en Vercel:
+- `API_BASE_URL`: URL base del backend de la API (por ejemplo `https://api.staging.aprueba.cl/api/v1`).
+
+### URL de producción:
+- [https://aprueba-app-modulo-preguntas.vercel.app/](https://aprueba-app-modulo-preguntas.vercel.app/)
+
