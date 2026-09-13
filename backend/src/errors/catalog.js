@@ -93,7 +93,7 @@ const ErrorCatalog = {
     message: 'Ya existe una solicitud de recorrección pendiente de revisión para esta pregunta.',
   },
   FORMAT_REQUIRES_PLAN: {
-    status: 403,
+    status: 422,
     message: 'El formato de ensayo o práctica seleccionado requiere un plan de pago activo.',
   },
 };
