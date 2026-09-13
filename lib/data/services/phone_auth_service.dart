@@ -44,7 +44,7 @@ class PhoneAuthService {
   /// main() no inicializa Firebase (para no bloquear el arranque si faltan
   /// claves), así que se hace aquí la primera vez que se necesita.
   Future<FirebaseAuth> _firebase() async {
-    if (_auth != null) return _auth!;
+    if (_auth != null) return _auth;
     if (Firebase.apps.isEmpty) {
       try {
         await Firebase.initializeApp();
