@@ -7,7 +7,6 @@ import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/async_value_view.dart';
 import '../../core/widgets/common_widgets.dart';
-import '../../data/models/models.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/data_providers.dart';
 
