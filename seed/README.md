@@ -5,7 +5,7 @@ Los ids usados en los ejemplos son los que el frontend espera.
 
 ---
 
-## Colección `tests`
+## Colección `tests` (Raíz)
 
 Cinco documentos, uno por prueba PAES. El id del documento **es** el código de la
 prueba.
@@ -39,7 +39,7 @@ Documentos semilla:
 
 ---
 
-## Colección `skills`
+## Colección `skills` (Raíz)
 
 Habilidad dentro de una prueba. El id es un slug generado.
 
@@ -90,9 +90,11 @@ Habilidad dentro de una prueba. El id es un slug generado.
 
 ---
 
-## Colección `questions`
+## Colección `questions` (Raíz)
 
 Pregunta del banco. El id es un slug generado.
+**Regla de integridad:** `correctAnswer` vive en la base de datos, pero el servicio
+backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
 
 ```jsonc
 // questions/q_lectora_001
@@ -124,20 +126,23 @@ Pregunta del banco. El id es un slug generado.
 | `difficulty` | `string` | ✔ | `d1` \| `d2` \| `d3` \| `d4` |
 | `statement` | `string` | ✔ | Enunciado |
 | `options` | `string[]` | ✔ | Alternativas A–D/E |
-| `correctAnswer` | `string` | ✔ | Letra correcta |
+| `correctAnswer` | `string` | ✔ | Letra correcta (solo backend/admin) |
 | `explanation` | `string?` | | Explicación corta |
 | `status` | `string` | ✔ | `active` \| `draft` \| `disabled` |
 
 ---
 
-## Subcolección `users/{uid}/answers`
+## Colección `answers` (Raíz)
 
 Respuesta del alumno a una pregunta. Inmutable (create-only).
+**Diseño:** Colección raíz para permitir agregación por `questionId` entre todos los alumnos
+al calcular el percentil de cohorte (`cohortPercentile`).
 
 ```jsonc
-// users/usr_demo/answers/ans_001
+// answers/ans_001
 {
   "id": "ans_001",
+  "userId": "usr_demo",
   "questionId": "q_lectora_001",
   "selected": "B",
   "correct": true,
@@ -150,6 +155,7 @@ Respuesta del alumno a una pregunta. Inmutable (create-only).
 | Campo | Tipo | Requerido |
 |---|---|---|
 | `id` | `string` | ✔ |
+| `userId` | `string` | ✔ |
 | `questionId` | `string` | ✔ |
 | `selected` | `string` | ✔ (letra A–E) |
 | `correct` | `boolean` | ✔ |
@@ -159,12 +165,14 @@ Respuesta del alumno a una pregunta. Inmutable (create-only).
 
 ---
 
-## Subcolección `users/{uid}/corrections`
+## Colección `corrections` (Raíz)
 
 Solicitud de recorrección de una pregunta. Create-only desde el cliente.
+**Diseño:** Colección raíz para permitir a administración listar todas las solicitudes pendientes
+sin importar el usuario.
 
 ```jsonc
-// users/usr_demo/corrections/cor_001
+// corrections/cor_001
 {
   "id": "cor_001",
   "userId": "usr_demo",
@@ -172,6 +180,7 @@ Solicitud de recorrección de una pregunta. Create-only desde el cliente.
   "reason": "wrong_answer",
   "comment": "La alternativa correcta debería ser C",
   "status": "pending",
+  "potentialReward": { "amount": 250 },
   "createdAt": "2026-09-15T14:35:00.000Z",
   "reviewedAt": null,
   "reviewedBy": null
@@ -186,6 +195,8 @@ Solicitud de recorrección de una pregunta. Create-only desde el cliente.
 | `reason` | `string` | ✔ (`wrong_answer` \| `ambiguous` \| `typo` \| `bad_explanation` \| `other`) |
 | `comment` | `string?` | |
 | `status` | `string` | ✔ (`pending` \| `confirmed` \| `rejected`) |
+| `potentialReward` | `object?` | `{ "amount": 250 }` |
+| `rewardGranted` | `object?` | `{ "amount": 250 }` (tras confirmación) |
 | `createdAt` | `timestamp` | ✔ |
 | `reviewedAt` | `timestamp?` | |
 | `reviewedBy` | `string?` | |
@@ -194,7 +205,7 @@ Solicitud de recorrección de una pregunta. Create-only desde el cliente.
 
 ## Subcolección `users/{uid}/medalLedger`
 
-Registro de movimientos de medallas. Solo el backend escribe.
+Registro de movimientos de medallas de cada usuario. Solo el backend escribe.
 
 ```jsonc
 // users/usr_demo/medalLedger/ml_001
@@ -216,4 +227,3 @@ Registro de movimientos de medallas. Solo el backend escribe.
 | `amount` | `int` | ✔ (positivo = ganó, negativo = gastó) |
 | `referenceId` | `string?` | |
 | `createdAt` | `timestamp` | ✔ |
-

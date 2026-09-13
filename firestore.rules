@@ -15,49 +15,51 @@ service cloud.firestore {
     }
 
     // ── Banco de preguntas (lectura autenticada) ─────────────────────────────
+    // Nota de integridad: 'correctAnswer' vive en Firestore pero el backend
+    // proyecta y lo omite en GET /practice/next y GET /questions/{id}.
     match /questions/{questionId} {
       allow read: if request.auth != null;
       allow write: if false; // Solo admin / seed
     }
 
-    // ── Datos del usuario ────────────────────────────────────────────────────
+    // ── Respuestas (colección raíz con userId) ───────────────────────────────
+    // Colección raíz para permitir agregación por questionId (cohortPercentile).
+    match /answers/{answerId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys()
+                         .hasAll(['userId', 'questionId', 'selected', 'correct', 'elapsedMs', 'answeredAt'])
+                    && request.resource.data.questionId is string
+                    && request.resource.data.selected is string
+                    && request.resource.data.correct is bool
+                    && request.resource.data.elapsedMs is int;
+      allow update, delete: if false; // Inmutables
+    }
+
+    // ── Recorrecciones (colección raíz con userId) ───────────────────────────
+    match /corrections/{correctionId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys()
+                         .hasAll(['userId', 'questionId', 'reason', 'status'])
+                    && request.resource.data.questionId is string
+                    && request.resource.data.reason in ['wrong_answer', 'ambiguous', 'typo', 'bad_explanation', 'other']
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if false; // Alumno no edita ni borra; backend usa Admin SDK
+    }
+
+    // ── Datos de usuario y subcolecciones ────────────────────────────────────
     match /users/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid;
 
-      // Respuestas: el alumno crea, nadie modifica ni borra.
-      match /answers/{answerId} {
-        allow read: if request.auth != null && request.auth.uid == uid;
-        allow create: if request.auth != null
-                      && request.auth.uid == uid
-                      && request.resource.data.keys()
-                           .hasAll(['questionId', 'selected', 'correct', 'elapsedMs', 'answeredAt'])
-                      && request.resource.data.questionId is string
-                      && request.resource.data.selected is string
-                      && request.resource.data.correct is bool
-                      && request.resource.data.elapsedMs is int;
-        allow update, delete: if false;
-      }
-
-      // Recorrecciones: el alumno crea, nadie modifica ni borra desde el cliente.
-      match /corrections/{correctionId} {
-        allow read: if request.auth != null && request.auth.uid == uid;
-        allow create: if request.auth != null
-                      && request.auth.uid == uid
-                      && request.resource.data.keys()
-                           .hasAll(['questionId', 'reason', 'status'])
-                      && request.resource.data.questionId is string
-                      && request.resource.data.reason is string
-                      && request.resource.data.status == 'pending';
-        allow update, delete: if false;
-      }
-
-      // Ledger de medallas: solo el backend escribe.
+      // Historial contable de medallas: solo lectura para el usuario
       match /medalLedger/{entryId} {
         allow read: if request.auth != null && request.auth.uid == uid;
-        allow write: if false;
+        allow write: if false; // Solo backend con Admin SDK
       }
     }
   }
 }
-
