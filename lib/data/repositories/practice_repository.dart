@@ -52,6 +52,9 @@ class PracticeRepository {
       elapsedMs: elapsedMs,
       answeredAt: DateTime.now(),
     ));
+    if (r.correctAnswer.isNotEmpty) {
+      await _db.updateQuestionAnswer(questionId, r.correctAnswer, r.shortExplanation);
+    }
     return r;
   }
 
