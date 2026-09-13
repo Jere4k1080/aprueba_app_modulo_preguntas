@@ -1,0 +1,93 @@
+> # Módulo de Preguntas — App Aprueba
+> # Grupo 9 · PTY4614 Capstone
+
+# ─── Secretos y credenciales ─────────────────────────────────────
+# Criterio de terminado del equipo: no hay credenciales versionadas.
+.env
+.env.*
+!.env.example
+serviceAccount.json
+**/serviceAccount*.json
+**/google-services.json
+**/GoogleService-Info.plist
+*.jks
+*.keystore
+key.properties
+*.pem
+*.p8
+*.p12
+
+# ─── Flutter y Dart ──────────────────────────────────────────────
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# Código generado por build_runner: se regenera con
+# dart run build_runner build --delete-conflicting-outputs
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# pubspec.lock SÍ se versiona en aplicaciones: fija las versiones
+# exactas con las que trabaja el equipo.
+
+# ─── Android ─────────────────────────────────────────────────────
+**/android/.gradle/
+**/android/captures/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/**/gradle-wrapper.jar
+
+# ─── iOS ─────────────────────────────────────────────────────────
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/App.framework
+**/ios/Flutter/ephemeral/
+**/ios/Runner.xcworkspace/xcuserdata/
+**/ios/Runner.xcodeproj/xcuserdata/
+**/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+*.ipa
+
+# ─── Node y backend ──────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.npm/
+dist/
+coverage/
+
+# Emulador de Firestore
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
+**/firestore-export/
+
+# ─── Despliegue ──────────────────────────────────────────────────
+.vercel
+
+# ─── Editores y sistema operativo ────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.iws
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Temporales ──────────────────────────────────────────────────
+*.log
+*.tmp
+/tmp/

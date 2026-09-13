@@ -1,0 +1,17 @@
+<!-- Pega dentro de ios/Runner/Info.plist (tras `flutter create .`). -->
+
+<!-- Google Sign-In: esquema URL inverso del OAuth iOS client. -->
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>com.googleusercontent.apps.TU_CLIENT_ID_INVERSO</string>
+    </array>
+  </dict>
+</array>
+
+<!-- Sign in with Apple: se habilita como capability en Xcode, no aquí. -->
+
+<!-- Notificaciones push: habilita Push Notifications y Background Modes
+     (Remote notifications) en Signing & Capabilities de Xcode. -->

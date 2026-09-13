@@ -1,0 +1,84 @@
+name: aprueba_app
+description: Aprueba — práctica diaria para la PAES (app del alumno, iOS y Android).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  # WidgetStatePropertyAll (antes MaterialStateProperty) exige Flutter 3.22+.
+  flutter: '>=3.22.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Estado y navegación
+  flutter_riverpod: ^2.5.1
+  go_router: ^14.2.0
+
+  # Red
+  dio: ^5.5.0
+
+  # Base de datos local (caché)
+  drift: ^2.18.0
+  sqlite3_flutter_libs: ^0.5.20
+  path_provider: ^2.1.3
+  path: ^1.9.0
+
+  # Almacenamiento seguro de tokens (Keychain / Keystore)
+  flutter_secure_storage: ^9.2.2
+
+  # Autenticación social
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.1
+
+  # Verificación telefónica por SMS (Firebase Auth phone sign-in).
+  # El backend solo valida el idToken resultante (POST /auth/phone/verify-code).
+  firebase_auth: ^5.1.4
+
+  # Pagos
+  flutter_stripe: ^11.1.0
+
+  # Notificaciones push
+  firebase_core: ^3.3.0
+  firebase_messaging: ^15.0.4
+  flutter_local_notifications: ^17.2.1
+
+  # Utilidades
+  intl: ^0.20.2
+  collection: ^1.18.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  drift_dev: ^2.18.0
+  build_runner: ^2.4.11
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/data/
+    - assets/images/
+  # Las fuentes Montserrat/Inter deben añadirse en assets/fonts/.
+  # Descárgalas de Google Fonts y descomenta este bloque:
+  # fonts:
+  #   - family: Montserrat
+  #     fonts:
+  #       - asset: assets/fonts/Montserrat-Bold.ttf
+  #         weight: 700
+  #       - asset: assets/fonts/Montserrat-ExtraBold.ttf
+  #         weight: 800
+  #   - family: Inter
+  #     fonts:
+  #       - asset: assets/fonts/Inter-Regular.ttf
+  #         weight: 400
+  #       - asset: assets/fonts/Inter-Medium.ttf
+  #         weight: 500
+  #       - asset: assets/fonts/Inter-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Inter-Bold.ttf
+  #         weight: 700

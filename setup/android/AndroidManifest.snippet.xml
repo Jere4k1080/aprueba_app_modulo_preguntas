@@ -1,0 +1,14 @@
+<!-- Pega estos elementos dentro de android/app/src/main/AndroidManifest.xml
+     (tras correr `flutter create .`). -->
+
+<!-- Permisos: justo después de <manifest ...> -->
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+<!-- Dentro de <application ...>: MainActivity debe heredar de
+     FlutterFragmentActivity para que flutter_stripe funcione. -->
+<!--   android:name=".MainActivity"  ->  usa FlutterFragmentActivity (ver MainActivity.kt) -->
+
+<!-- En <application>, tema requerido por Stripe (Material Components):
+     android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" en la Activity de pago,
+     o aplica un tema MaterialComponents a nivel de app. -->
