@@ -29,7 +29,6 @@ class MedalsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wallet = ref.watch(medalWalletProvider);
-    final t = context.tokens;
     return Scaffold(
       body: SafeArea(
         child: AsyncValueView<MedalWalletState>(

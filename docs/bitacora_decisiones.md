@@ -103,7 +103,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 * **Estado:** **APROBADA**
 * **Decisión:** Se corrigieron las 5 advertencias (`warning`) que causaban la salida con código de error de `flutter analyze` (variables locales no usadas, import innecesario y aserción no nula redundante). Se decidió de forma explícita **no modificar** los 38 avisos informativos (`info`) relativos a la deprecación de `withOpacity` en el código base heredado del cliente móvil.
-* **Fundamento:** La regla de calidad del equipo estipula que `flutter analyze` debe correr sin advertencias. Los avisos de `withOpacity` pertenecen al código base completo del cliente que está fuera del alcance de la HU-20.
+* **Fundamento:** La regla de calidad del equipo estipula que `flutter analyze` debe correr sin advertencias. Los avisos de `withOpacity` pertenecen al código base completo del cliente (onboarding, tutores, suscripciones) que está fuera del alcance de la HU-20. Reemplazar `.withOpacity()` por `.withValues()` a lo largo de decenas de archivos ensuciaría el diff del repositorio con cambios cosméticos sin aportar valor al módulo de práctica.
 
 ---
 
