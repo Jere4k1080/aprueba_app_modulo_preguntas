@@ -96,3 +96,50 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   2. `questions` (`testId ASC`, `status ASC`, `difficulty ASC`)
   3. `answers` (`questionId ASC`, `answeredAt DESC`) — Cálculo de percentil de cohorte
   4. `corrections` (`userId ASC`, `createdAt DESC`) — Historial de reportes del estudiante
+
+---
+
+### ADR-08: Tratamiento de avisos del analizador estático (flutter analyze)
+
+* **Estado:** **APROBADA**
+* **Decisión:** Se corrigieron las 5 advertencias (`warning`) que causaban la salida con código de error de `flutter analyze` (variables locales no usadas, import innecesario y aserción no nula redundante). Se decidió de forma explícita **no modificar** los 38 avisos informativos (`info`) relativos a la deprecación de `withOpacity` en el código base heredado del cliente móvil.
+* **Fundamento:** La regla de calidad del equipo estipula que `flutter analyze` debe correr sin advertencias. Los avisos de `withOpacity` pertenecen al código base completo del cliente que está fuera del alcance de la HU-20.
+
+---
+
+### ADR-09: Exclusión de preguntas respondidas mediante documento de estado
+
+* **Estado:** **PROPUESTA PARA RATIFICACIÓN**
+* **Decisión:** Almacenar `answeredQuestionIds: string[]` dentro del documento dedicado `users/{uid}/state/practice`.
+* **Fundamento:**
+  * Firestore no posee un operador `NOT IN` eficiente sobre listas grandes. Consultar la colección `answers` en cada llamada a `GET /practice/next` implicaría lecturas masivas y costosas.
+  * Mantener la lista de IDs en un documento ligero de estado permite al backend leer 1 solo documento y filtrar preguntas en memoria antes de servir la siguiente.
+  * El límite de 1 MB por documento de Firestore almacena cómodamente más de 30.000 IDs de preguntas, superando con creces la vida útil anual de la batería PAES.
+
+---
+
+### ADR-10: Precálculo de percentil de cohorte mediante umbrales en questions
+
+* **Estado:** **PROPUESTA PARA RATIFICACIÓN**
+* **Decisión:** Almacenar un mapa precalculado `cohortSpeedThresholds: { p25, p50, p75, p90 }` dentro de cada documento de `questions`.
+* **Fundamento:**
+  * Calcular el percentil en tiempo real contando respuestas en Firestore en cada POST `/answer` es lento y costoso en lecturas.
+  * Un proceso programado (Cloud Function o cron nocturno) calcula los cuartiles de tiempo a partir de la colección `answers` (usando el índice `questionId + answeredAt`) y actualiza `cohortSpeedThresholds` en la pregunta.
+  * Al responder, el backend compara el `elapsedMs` del alumno contra estos 4 valores fijos en tiempo $O(1)$ sin realizar ninguna consulta adicional a la base de datos.
+
+---
+
+### ADR-11: Reinicio configurable de cuota diaria
+
+* **Estado:** **PROPUESTA PARA RATIFICACIÓN**
+* **Decisión:** Definir el horario y huso horario de reinicio como variables de entorno en el backend (`QUOTA_RESET_HOUR_LOCAL=0`, `QUOTA_RESET_TIMEZONE='America/Santiago'`).
+* **Fundamento:** Evita quemar constantes horarias en el código de la aplicación. Permite adaptarse dinámicamente a cambios de horario de verano/invierno en Chile o desplegar instancias para otros países (como Reino Unido con `Europe/London`) reutilizando el mismo motor de backend.
+
+---
+
+### ADR-12: Proyección y sanitización centralizada de correctAnswer
+
+* **Estado:** **PROPUESTA PARA RATIFICACIÓN**
+* **Decisión:** Implementar la función `sanitizeQuestion(questionDoc)` en la capa de servicios del backend (`backend/src/services/questionService.js`).
+* **Fundamento:** La regla de integridad prohíbe exponer la alternativa correcta antes de responder. Centralizar la eliminación de `correctAnswer` en la capa de servicios garantiza que ningún controlador o ruta olvide proyectar el documento, evitando fugas de respuestas hacia el cliente móvil.
+
