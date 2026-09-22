@@ -113,6 +113,12 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
   ],
   "correctAnswer": "B",
   "explanation": "El fragmento describe las consecuencias ambientales...",
+  "cohortSpeedThresholds": {
+    "p25": 15000,
+    "p50": 25000,
+    "p75": 45000,
+    "p90": 60000
+  },
   "status": "active"
 }
 ```
@@ -128,6 +134,7 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
 | `options` | `string[]` | ✔ | Alternativas A–D/E |
 | `correctAnswer` | `string` | ✔ | Letra correcta (solo backend/admin) |
 | `explanation` | `string?` | | Explicación corta |
+| `cohortSpeedThresholds` | `map?` | | Umbrales precalculados en ms (`p25`, `p50`, `p75`, `p90`) |
 | `status` | `string` | ✔ | `active` \| `draft` \| `disabled` |
 
 ---
@@ -227,3 +234,29 @@ Registro de movimientos de medallas de cada usuario. Solo el backend escribe.
 | `amount` | `int` | ✔ (positivo = ganó, negativo = gastó) |
 | `referenceId` | `string?` | |
 | `createdAt` | `timestamp` | ✔ |
+
+---
+
+## Documento `users/{uid}/state/practice`
+
+Estado de sesión y preguntas respondidas por el alumno. Usado por `GET /practice/next` para filtrar preguntas ya contestadas sin necesidad de escanear la colección `answers`.
+
+```jsonc
+// users/usr_demo/state/practice
+{
+  "answeredQuestionIds": [
+    "q_lectora_001"
+  ],
+  "lastQuestionId": "q_lectora_001",
+  "lastAnsweredAt": "2026-09-15T14:30:00.000Z",
+  "activeSessionId": "sess_demo_01"
+}
+```
+
+| Campo | Tipo | Requerido | Descripción |
+|---|---|---|---|
+| `answeredQuestionIds` | `string[]` | ✔ | IDs de preguntas ya respondidas |
+| `lastQuestionId` | `string?` | | Última pregunta entregada |
+| `lastAnsweredAt` | `timestamp?` | | Fecha de última respuesta |
+| `activeSessionId` | `string?` | | ID de la sesión actual |
+
