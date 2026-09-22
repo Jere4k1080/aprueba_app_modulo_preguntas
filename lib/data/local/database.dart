@@ -91,6 +91,15 @@ class AppDatabase extends _$AppDatabase {
   Future<CachedQuestion?> question(String id) =>
       (select(cachedQuestions)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Actualiza la respuesta correcta y explicación tras responder la pregunta en el servidor.
+  Future<int> updateQuestionAnswer(String id, String correctAnswer, [String? shortExplanation]) =>
+      (update(cachedQuestions)..where((t) => t.id.equals(id))).write(
+        CachedQuestionsCompanion(
+          correctAnswer: Value(correctAnswer),
+          shortExplanation: Value(shortExplanation),
+        ),
+      );
+
   // ---- Respuestas ----
   Future<void> logAnswer(AnswerLogsCompanion log) => into(answerLogs).insert(log);
 
