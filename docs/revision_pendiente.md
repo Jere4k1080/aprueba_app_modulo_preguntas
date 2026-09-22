@@ -1,8 +1,8 @@
 # Revisión pendiente — fusión sin revisión cruzada del 2026-09-13
 
-Este documento existe porque los ocho pull requests abiertos ese día se fusionaron (los que pudieron) sin que otro integrante del equipo los revisara, por ausencia del equipo esa semana. Ver ADR-16 en `docs/bitacora_decisiones.md`. Ninguno de los ocho pasó por el ojo de una segunda persona todavía. Esta guía es para que Sebastián y Martín puedan hacer esa revisión durante la semana, sin tener que reconstruir el contexto desde cero.
+Este documento existe porque los ocho pull requests abiertos ese día se fusionaron (los que pudieron) sin que otro integrante del equipo los revisara, por ausencia del equipo esa semana. Ver ADR-16 en `docs/bitacora_decisiones.md`. De los ocho, #7, #1 y #4 se fusionaron el 2026-09-22 con la aprobación de Sebastián y Martín, dada por WhatsApp; los otros cinco siguen sin una segunda lectura. Ese día se sumó el PR #10, fusionado sin revisión (sección al final). Esta guía es para que Sebastián y Martín puedan hacer esa revisión durante la semana, sin tener que reconstruir el contexto desde cero.
 
-Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebastián lo va a necesitar para la Iteración 3), después el backend (envelope, catálogo de errores, ADR-09 a ADR-12), y al final los dos PR bloqueados, porque esos ni siquiera llegaron a `main`.
+Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebastián lo va a necesitar para la Iteración 3), después el backend (envelope, catálogo de errores, ADR-09 a ADR-12). El PR #10 es corto y se puede leer en cualquier momento. #7, #1 y #4 ya tienen aprobación, pero las preguntas de sus secciones no tienen respuesta en este documento; si en WhatsApp se respondió alguna, conviene copiarla aquí.
 
 ---
 
@@ -55,7 +55,7 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 **Qué mirar con atención:**
 - `updateQuestionAnswer(id, correctAnswer, [shortExplanation])` en `database.dart` es la única función que puede escribir `correctAnswer` en la tabla `CachedQuestions`. Confirmar que sigue siendo así después de cualquier cambio futuro — si en algún momento aparece otra escritura a esa columna que no sea esta función, la regla de integridad se rompe en silencio.
 - En `PracticeRepository.answer()`, la llamada a `_db.updateQuestionAnswer()` ocurre **después** de recibir la respuesta de `POST /questions/:id/answer`, nunca antes. Es el único call site.
-- `_cacheQuestion()` (el método que cachea la pregunta al pedir `next()` o `question(id)`) deliberadamente no incluye `correctAnswer` en el `CachedQuestionsCompanion` que construye — por eso la columna queda en su default (`NULL`). Si alguien "simplifica" ese método para pasar el objeto `Question` completo en vez de campo por campo, `correctAnswer` se coласría sin querer.
+- `_cacheQuestion()` (el método que cachea la pregunta al pedir `next()` o `question(id)`) deliberadamente no incluye `correctAnswer` en el `CachedQuestionsCompanion` que construye — por eso la columna queda en su default (`NULL`). Si alguien "simplifica" ese método para pasar el objeto `Question` completo en vez de campo por campo, `correctAnswer` se colaría sin querer.
 - Las 3 pruebas de `drift_integrity_test.dart` usan una base de datos Drift en memoria y un interceptor de Dio con payloads canónicos, no mocks de la capa de datos. Es un patrón bueno para replicar en pruebas futuras de este módulo.
 
 **Preguntas que debería poder responder Sebastián:**
@@ -64,9 +64,9 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 
 ---
 
-## PR #5 — status HTTP de FORMAT_REQUIRES_PLAN (fusionado a feature/backend-scaffold, no a main)
+## PR #5 — status HTTP de FORMAT_REQUIRES_PLAN (fusionado a feature/backend-scaffold y, con el PR #4, a main)
 
-**Estado:** fusionado a `feature/backend-scaffold`, que todavía no llegó a `main` (ver PR #4 más abajo). Sin revisión cruzada.
+**Estado:** fusionado a `feature/backend-scaffold` sin revisión cruzada. Llegó a `main` el 2026-09-22 dentro del PR #4, que sí tuvo aprobación.
 
 **Archivos:** `backend/src/errors/catalog.js` (1 línea), `docs/bitacora_decisiones.md` (ADR-13).
 
@@ -77,15 +77,15 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 
 ---
 
-## PR #7 — timestamps del seed (bloqueado, no fusionado)
+## PR #7 — timestamps del seed (fusionado el 2026-09-22)
 
-**Estado:** **abierto, no fusionado.** Conflicto real en `docs/bitacora_decisiones.md` al intentar fusionarlo sobre `feature/backend-scaffold` (que ya tenía el PR #5 fusionado).
+**Estado:** fusionado a `feature/backend-scaffold` el 2026-09-22, con la aprobación de Sebastián y Martín por WhatsApp. Antes estuvo bloqueado por un conflicto en `docs/bitacora_decisiones.md` con el PR #5.
 
 **Archivos:** `backend/src/seed/seed.js`, `docs/bitacora_decisiones.md` (ADR-14).
 
 **Naturaleza del conflicto:** ADR-13 (del PR #5, ya fusionado en `backend-scaffold`) y ADR-14 (de este PR) se insertan en el mismo punto del archivo — justo después de ADR-12 — porque ambas ramas se crearon desde el mismo commit base de `backend-scaffold`, antes de que cualquiera de las dos se fusionara. No es un desacuerdo de contenido: son dos decisiones distintas que simplemente compiten por el mismo lugar en el archivo. No se resolvió a la fuerza, como pidió el equipo.
 
-**Qué hay que hacer para desbloquearlo:** alguien tiene que fusionar (o rebasar) esta rama manualmente, colocando el bloque de ADR-14 después de ADR-13 en vez de en el mismo punto que reclama el conflicto. Es edición de texto, no una decisión de diseño — no requiere criterio adicional, solo a alguien con acceso a `main` que lo haga con cuidado.
+**Cómo se desbloqueó:** se integró `feature/backend-scaffold` en esta rama con el commit `f0bce0f`, dejando ADR-13 antes de ADR-14 sin cambiar el texto de ninguno, y después se fusionó el PR.
 
 **Qué mirar con atención en el contenido en sí (además del conflicto):** el cambio reemplaza `new Date().toISOString()` por `admin.firestore.Timestamp.now()` en 4 campos (`answeredAt`, dos `createdAt`, `lastAnsweredAt`). No se pudo ejecutar el seed contra un emulador real porque `firebase-tools` no estaba instalado en el entorno donde se hizo el cambio — se verificó solo sintaxis y `require()` limpio.
 
@@ -94,26 +94,26 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 
 ---
 
-## PR #1 — 5 advertencias del analizador (bloqueado, no fusionado)
+## PR #1 — 5 advertencias del analizador (fusionado el 2026-09-22)
 
-**Estado:** **abierto, no fusionado a main.** Mismo tipo de conflicto que el PR #7, pero contra `main`.
+**Estado:** fusionado a `main` el 2026-09-22, con la aprobación de Sebastián y Martín por WhatsApp. Antes estuvo bloqueado por el mismo tipo de conflicto que el PR #7, pero contra `main`.
 
 **Archivos:** `docs/bitacora_decisiones.md` (ADR-08), `lib/data/repositories/profile_repository.dart`, `lib/data/services/phone_auth_service.dart`, `lib/features/groups/create_group_screen.dart`, `lib/features/medals/medals_screen.dart`, `lib/features/practice/question_screen.dart`.
 
 **Naturaleza del conflicto:** ADR-15 (ya fusionado a `main` vía PR #6) y ADR-08 (de este PR) se insertan en el mismo punto — justo después de ADR-07 — por la misma razón que el PR #7: ambas ramas partieron del mismo commit base de `main` antes de que cualquiera de las dos se fusionara. De nuevo, no es contenido contradictorio, es competencia por el mismo lugar en el archivo.
 
-**Qué hay que hacer para desbloquearlo:** igual que el PR #7 — reordenar manualmente el bloque de ADR-08 después de ADR-15 (o antes, el orden entre ellos no importa en términos de contenido, solo que no queden superpuestos) y completar la fusión.
+**Cómo se desbloqueó:** se integró `main` en esta rama con el commit `b9bf462`, dejando ADR-08 antes de ADR-15 en orden numérico, y después se fusionó el PR.
 
 **Qué mirar con atención además del conflicto — importante para el alcance del equipo:** este PR mezcla en un solo commit archivos dentro del módulo de práctica (`question_screen.dart`) con archivos fuera de alcance (`profile_repository.dart`, `phone_auth_service.dart`, `groups/create_group_screen.dart`, `medals/medals_screen.dart`). El criterio del equipo pide que las correcciones de advertencias fuera del módulo vayan en un commit separado para que el límite de alcance quede visible en el historial. Aquí no se hizo así — quedó todo en un solo commit. No se deshizo porque ya estaba hecho y separar el historial ahora generaría más riesgo que beneficio, pero vale la pena que quien revise lo sepa y lo tenga presente para la próxima vez.
 
 **Preguntas:**
-- ¿Alguien del equipo (Sebastián, ya que toca su capa de presentación) revisó que las correcciones fuera del módulo no cambiaron comportamiento, solo eliminaron código muerto? Se verificó por lectura de diff en la auditoría, pero no hay una segunda persona que lo haya confirmado todavía.
+- ¿Alguien del equipo (Sebastián, ya que toca su capa de presentación) revisó que las correcciones fuera del módulo no cambiaron comportamiento, solo eliminaron código muerto? Se verificó por lectura de diff en la auditoría; la aprobación por WhatsApp no dice si se revisó este punto.
 
 ---
 
-## PR #4 — andamiaje de backend (bloqueado, no fusionado)
+## PR #4 — andamiaje de backend (fusionado el 2026-09-22)
 
-**Estado:** **abierto, no fusionado a main.** Mismo conflicto de fondo que el PR #1: al intentar fusionar `feature/backend-scaffold` sobre `main`, la cadena de ADR que trae (empezando en ADR-08) choca con ADR-15 en el mismo punto del archivo. Confirmado intentando la fusión real, no es una suposición.
+**Estado:** fusionado a `main` el 2026-09-22, con la aprobación de Sebastián y Martín por WhatsApp. Antes estuvo bloqueado porque la cadena de ADR que traía chocaba con ADR-15 en el mismo punto del archivo. Se integró `main` en la rama con el commit `c73a9ac`, dejando ADR-09 a ADR-14 antes de ADR-15.
 
 **Archivos:** todo `backend/` (Express, Firebase Admin, envelope, catálogo de errores, auth JWT, `sanitizeQuestion()`, seed, health check), `docs/diccionario_de_datos.md` (nuevo), `docs/bitacora_decisiones.md` (ADR-09 a ADR-12, más ADR-08 ya resuelto con `fix-analyzer-warnings`, más ADR-13 del PR #5 ya fusionado en esta rama).
 
@@ -125,7 +125,7 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 - **Firebase Admin (`backend/src/config/firebase.js`):** funciona con y sin emulador (usa `FIRESTORE_EMULATOR_HOST` si existe; si no, cae a Application Default Credentials, que es donde debe entrar `GOOGLE_APPLICATION_CREDENTIALS` en producción sin que el JSON se versione).
 - **Riesgo de configuración sin resolver:** `backend/src/config/index.js` tiene `JWT_SECRET` con un valor por defecto público (el mismo que aparece en `backend/.env.example`) si la variable de entorno no está definida. El servidor arranca igual en producción sin ese secreto configurado, en vez de fallar. Esto no se corrigió en esta tanda — queda para quien revise decidir si es bloqueante antes de desplegar.
 - **`sanitizeQuestion()` (`backend/src/services/questionService.js`):** elimina `correctAnswer` y `explanation` incondicionalmente. Hoy no hay ninguna ruta que emita preguntas todavía (los 13 servicios no están implementados), así que esta función nunca se ha ejercitado con una ruta real — cuando se implemente `GET /practice/next` en la Iteración 3, confirmar que ese endpoint pasa el documento por `sanitizeQuestion()` antes de responder. No hay ningún mecanismo automático que lo obligue.
-- **Seed (`backend/src/seed/seed.js`):** es idempotente por diseño (usa IDs fijos con `.set()`, no `.add()`), así que correrlo dos veces no duplica datos. Los timestamps siguen como texto ISO en esta rama porque el PR #7 que los corrige está bloqueado (ver arriba).
+- **Seed (`backend/src/seed/seed.js`):** es idempotente por diseño (usa IDs fijos con `.set()`, no `.add()`), así que correrlo dos veces no duplica datos. Los timestamps son `Timestamp` de Firestore desde que entró el PR #7.
 - **ADR-09 a ADR-12 siguen "PROPUESTA PARA RATIFICACIÓN":** ninguna de las cuatro se ha ratificado formalmente por el equipo todavía. Son:
   - ADR-09 (`answeredQuestionIds` como arreglo en `users/{uid}/state/practice`): el margen contra el límite de 1 MB de Firestore es cómodo (se estimó en años, no meses) con el ritmo de cuota gratuita, pero el cálculo no considera usuarios con plan de pago y cuota ilimitada — vale la pena que el equipo lo tenga presente al ratificar.
   - ADR-10 (umbrales de percentil precalculados en `questions`): depende de un proceso programado (Cloud Function o cron) que **no existe todavía** — la decisión asume que alguien va a construir ese proceso en la Iteración 3.
@@ -136,3 +136,17 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 - ¿El equipo ratifica ADR-09 a ADR-12 tal como están, o alguna necesita ajuste antes de construir los servicios de la Iteración 3 sobre ellas?
 - ¿Quién es responsable de que `JWT_SECRET` tenga un valor real antes de cualquier despliegue con tráfico real, y hay algo que impida que el servidor arranque sin él?
 - ¿El cliente Flutter (capa de Sebastián) ya está preparado para leer `error.code` del envelope y no solo el status HTTP, dado que varios códigos de negocio comparten status (422) con `VALIDATION_ERROR`?
+
+---
+
+## PR #10: índice de la bitácora y corrección de ADR-08 (fusionado sin revisión)
+
+**Estado:** fusionado a `main` el 2026-09-22 sin revisión cruzada, por decisión explícita tomada durante la auditoría. Está registrado en ADR-16.
+
+**Archivos:** `docs/bitacora_decisiones.md`, `docs/diccionario_de_datos.md`.
+
+**Qué mirar con atención:** la corrección de ADR-08. El texto anterior atribuía los 38 avisos de `flutter analyze` a `withOpacity` en código del cliente fuera del alcance. Medidos con Flutter 3.44.7, 14 están en `lib/features/practice/`. La decisión de no tocarlos se mantuvo y cambió el fundamento. El resto del PR es mecánico: siete entradas nuevas en el índice y cinco enlaces `file:///` convertidos en rutas relativas.
+
+**Preguntas:**
+- ¿El equipo corrige los 14 avisos que están dentro del módulo o los deja como están?
+- ¿Con qué versión de Flutter trabaja cada integrante? El recuento cambia con ella: el aviso de `value` deprecado aparece desde Flutter 3.33.
