@@ -164,7 +164,7 @@ erDiagram
 
 ## 3. Catálogo de Índices Compuestos
 
-Definidos formalmente en [`firestore.indexes.json`](file:///f:/Descargas%20Chrome/aprueba_app-20260903T024027Z-1-001/aprueba_app_modulo_preguntas/firestore.indexes.json):
+Definidos formalmente en [`firestore.indexes.json`](../firestore.indexes.json):
 
 | Colección | Campos y Orden | Justificación Operativa |
 |---|---|---|
@@ -177,7 +177,7 @@ Definidos formalmente en [`firestore.indexes.json`](file:///f:/Descargas%20Chrom
 
 ## 4. Esquema Local de Caché Offline (Drift / SQLite)
 
-Ubicación: [`lib/data/local/database.dart`](file:///f:/Descargas%20Chrome/aprueba_app-20260903T024027Z-1-001/aprueba_app_modulo_preguntas/lib/data/local/database.dart)
+Ubicación: [`lib/data/local/database.dart`](../lib/data/local/database.dart)
 
 ### 4.1 Tabla `CachedQuestions`
 * **Propósito:** Almacenar preguntas descargadas para permitir resolución y repaso offline.
