@@ -26,7 +26,7 @@ class ProfileRepository {
   }
 
   Future<User> updateProfile({String? school, int? age, String? region}) async {
-    final res = await _api.patch(Endpoints.me,
+    await _api.patch(Endpoints.me,
         body: {if (school != null) 'school': school, if (age != null) 'age': age, if (region != null) 'region': region},
         parse: (d) => d);
     return me(forceRefresh: true);
