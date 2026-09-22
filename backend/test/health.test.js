@@ -1,8 +1,33 @@
 const assert = require('assert');
 const http = require('http');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+process.env.NODE_ENV = 'test';
+process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+process.env.ALLOWED_ORIGINS = 'https://app.aprueba.test,http://localhost:3000';
+process.env.ALLOWED_ORIGIN_PATTERN = '^https://aprueba-pr-[a-z0-9-]+\\.vercel\\.app$';
+
 const app = require('../src/app');
+assert.strictEqual(require('..'), app, 'La entrada del paquete debe exportar Express para Vercel');
 const { sanitizeQuestion, calculateCohortPercentile } = require('../src/services/questionService');
 const { AppError, ErrorCatalog } = require('../src/errors/catalog');
+const seedDatabase = require('../src/seed/seed');
+
+function runConfigProbe(script, overrides = {}) {
+  return spawnSync(process.execPath, ['-e', script], {
+    cwd: path.resolve(__dirname, '..'),
+    env: {
+      ...process.env,
+      FIRESTORE_EMULATOR_HOST: '',
+      FIREBASE_SERVICE_ACCOUNT_BASE64: '',
+      FIREBASE_PROJECT_ID: '',
+      JWT_SECRET: '',
+      ...overrides,
+    },
+    encoding: 'utf8',
+  });
+}
 
 async function runTests() {
   console.log('[Backend Tests] Iniciando pruebas de verificación...');
@@ -65,6 +90,93 @@ async function runTests() {
   assert.strictEqual(notFoundJson.error.code, 'NOT_FOUND');
   assert.ok(notFoundJson.meta.requestId);
   console.log('✓ Prueba 5: Ruta 404 produce envelope estándar con código NOT_FOUND.');
+
+  // 6. CORS: lista exacta, patrón de vistas previas y solicitud previa
+  const allowed = await fetch(`http://localhost:${port}/api/v1/health`, {
+    headers: { Origin: 'https://app.aprueba.test' },
+  });
+  assert.strictEqual(allowed.headers.get('access-control-allow-origin'), 'https://app.aprueba.test');
+  const preview = await fetch(`http://localhost:${port}/api/v1/health`, {
+    headers: { Origin: 'https://aprueba-pr-12.vercel.app' },
+  });
+  assert.strictEqual(preview.headers.get('access-control-allow-origin'), 'https://aprueba-pr-12.vercel.app');
+  const denied = await fetch(`http://localhost:${port}/api/v1/health`, {
+    headers: { Origin: 'https://app.aprueba.test.evil.example' },
+  });
+  assert.strictEqual(denied.headers.get('access-control-allow-origin'), null);
+  const preflight = await fetch(`http://localhost:${port}/api/v1/health`, {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'https://app.aprueba.test',
+      'Access-Control-Request-Method': 'GET',
+      'Access-Control-Request-Headers': 'Authorization',
+    },
+  });
+  assert.strictEqual(preflight.status, 204);
+  assert.strictEqual(preflight.headers.get('access-control-allow-origin'), 'https://app.aprueba.test');
+  assert.strictEqual(preflight.headers.get('access-control-allow-credentials'), null);
+  console.log('✓ Prueba 6: CORS permite orígenes conocidos y OPTIONS, sin credenciales.');
+
+  // 7. Selección de credenciales con Firebase Admin simulado, sin tocar Firestore
+  const firebaseProbe = `
+    const Module = require('module');
+    const originalLoad = Module._load;
+    const admin = {
+      apps: [],
+      credential: { cert: (data) => ({ project_id: data.project_id }) },
+      initializeApp(options) { this.apps.push(options); },
+      firestore() { return {}; },
+    };
+    Module._load = function (name, ...args) {
+      return name === 'firebase-admin' ? admin : originalLoad.call(this, name, ...args);
+    };
+    try {
+      const { initFirebase } = require('./src/config/firebase');
+      initFirebase();
+      initFirebase();
+      console.log(JSON.stringify(admin.apps));
+    } catch (error) {
+      console.error(error.message);
+      process.exitCode = 2;
+    }
+  `;
+  const emulator = runConfigProbe(firebaseProbe, {
+    FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+    FIREBASE_SERVICE_ACCOUNT_BASE64: 'invalid',
+  });
+  assert.strictEqual(emulator.status, 0, emulator.stderr);
+  assert.deepStrictEqual(JSON.parse(emulator.stdout.trim()), [{ projectId: 'aprueba-dev' }]);
+  const serviceAccount = Buffer.from(JSON.stringify({ project_id: 'aprueba-test' })).toString('base64');
+  const remote = runConfigProbe(firebaseProbe, { FIREBASE_SERVICE_ACCOUNT_BASE64: serviceAccount });
+  assert.strictEqual(remote.status, 0, remote.stderr);
+  assert.deepStrictEqual(JSON.parse(remote.stdout.trim()), [{
+    credential: { project_id: 'aprueba-test' },
+    projectId: 'aprueba-test',
+  }]);
+  const missing = runConfigProbe(firebaseProbe);
+  assert.strictEqual(missing.status, 2);
+  assert.match(missing.stderr, /Configura FIRESTORE_EMULATOR_HOST o FIREBASE_SERVICE_ACCOUNT_BASE64/);
+  console.log('✓ Prueba 7: Firebase prioriza emulador, acepta cuenta de servicio e impide inicio sin credenciales.');
+
+  // 8. El secreto JWT no puede caer al valor de desarrollo en producción
+  const noJwt = runConfigProbe("require('./src/config')", { NODE_ENV: 'production' });
+  assert.notStrictEqual(noJwt.status, 0);
+  assert.match(noJwt.stderr, /JWT_SECRET es obligatorio en producción/);
+  console.log('✓ Prueba 8: Producción falla sin JWT_SECRET.');
+
+  // 9. Un seed remoto requiere permiso explícito antes de abrir Firestore
+  const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
+  const allowRemote = process.env.SEED_ALLOW_REMOTE;
+  delete process.env.FIRESTORE_EMULATOR_HOST;
+  delete process.env.SEED_ALLOW_REMOTE;
+  try {
+    await assert.rejects(seedDatabase(), /Seed remoto bloqueado/);
+  } finally {
+    process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
+    if (allowRemote === undefined) delete process.env.SEED_ALLOW_REMOTE;
+    else process.env.SEED_ALLOW_REMOTE = allowRemote;
+  }
+  console.log('✓ Prueba 9: Seed remoto exige SEED_ALLOW_REMOTE=true.');
 
   server.close();
   console.log('[Backend Tests] ¡Todas las pruebas de infraestructura pasaron con éxito!\n');

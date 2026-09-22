@@ -2,6 +2,10 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET?.trim()) {
+  throw new Error('JWT_SECRET es obligatorio en producción.');
+}
+
 module.exports = {
   port: parseInt(process.env.PORT || '4000', 10),
   env: process.env.NODE_ENV || 'development',
@@ -19,7 +23,14 @@ module.exports = {
     addressBonus: 5,
   },
   firebase: {
-    projectId: process.env.FIREBASE_PROJECT_ID || 'aprueba-dev',
+    projectId: process.env.FIREBASE_PROJECT_ID,
     emulatorHost: process.env.FIRESTORE_EMULATOR_HOST,
+    serviceAccountBase64: process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
+  },
+  cors: {
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+    allowedOriginPattern: process.env.ALLOWED_ORIGIN_PATTERN
+      ? new RegExp(process.env.ALLOWED_ORIGIN_PATTERN)
+      : null,
   },
 };

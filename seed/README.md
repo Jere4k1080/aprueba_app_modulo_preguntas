@@ -141,7 +141,7 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
 
 ## Colección `answers` (Raíz)
 
-Respuesta del alumno a una pregunta. Inmutable (create-only).
+Respuesta del alumno a una pregunta. La API la crea tras evaluar la alternativa; el cliente no escribe en Firestore.
 **Diseño:** Colección raíz para permitir agregación por `questionId` entre todos los alumnos
 al calcular el percentil de cohorte (`cohortPercentile`).
 
@@ -174,7 +174,7 @@ al calcular el percentil de cohorte (`cohortPercentile`).
 
 ## Colección `corrections` (Raíz)
 
-Solicitud de recorrección de una pregunta. Create-only desde el cliente.
+Solicitud de recorrección de una pregunta. El cliente la envía a la API, que la crea en Firestore.
 **Diseño:** Colección raíz para permitir a administración listar todas las solicitudes pendientes
 sin importar el usuario.
 

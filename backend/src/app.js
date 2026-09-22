@@ -4,11 +4,22 @@ const envelopeMiddleware = require('./middleware/envelope');
 const errorHandlerMiddleware = require('./middleware/errorHandler');
 const routes = require('./routes');
 const { AppError } = require('./errors/catalog');
+const config = require('./config');
+const { initFirebase } = require('./config/firebase');
+
+initFirebase();
 
 const app = express();
 
 // Middlewares base
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    callback(null, Boolean(origin && (
+      config.cors.allowedOrigins.includes(origin) ||
+      config.cors.allowedOriginPattern?.test(origin)
+    )));
+  },
+}));
 app.use(express.json());
 
 // Envelope estándar { data, error, meta }
