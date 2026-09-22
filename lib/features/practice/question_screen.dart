@@ -57,7 +57,6 @@ class _QuestionScreenState extends ConsumerState<QuestionScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(practiceSessionProvider);
     final q = session.question;
-    final t = context.tokens;
     if (q == null) {
       return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
     }
