@@ -73,7 +73,7 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 **Qué mirar con atención:** el cambio es de una sola línea (403 → 422), pero el motivo importa: `FORMAT_REQUIRES_PLAN` es un error de negocio (el alumno pidió un formato que su plan no cubre), no de autorización. Si el interceptor de Dio del cliente Flutter trata 401/403 como "cerrar sesión", este código con 403 lo habría mandado a cerrar sesión en vez de al muro de pago. El endpoint que dispara este error todavía no existe (Iteración 3), así que esto no se pudo probar en vivo — solo se verificó que el catálogo quedó consistente.
 
 **Preguntas:**
-- Cuando se implemente el endpoint que devuelve `FORMAT_REQUIRES_PLAN`, ¿el interceptor de Dio del cliente ya sabe distinguir 422 de negocio de 422 de validación (`VALIDATION_ERROR` también es 422)? Ambos comparten status HTTP pero deben llevar al alumno a pantallas distintas (muro de pago vs. mensaje de error de formulario). Eso se resuelve por el campo `code` del envelope, no por el status — confirmar que el cliente ya lee `error.code` y no solo el status HTTP.
+- Cuando se implemente el endpoint que devuelve `FORMAT_REQUIRES_PLAN`, ¿el cliente lee `error.code` para abrir el muro de pago? Ese error responde 422 y `VALIDATION_ERROR` responde 400. El cliente debe distinguirlos por código, sin reducir ambos a un mensaje genérico.
 
 ---
 
@@ -125,10 +125,10 @@ Prioridad de lectura sugerida: primero el bloque de Drift e integridad (Sebasti�
 - **Firebase Admin (`backend/src/config/firebase.js`):** funciona con y sin emulador (usa `FIRESTORE_EMULATOR_HOST` si existe; si no, cae a Application Default Credentials, que es donde debe entrar `GOOGLE_APPLICATION_CREDENTIALS` en producción sin que el JSON se versione).
 - **Riesgo de configuración sin resolver:** `backend/src/config/index.js` tiene `JWT_SECRET` con un valor por defecto público (el mismo que aparece en `backend/.env.example`) si la variable de entorno no está definida. El servidor arranca igual en producción sin ese secreto configurado, en vez de fallar. Esto no se corrigió en esta tanda — queda para quien revise decidir si es bloqueante antes de desplegar.
 - **`sanitizeQuestion()` (`backend/src/services/questionService.js`):** elimina `correctAnswer` y `explanation` incondicionalmente. Hoy no hay ninguna ruta que emita preguntas todavía (los 13 servicios no están implementados), así que esta función nunca se ha ejercitado con una ruta real — cuando se implemente `GET /practice/next` en la Iteración 3, confirmar que ese endpoint pasa el documento por `sanitizeQuestion()` antes de responder. No hay ningún mecanismo automático que lo obligue.
-- **Seed (`backend/src/seed/seed.js`):** es idempotente por diseño (usa IDs fijos con `.set()`, no `.add()`), así que correrlo dos veces no duplica datos. Los timestamps son `Timestamp` de Firestore desde que entró el PR #7.
+- **Seed (`backend/src/seed/seed.js`):** usa IDs fijos con `.set()`, así que correrlo dos veces no duplica documentos, pero reescribe los timestamps. Estos son `Timestamp` de Firestore desde que entró el PR #7.
 - **ADR-09 a ADR-12 siguen "PROPUESTA PARA RATIFICACIÓN":** ninguna de las cuatro se ha ratificado formalmente por el equipo todavía. Son:
   - ADR-09 (`answeredQuestionIds` como arreglo en `users/{uid}/state/practice`): el margen contra el límite de 1 MB de Firestore es cómodo (se estimó en años, no meses) con el ritmo de cuota gratuita, pero el cálculo no considera usuarios con plan de pago y cuota ilimitada — vale la pena que el equipo lo tenga presente al ratificar.
-  - ADR-10 (umbrales de percentil precalculados en `questions`): depende de un proceso programado (Cloud Function o cron) que **no existe todavía** — la decisión asume que alguien va a construir ese proceso en la Iteración 3.
+  - ADR-10 (umbrales de percentil precalculados en `questions`): depende de un proceso programado que **no existe todavía**. El equipo prevé construirlo en la Iteración 4.
   - ADR-11 (reinicio de cuota configurable por variables de entorno): sin código que lo consuma todavía, es solo la variable de entorno documentada.
   - ADR-12 (`sanitizeQuestion()` centralizado): esta ya está implementada y probada; las otras tres son solo diseño en papel.
 
