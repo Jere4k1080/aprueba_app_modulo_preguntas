@@ -259,9 +259,9 @@ La versión web del módulo se compila y despliega automáticamente en Vercel me
 
 El proyecto web anterior conserva la raíz del repositorio. La API usa otro proyecto de Vercel con **Root Directory `backend/`**. Vercel detecta `backend/src/app.js` como aplicación Express; `backend/src/server.js` escucha un puerto solo al ejecutar `npm start` localmente.
 
-1. Crea un proyecto Firebase propio con Firestore. Las reglas bloquean el acceso directo del cliente; el backend usa Firebase Admin.
+1. Crea un proyecto Firebase propio y su base Firestore predeterminada en `southamerica-east1` (São Paulo), según ADR-24. Comprueba la ubicación antes de crearla: no se puede cambiar después. Las reglas bloquean el acceso directo del cliente; el backend usa Firebase Admin.
 2. Genera una cuenta de servicio para ese proyecto y guarda el JSON fuera del repositorio. En PowerShell, conviértelo con `[Convert]::ToBase64String([IO.File]::ReadAllBytes('RUTA_AL_JSON'))`. Copia el resultado solo a `FIREBASE_SERVICE_ACCOUNT_BASE64` en Vercel.
-3. Crea el proyecto de Vercel de la API con Root Directory `backend/`.
+3. Crea el proyecto de Vercel de la API con Root Directory `backend/` y configura Function Region `gru1` (São Paulo) en Settings > Functions. Vercel usa `iad1` si no se cambia.
 4. En ese proyecto configura `NODE_ENV=production`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID` y `ALLOWED_ORIGINS`. Este último contiene la URL de origen de la app web, sin barra final. `ALLOWED_ORIGIN_PATTERN` es opcional para vistas previas y debe cubrir el origen completo con `^` y `$`. No configures `FIRESTORE_EMULATOR_HOST` allí. En el proyecto web configura `API_BASE_URL=https://DOMINIO_DEL_BACKEND/api/v1`.
 5. Desde la raíz del repositorio, despliega las reglas y los índices con `firebase deploy --only firestore --project ID_DEL_PROYECTO`. `.firebaserc` no fija un proyecto para evitar desplegar por accidente en otro entorno.
 6. Despliega la API y comprueba `https://DOMINIO_DEL_BACKEND/api/v1/health`. Debe responder con `data.status` igual a `ok` dentro del envelope `{data, error, meta}`. Vuelve a desplegar la app web y comprueba en el navegador que sus solicitudes usan la API y reciben la cabecera CORS correspondiente.

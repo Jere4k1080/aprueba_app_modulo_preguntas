@@ -33,6 +33,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 21. [ADR-21: Firestore accesible solo desde la API](#adr-21-firestore-accesible-solo-desde-la-api)
 22. [ADR-22: Confirmación para ejecutar el seed remoto](#adr-22-confirmación-para-ejecutar-el-seed-remoto)
 23. [ADR-23: Recálculo diario del percentil con Vercel Cron](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
+24. [ADR-24: Ubicación de Firestore para el proyecto de desarrollo](#adr-24-ubicación-de-firestore-para-el-proyecto-de-desarrollo)
 
 ---
 
@@ -271,3 +272,12 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Propuesta:** en la Iteración 4, un cron diario de Vercel llamaría a un endpoint interno de la API para actualizar los umbrales de `cohortSpeedThresholds` descritos en ADR-10.
 * **Alternativa descartada por ahora:** Cloud Function programada.
 * **Motivo:** el proyecto Firebase usa Spark; [Firebase exige Blaze para desplegar Cloud Functions](https://firebase.google.com/docs/functions/get-started). La propuesta no agrega todavía ni el cron ni el endpoint.
+
+---
+
+### ADR-24: Ubicación de Firestore para el proyecto de desarrollo
+
+* **Estado:** **DECIDIDA POR EL EQUIPO, PENDIENTE DE APLICACIÓN**
+* **Decisión:** crear la base Firestore predeterminada del proyecto Firebase propio de desarrollo en la región `southamerica-east1` (São Paulo). Configurar las funciones del proyecto Vercel de la API en `gru1` (São Paulo). La app Flutter Web sigue en su proyecto Vercel separado.
+* **Alternativa descartada:** `southamerica-west1` (Santiago). Firestore la ofrece, pero [Vercel no tiene una región de funciones en Santiago](https://vercel.com/docs/regions). Con la API en `gru1`, cada acceso a la base cruzaría entre São Paulo y Santiago. También se descarta dejar la región predeterminada `iad1` de Vercel.
+* **Motivo:** según ADR-21, el cliente consulta Firestore solo por la API. Ubicar API y base en la misma ciudad evita ese tramo adicional en cada lectura y escritura. [Firestore permite ambas regiones sudamericanas](https://firebase.google.com/docs/firestore/locations) y [Vercel recomienda ejecutar las funciones cerca de la base](https://vercel.com/docs/functions/configuring-functions/region). La cuota gratuita de Firestore se aplica a [una base por proyecto](https://firebase.google.com/docs/firestore/pricing). La ubicación de una base ya creada no se puede cambiar; antes de provisionarla se debe comprobar que el proyecto nuevo no tenga una ubicación fijada por otro recurso.
