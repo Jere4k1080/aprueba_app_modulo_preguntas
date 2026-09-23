@@ -1,3 +1,5 @@
 {
-  "projects": {}
+  "projects": {
+    "default": "aprueba-app-modulo-preguntas"
+  }
 }
