@@ -2,7 +2,8 @@
 
 Referencia de esquemas para el script de seed del backend (`npm run seed`).
 Los ids usados en los ejemplos son los que el frontend espera.
-Los datos viven en `backend/src/seed/data.js`.
+Los datos viven en `backend/src/seed/data.js`, y las fechas las asigna el servidor de
+Firestore al escribir, con `FieldValue.serverTimestamp()` (ADR-14).
 
 ---
 

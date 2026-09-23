@@ -4,6 +4,7 @@ const { tests, skills, questions, practiceStates } = require('./data');
 /**
  * Script de carga de datos semilla (Seed) en Firestore.
  * Pobla las colecciones con los datos de demostración de ./data.js, descritos en seed/README.md.
+ * Las fechas usan la hora del servidor de Firestore, no el reloj local (ADR-14).
  */
 async function seedDatabase() {
   if (!process.env.FIRESTORE_EMULATOR_HOST && process.env.SEED_ALLOW_REMOTE !== 'true') {
@@ -11,6 +12,7 @@ async function seedDatabase() {
   }
   console.log('[Seed] Iniciando siembra de datos en Firestore...');
   const db = getDb();
+  const serverTimestamp = () => admin.firestore.FieldValue.serverTimestamp();
 
   // 1. Colección tests (5 pruebas PAES)
   for (const t of tests) {
@@ -40,7 +42,7 @@ async function seedDatabase() {
       correct: true,
       elapsedMs: 24000,
       cohortPercentile: 78,
-      answeredAt: admin.firestore.Timestamp.now(),
+      answeredAt: serverTimestamp(),
     },
   ];
 
@@ -59,7 +61,7 @@ async function seedDatabase() {
       comment: 'La alternativa correcta debería ser C.',
       status: 'pending',
       potentialReward: { amount: 250 },
-      createdAt: admin.firestore.Timestamp.now(),
+      createdAt: serverTimestamp(),
       reviewedAt: null,
       reviewedBy: null,
     },
@@ -82,13 +84,13 @@ async function seedDatabase() {
       tier: 'bronze',
       amount: 1,
       referenceId: 'q_lectora_001',
-      createdAt: admin.firestore.Timestamp.now(),
+      createdAt: serverTimestamp(),
     });
   console.log('[Seed] 1 movimiento de medalla insertado en users/usr_demo/medalLedger');
 
   // 7. Documento de estado users/{uid}/state/practice (ADR-09)
   for (const [uid, state] of Object.entries(practiceStates)) {
-    const doc = state.answeredQuestionIds.length > 0 ? { ...state, lastAnsweredAt: admin.firestore.Timestamp.now() } : state;
+    const doc = state.answeredQuestionIds.length > 0 ? { ...state, lastAnsweredAt: serverTimestamp() } : state;
     await db.collection('users').doc(uid).collection('state').doc('practice').set(doc);
   }
   console.log(`[Seed] Estado de práctica insertado para ${Object.keys(practiceStates).join(' y ')}`);
