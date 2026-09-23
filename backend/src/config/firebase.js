@@ -1,25 +1,28 @@
 const admin = require('firebase-admin');
 const config = require('./index');
 
-let initialized = false;
-
 function initFirebase() {
-  if (initialized || admin.apps.length > 0) {
+  if (admin.apps.length > 0) {
     return admin.firestore();
   }
 
-  const options = {
-    projectId: config.firebase.projectId,
-  };
-
-  // Si existe emulador local de Firestore, lo prioriza
   if (config.firebase.emulatorHost) {
-    process.env.FIRESTORE_EMULATOR_HOST = config.firebase.emulatorHost;
-    console.log(`[Firebase] Conectando a Firestore Emulator en ${config.firebase.emulatorHost}`);
+    admin.initializeApp({ projectId: config.firebase.projectId || 'aprueba-dev' });
+  } else if (config.firebase.serviceAccountBase64) {
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(Buffer.from(config.firebase.serviceAccountBase64, 'base64').toString('utf8'));
+    } catch (_) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_BASE64 no contiene un JSON válido.');
+    }
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: config.firebase.projectId || serviceAccount.project_id,
+    });
+  } else {
+    throw new Error('Configura FIRESTORE_EMULATOR_HOST o FIREBASE_SERVICE_ACCOUNT_BASE64.');
   }
 
-  admin.initializeApp(options);
-  initialized = true;
   return admin.firestore();
 }
 

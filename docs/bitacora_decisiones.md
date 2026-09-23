@@ -26,6 +26,14 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 14. [ADR-14: Tipo de dato de las fechas insertadas por el seed (Corregida)](#adr-14-tipo-de-dato-de-las-fechas-insertadas-por-el-seed)
 15. [ADR-15: Estado sin commitear en el working tree de main durante la auditoría del 2026-09-13 (Resuelta)](#adr-15-estado-sin-commitear-en-el-working-tree-de-main-durante-la-auditoría-del-2026-09-13)
 16. [ADR-16: Fusión de pull requests a main sin revisión cruzada previa (Desviación declarada)](#adr-16-fusión-de-pull-requests-a-main-sin-revisión-cruzada-previa)
+17. [ADR-17: Proyecto de Vercel separado para el backend](#adr-17-proyecto-de-vercel-separado-para-el-backend)
+18. [ADR-18: Cuenta de servicio de Firebase en base64](#adr-18-cuenta-de-servicio-de-firebase-en-base64)
+19. [ADR-19: CORS por lista de orígenes y patrón](#adr-19-cors-por-lista-de-orígenes-y-patrón)
+20. [ADR-20: JWT_SECRET obligatorio en producción](#adr-20-jwt_secret-obligatorio-en-producción)
+21. [ADR-21: Firestore accesible solo desde la API](#adr-21-firestore-accesible-solo-desde-la-api)
+22. [ADR-22: Confirmación para ejecutar el seed remoto](#adr-22-confirmación-para-ejecutar-el-seed-remoto)
+23. [ADR-23: Recálculo diario del percentil con Vercel Cron](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
+24. [ADR-24: Ubicación de Firestore para el proyecto de desarrollo](#adr-24-ubicación-de-firestore-para-el-proyecto-de-desarrollo)
 
 ---
 
@@ -41,6 +49,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * `answers` y `corrections` son **colecciones raíz**, con campo `userId` obligatorio y validado en las reglas de seguridad.
   * `medalLedger` se mantiene como **subcolección** (`users/{uid}/medalLedger`), ya que es un libro contable estrictamente personal del usuario.
   * Se eliminaron las reglas y rutas de subcolección redundantes.
+* **Actualización de despliegue:** ADR-21 bloquea el acceso directo del cliente a Firestore. La API valida `userId` antes de escribir; las reglas ya no validan campos enviados por el estudiante.
 
 ---
 
@@ -52,6 +61,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Integridad y auditoría académica: una respuesta completada no debe ser alterada ni eliminada por el estudiante para evitar adulteraciones de cuota o estadísticas.
   * Una solicitud de recorrección enviada queda en estado inmutable para el cliente.
 * **Nota técnica:** El bloqueo de `update` en `corrections` no afecta la labor del moderador/administrador, ya que los servicios de administración operan con el Firebase Admin SDK en Node.js, el cual omite por diseño las reglas de seguridad de cliente.
+* **Actualización de despliegue:** ADR-21 también bloquea `create` desde el cliente. La inmutabilidad sigue vigente; las escrituras pasan por la API.
 
 ---
 
@@ -105,6 +115,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   2. `questions` (`testId ASC`, `status ASC`, `difficulty ASC`)
   3. `answers` (`questionId ASC`, `answeredAt DESC`) — Cálculo de percentil de cohorte
   4. `corrections` (`userId ASC`, `createdAt DESC`) — Historial de reportes del estudiante
+* **Estado al preparar Vercel:** el andamiaje actual todavía no ejecuta consultas compuestas. Los cuatro índices están preparados para los servicios de la Iteración 3; su uso debe verificarse cuando existan esas rutas.
 
 ---
 
@@ -197,3 +208,76 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Motivo de la desviación:** El criterio de terminado del equipo (revisión de otro integrante antes de fusionar) es, junto con la bitácora de decisiones, la mitigación declarada para la ausencia de la práctica XP de cliente en sitio y de revisión par constante. No tener a nadie del equipo disponible para revisar convierte esa mitigación en un bloqueo indefinido. Se prefirió fusionar lo verificable automáticamente y dejar una guía de revisión posterior (`docs/revision_pendiente.md`) antes que acumular más PR sin fusionar o forzar una fusión sin ningún tipo de control.
 * **Alternativa descartada:** esperar a que el equipo esté disponible para revisar antes de fusionar nada. Se descartó porque no hay fecha cierta de retorno y las ramas seguían acumulando riesgo de choque entre sí cuanto más tiempo pasaran sin integrarse a `main`.
 * **Decisión final:** el código fusionado sin revisión cruzada queda marcado como pendiente de revisión en `docs/revision_pendiente.md`, con preguntas específicas que Sebastián y Martín deben poder responder antes de la Iteración 3. Esta ADR no reemplaza esa revisión: la declara pendiente y la hace visible.
+* **Cierre del PR #9 (2026-09-22):** el usuario confirmó su aprobación por WhatsApp. La identidad del revisor no consta en GitHub; se dejó registro de esa limitación en un comentario del PR. Tras corregir tres afirmaciones de la guía y pasar la verificación de Vercel, el PR se fusionó a `main`.
+
+---
+
+### ADR-17: Proyecto de Vercel separado para el backend
+
+* **Estado:** **APROBADA POR EL EQUIPO**
+* **Decisión:** Desplegar la API en otro proyecto de Vercel con Root Directory `backend/`. `src/app.js` exporta Express y `src/server.js` escucha solo en desarrollo local, conforme a la [guía de Vercel para Express](https://vercel.com/docs/frameworks/backend/express).
+* **Alternativa descartada:** servir la API bajo `/api` en el mismo proyecto que Flutter Web.
+* **Motivo:** la raíz del repositorio tiene un build de Flutter y no contiene `package.json`; separar ambos proyectos evita mezclar comandos de compilación y variables de entorno. Como aún no existe el ID del proyecto Firebase, `.firebaserc` queda sin alias y el despliegue exige `--project`; se descartó inventar un ID provisional.
+
+---
+
+### ADR-18: Cuenta de servicio de Firebase en base64
+
+* **Estado:** **IMPLEMENTADA, PENDIENTE DE REVISIÓN CRUZADA**
+* **Decisión:** `FIRESTORE_EMULATOR_HOST` tiene prioridad. Fuera del emulador, `FIREBASE_SERVICE_ACCOUNT_BASE64` entrega el JSON a `admin.credential.cert()`. Sin ninguna de las dos variables, la API falla al iniciar. Se reutiliza la instancia de Firebase Admin cuando ya existe.
+* **Alternativa descartada:** depender de un archivo JSON mediante `GOOGLE_APPLICATION_CREDENTIALS` o aceptar credenciales predeterminadas de forma implícita.
+* **Motivo:** Vercel recibe secretos por variables de entorno. El base64 conserva los saltos de línea de la cuenta de servicio y el fallo explícito evita iniciar contra un proyecto distinto al previsto.
+
+---
+
+### ADR-19: CORS por lista de orígenes y patrón
+
+* **Estado:** **IMPLEMENTADA, PENDIENTE DE REVISIÓN CRUZADA**
+* **Decisión:** `ALLOWED_ORIGINS` contiene orígenes exactos separados por comas. `ALLOWED_ORIGIN_PATTERN` admite una expresión regular opcional para vistas previas de Vercel. Las solicitudes `OPTIONS` reciben respuesta sin habilitar credenciales. Se reutiliza `cors` 2.8.6, que ya estaba en el lockfile, y se fija su versión exacta.
+* **Alternativa descartada:** `cors()` sin restricciones y una lista fija de cada URL de vista previa.
+* **Motivo:** el origen de producción es estable y las URLs de vista previa cambian en cada despliegue. `Authorization` viaja en una cabecera, sin cookies.
+
+---
+
+### ADR-20: JWT_SECRET obligatorio en producción
+
+* **Estado:** **IMPLEMENTADA, PENDIENTE DE REVISIÓN CRUZADA**
+* **Decisión:** la carga de configuración falla cuando `NODE_ENV=production` y falta `JWT_SECRET`. El valor de desarrollo solo sirve fuera de producción.
+* **Alternativa descartada:** conservar el secreto público de respaldo en producción.
+* **Motivo:** ese valor está versionado como ejemplo y permitiría firmar tokens válidos si el operador omite la variable.
+
+---
+
+### ADR-21: Firestore accesible solo desde la API
+
+* **Estado:** **IMPLEMENTADA, PENDIENTE DE REVISIÓN CRUZADA**
+* **Hallazgo:** la regla anterior dejaba leer `questions` a cualquier usuario autenticado. Cada documento contiene `correctAnswer`; una lectura directa evitaba `sanitizeQuestion()`. También permitía crear respuestas con `correct` elegido por el cliente y modificar `users/{uid}/state/practice`.
+* **Decisión:** `firestore.rules` bloquea todas las lecturas y escrituras de SDKs cliente. La app usa la API y Firebase Admin accede con IAM sin pasar por estas reglas, como indica la [documentación de Firebase](https://firebase.google.com/docs/firestore/security/rules-conditions).
+* **Alternativa descartada:** conservar accesos directos con validaciones por colección. No se puede ocultar `correctAnswer` al entregar el documento completo de una pregunta y el cliente no necesita acceso directo según ADR-03.
+
+---
+
+### ADR-22: Confirmación para ejecutar el seed remoto
+
+* **Estado:** **IMPLEMENTADA, PENDIENTE DE REVISIÓN CRUZADA**
+* **Decisión:** `npm run seed` opera con el emulador; fuera de él exige `SEED_ALLOW_REMOTE=true` antes de abrir Firestore.
+* **Alternativa descartada:** permitir que la variable de credenciales por sí sola habilite el seed remoto.
+* **Motivo:** el script usa IDs fijos con `.set()` y puede reemplazar documentos existentes y sus marcas de tiempo en el proyecto real.
+
+---
+
+### ADR-23: Recálculo diario del percentil con Vercel Cron
+
+* **Estado:** **PROPUESTA PARA RATIFICACIÓN, SIN IMPLEMENTAR**
+* **Propuesta:** en la Iteración 4, un cron diario de Vercel llamaría a un endpoint interno de la API para actualizar los umbrales de `cohortSpeedThresholds` descritos en ADR-10.
+* **Alternativa descartada por ahora:** Cloud Function programada.
+* **Motivo:** el proyecto Firebase usa Spark; [Firebase exige Blaze para desplegar Cloud Functions](https://firebase.google.com/docs/functions/get-started). La propuesta no agrega todavía ni el cron ni el endpoint.
+
+---
+
+### ADR-24: Ubicación de Firestore para el proyecto de desarrollo
+
+* **Estado:** **DECIDIDA POR EL EQUIPO, PENDIENTE DE APLICACIÓN**
+* **Decisión:** crear la base Firestore predeterminada del proyecto Firebase propio de desarrollo en la región `southamerica-east1` (São Paulo). Configurar las funciones del proyecto Vercel de la API en `gru1` (São Paulo). La app Flutter Web sigue en su proyecto Vercel separado.
+* **Alternativa descartada:** `southamerica-west1` (Santiago). Firestore la ofrece, pero [Vercel no tiene una región de funciones en Santiago](https://vercel.com/docs/regions). Con la API en `gru1`, cada acceso a la base cruzaría entre São Paulo y Santiago. También se descarta dejar la región predeterminada `iad1` de Vercel.
+* **Motivo:** según ADR-21, el cliente consulta Firestore solo por la API. Ubicar API y base en la misma ciudad evita ese tramo adicional en cada lectura y escritura. [Firestore permite ambas regiones sudamericanas](https://firebase.google.com/docs/firestore/locations) y [Vercel recomienda ejecutar las funciones cerca de la base](https://vercel.com/docs/functions/configuring-functions/region). La cuota gratuita de Firestore se aplica a [una base por proyecto](https://firebase.google.com/docs/firestore/pricing). La ubicación de una base ya creada no se puede cambiar; antes de provisionarla se debe comprobar que el proyecto nuevo no tenga una ubicación fijada por otro recurso.

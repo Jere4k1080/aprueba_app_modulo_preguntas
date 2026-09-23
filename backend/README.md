@@ -39,6 +39,12 @@ npm run dev
 npm start
 ```
 
+En local, `FIRESTORE_EMULATOR_HOST` dirige Firebase Admin al emulador. En Vercel se omite esa variable y se configura `FIREBASE_SERVICE_ACCOUNT_BASE64` con el JSON de la cuenta de servicio codificado en base64. El servidor falla al iniciar si falta la credencial de Firebase o si `NODE_ENV=production` no tiene `JWT_SECRET`.
+
+`ALLOWED_ORIGINS` contiene orígenes exactos separados por comas. `ALLOWED_ORIGIN_PATTERN` permite una expresión regular opcional para vistas previas. Las solicitudes previas `OPTIONS` admiten `Authorization` sin habilitar cookies. El seed se niega a escribir en un proyecto real si `SEED_ALLOW_REMOTE` no es `true`.
+
+El despliegue usa otro proyecto de Vercel con Root Directory `backend/`; `src/app.js` exporta Express y `src/server.js` escucha el puerto local. Las reglas y los índices se configuran desde `firebase.json` en la raíz del repositorio.
+
 ## Verificación de Salud
 
 Endpoint de comprobación de salud disponible en:

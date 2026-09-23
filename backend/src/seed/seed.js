@@ -5,6 +5,9 @@ const { getDb, admin } = require('../config/firebase');
  * Pobla las colecciones con los datos canónicos definidos en seed/README.md.
  */
 async function seedDatabase() {
+  if (!process.env.FIRESTORE_EMULATOR_HOST && process.env.SEED_ALLOW_REMOTE !== 'true') {
+    throw new Error('Seed remoto bloqueado. Define SEED_ALLOW_REMOTE=true para permitirlo.');
+  }
   console.log('[Seed] Iniciando siembra de datos en Firestore...');
   const db = getDb();
 

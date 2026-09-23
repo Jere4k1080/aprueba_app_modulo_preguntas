@@ -34,7 +34,7 @@ erDiagram
 ### 2.1 Colección `tests`
 * **Ámbito:** Colección raíz pública.
 * **Propósito:** Catálogo oficial de las 5 pruebas de la batería PAES.
-* **Política de Seguridad:** Lectura pública (`allow read: if true;`), escritura bloqueada para clientes (`allow write: if false;`).
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. El catálogo se entrega por la API.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
@@ -48,7 +48,7 @@ erDiagram
 ### 2.2 Colección `skills`
 * **Ámbito:** Colección raíz pública.
 * **Propósito:** Árbol de competencias y habilidades curriculares por prueba.
-* **Política de Seguridad:** Lectura pública, escritura exclusiva por script seed o panel administrativo.
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. El backend y el seed usan Firebase Admin.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
@@ -74,7 +74,7 @@ erDiagram
 ### 2.3 Colección `questions`
 * **Ámbito:** Colección raíz autenticada.
 * **Propósito:** Banco central de ítems de evaluación tipo PAES.
-* **Política de Seguridad:** Lectura autenticada (`request.auth != null`), escritura restringida a administradores.
+* **Política de Seguridad:** Lectura y escritura directas del cliente bloqueadas. Firebase Admin evalúa la respuesta en el backend.
 * **Regla de Integridad Fundamental:** El campo `correctAnswer` se almacena exclusivamente para evaluación en servidor. La API omite este campo en `GET /practice/next` y `GET /questions/:id`.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
@@ -96,7 +96,7 @@ erDiagram
 ### 2.4 Colección `answers`
 * **Ámbito:** Colección raíz inmutable.
 * **Propósito:** Registro histórico transaccional de respuestas de estudiantes para analítica de cohorte.
-* **Política de Seguridad:** Creación autorizada únicamente para el propio autor (`request.resource.data.userId == request.auth.uid`). Modificación y borrado denegados de forma absoluta.
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. La API crea la respuesta tras evaluarla.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
@@ -114,7 +114,7 @@ erDiagram
 ### 2.5 Colección `corrections`
 * **Ámbito:** Colección raíz transaccional.
 * **Propósito:** Reportes de error o ambigüedad ingresados por los estudiantes sobre ítems del banco.
-* **Política de Seguridad:** Creación para el autor con `status == 'pending'`. Modificación bloqueada para cliente (resolución exclusiva por Admin SDK).
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. La API crea la solicitud y administración la resuelve con Firebase Admin.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
@@ -135,7 +135,7 @@ erDiagram
 ### 2.6 Subcolección `users/{uid}/medalLedger`
 * **Ámbito:** Subcolección bajo documento de usuario.
 * **Propósito:** Libro contable de movimientos de medallas (auditoría financiera de gamificación).
-* **Política de Seguridad:** Lectura permitida al titular (`request.auth.uid == uid`), escritura deshabilitada para clientes.
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. La API entrega el historial al titular.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
@@ -151,7 +151,7 @@ erDiagram
 ### 2.7 Documento de Estado: `users/{uid}/state/practice`
 * **Ámbito:** Documento específico de estado bajo la subcolección `users/{uid}/state`.
 * **Propósito:** Registro consolidado del avance de práctica del estudiante para permitir la exclusión económica de preguntas ya contestadas en `GET /practice/next`.
-* **Política de Seguridad:** Lectura y escritura restringida al propio usuario (`request.auth.uid == uid`).
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. Solo la API modifica este estado.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
