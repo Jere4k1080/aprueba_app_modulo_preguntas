@@ -21,7 +21,7 @@ Proyecto de Título (Capstone) · Grupo 9 · Duoc UC San Bernardo · 2026
 - [Tecnologías](#tecnologías)
 - [Arquitectura](#arquitectura)
 - [Instalación y ejecución](#instalación-y-ejecución)
-- [Despliegue en Vercel (Web)](#despliegue-en-vercel-web)
+- [Despliegue en Vercel](#despliegue-en-vercel)
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Metodología de trabajo](#metodología-de-trabajo)
 - [Convenciones](#convenciones)
@@ -236,7 +236,7 @@ flutter test                       # pruebas unitarias
 
 ---
 
-## Despliegue en Vercel (Web)
+## Despliegue en Vercel
 
 La versión web del módulo se compila y despliega automáticamente en Vercel mediante [`vercel.json`](vercel.json) y el script [`vercel-build.sh`](vercel-build.sh):
 
@@ -249,23 +249,58 @@ La versión web del módulo se compila y despliega automáticamente en Vercel me
 - **Directorio de salida (`outputDirectory`):** `build/web`.
 - **Enrutamiento (`rewrites`):** Redirige todas las rutas hacia `/index.html` para permitir la navegación directa del cliente mediante GoRouter.
 
-### Variables de entorno requeridas en Vercel:
-- `API_BASE_URL`: URL base del backend de la API (por ejemplo `https://api.staging.aprueba.cl/api/v1`).
+### Proyectos y URLs
 
-### URL de producción:
-- [https://aprueba-app-modulo-preguntas.vercel.app/](https://aprueba-app-modulo-preguntas.vercel.app/)
+| Proyecto de Vercel | Contenido | Root Directory | URL de producción |
+|---|---|---|---|
+| `aprueba-app-modulo-preguntas` | App Flutter Web | raíz del repositorio | https://aprueba-app-modulo-preguntas.vercel.app |
+| `aprueba-app-modulo-preguntas-api` | API Express | `backend/` | https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1 |
 
-### Backend en un proyecto de Vercel separado
+Los dos proyectos están en el equipo `aprueba-app` de Vercel y conectados a este repositorio con `main` como rama de producción. La API corre en la región `gru1` (São Paulo). Firestore está en el proyecto Firebase `aprueba-app-modulo-preguntas`, plan Spark, con la base `(default)` en `southamerica-east1` (ADR-24 y ADR-25). `.firebaserc` fija ese proyecto como predeterminado.
 
-El proyecto web anterior conserva la raíz del repositorio. La API usa otro proyecto de Vercel con **Root Directory `backend/`**. Vercel detecta `backend/src/app.js` como aplicación Express; `backend/src/server.js` escucha un puerto solo al ejecutar `npm start` localmente.
+### Variables de entorno
 
-1. Crea un proyecto Firebase propio y su base Firestore predeterminada en `southamerica-east1` (São Paulo), según ADR-24. Comprueba la ubicación antes de crearla: no se puede cambiar después. Las reglas bloquean el acceso directo del cliente; el backend usa Firebase Admin.
-2. Genera una cuenta de servicio para ese proyecto y guarda el JSON fuera del repositorio. En PowerShell, conviértelo con `[Convert]::ToBase64String([IO.File]::ReadAllBytes('RUTA_AL_JSON'))`. Copia el resultado solo a `FIREBASE_SERVICE_ACCOUNT_BASE64` en Vercel.
-3. Crea el proyecto de Vercel de la API con Root Directory `backend/` y configura Function Region `gru1` (São Paulo) en Settings > Functions. Vercel usa `iad1` si no se cambia.
-4. En ese proyecto configura `NODE_ENV=production`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID` y `ALLOWED_ORIGINS`. Este último contiene la URL de origen de la app web, sin barra final. `ALLOWED_ORIGIN_PATTERN` es opcional para vistas previas y debe cubrir el origen completo con `^` y `$`. No configures `FIRESTORE_EMULATOR_HOST` allí. En el proyecto web configura `API_BASE_URL=https://DOMINIO_DEL_BACKEND/api/v1`.
-5. Desde la raíz del repositorio, despliega las reglas y los índices con `firebase deploy --only firestore --project ID_DEL_PROYECTO`. `.firebaserc` no fija un proyecto para evitar desplegar por accidente en otro entorno.
-6. Despliega la API y comprueba `https://DOMINIO_DEL_BACKEND/api/v1/health`. Debe responder con `data.status` igual a `ok` dentro del envelope `{data, error, meta}`. Vuelve a desplegar la app web y comprueba en el navegador que sus solicitudes usan la API y reciben la cabecera CORS correspondiente.
-7. Mantén `SEED_ALLOW_REMOTE` sin definir. Si el equipo decide cargar datos de prueba en el proyecto real, configura `SEED_ALLOW_REMOTE=true` solo durante esa ejecución y retíralo después. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
+Solo nombres. Los valores se administran en cada proyecto de Vercel y no se versionan.
+
+La app web usa `API_BASE_URL` en production y preview, con la URL de la API terminada en `/api/v1`. `vercel-build.sh` la lee al compilar, así que cambiar su valor obliga a volver a desplegar la app.
+
+La API usa `NODE_ENV`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` y `ALLOWED_ORIGIN_PATTERN`, todas en production y preview. `JWT_SECRET` tiene un valor distinto en cada entorno. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. Las URLs de vista previa de la app web cambian en cada despliegue, así que pasan CORS por `ALLOWED_ORIGIN_PATTERN`, que vale `^https://aprueba-app-modulo-preguntas-[a-z0-9-]+-aprueba-app\.vercel\.app$`. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría Firebase Admin al emulador, ni `SEED_ALLOW_REMOTE`. El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL`, `QUOTA_RESET_TIMEZONE`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`) queda con los valores por defecto de `backend/src/config/index.js`, que son los mismos del ejemplo.
+
+Para rotar la cuenta de servicio se descarga un JSON nuevo desde la consola de Firebase y se guarda fuera del repositorio. En PowerShell, `[Convert]::ToBase64String([IO.File]::ReadAllBytes('RUTA_AL_JSON'))` lo convierte a base64, y ese resultado reemplaza `FIREBASE_SERVICE_ACCOUNT_BASE64` en los dos entornos.
+
+### Cómo se despliega
+
+Al fusionar en `main`, Vercel despliega la API y la app web a producción. `backend/vercel.json` declara el preset Express y desactiva los despliegues de Git de la API para cualquier otra rama (ADR-26). La app web sí crea vistas previas por rama.
+
+Las reglas y los índices de Firestore se publican aparte, desde la raíz del repositorio:
+
+```bash
+npx firebase-tools deploy --only firestore --project aprueba-app-modulo-preguntas
+```
+
+Un despliegue manual de la API se hace desde la raíz del repositorio y no desde `backend/`: con Root Directory `backend/` la CLI busca `backend/backend` y falla. Desde la raíz, la CLI sube el repositorio completo y no respeta `.gitignore`; solo excluye lo que lista `.vercelignore`. Por eso es más seguro hacerlo desde un checkout limpio, por ejemplo un `git worktree`. El 2026-09-23, `npx vercel deploy` sin `--prod` desde un checkout en `main` creó un despliegue de producción. Para una vista previa conviene pasar siempre `--target preview`.
+
+### Verificación
+
+```bash
+curl -s https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1/health
+```
+
+Responde 200 con `data.status` igual a `ok` y `error` en `null`. `meta.requestId` empieza con `req_`. Una ruta inexistente, como `/api/v1/ruta-inexistente`, responde 404 con `error.code` igual a `NOT_FOUND` en el mismo envelope. CORS se prueba con una solicitud previa:
+
+```bash
+curl -s -i -X OPTIONS https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1/health \
+  -H "Origin: https://aprueba-app-modulo-preguntas.vercel.app" \
+  -H "Access-Control-Request-Method: GET"
+```
+
+La respuesta es 204 con `Access-Control-Allow-Origin` igual al origen de la app. Las vistas previas de la app web se prueban con el mismo comando y un origen como `https://aprueba-app-modulo-preguntas-git-main-aprueba-app.vercel.app`, que entra por `ALLOWED_ORIGIN_PATTERN`. Con un origen que no está en `ALLOWED_ORIGINS` ni calza con el patrón, esa cabecera no aparece.
+
+Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión en Vercel. Se prueban con `npx vercel curl URL -- -s -i`. En su primer uso, ese comando crea en el proyecto un secreto de "Protection Bypass for Automation".
+
+### Datos de prueba
+
+`SEED_ALLOW_REMOTE` no se define en Vercel. Para cargar el seed en el proyecto real se ejecuta `npm run seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque `dotenv` carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
 
 ---
 

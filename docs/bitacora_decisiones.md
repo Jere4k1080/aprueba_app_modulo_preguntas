@@ -34,6 +34,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 22. [ADR-22: Confirmación para ejecutar el seed remoto](#adr-22-confirmación-para-ejecutar-el-seed-remoto)
 23. [ADR-23: Recálculo diario del percentil con Vercel Cron](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
 24. [ADR-24: Ubicación de Firestore para el proyecto de desarrollo](#adr-24-ubicación-de-firestore-para-el-proyecto-de-desarrollo)
+25. [ADR-25: Ubicación de Firestore y región de la API aplicadas](#adr-25-ubicación-de-firestore-y-región-de-la-api-aplicadas)
+26. [ADR-26: Preset Express y despliegues de Git solo desde main](#adr-26-preset-express-y-despliegues-de-git-solo-desde-main)
 27. [ADR-27: Cuota y preferencias en `users/{uid}` según el modelo de la empresa](#adr-27-cuota-y-preferencias-en-usersuid-según-el-modelo-de-la-empresa)
 28. [ADR-28: Supuesto sobre preferencias y cuota que el modelo de la empresa no define](#adr-28-supuesto-sobre-preferencias-y-cuota-que-el-modelo-de-la-empresa-no-define)
 29. [ADR-29: Respuesta de `GET /practice/next` sin pruebas seleccionadas](#adr-29-respuesta-de-get-practicenext-sin-pruebas-seleccionadas)
@@ -222,6 +224,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Decisión:** Desplegar la API en otro proyecto de Vercel con Root Directory `backend/`. `src/app.js` exporta Express y `src/server.js` escucha solo en desarrollo local, conforme a la [guía de Vercel para Express](https://vercel.com/docs/frameworks/backend/express).
 * **Alternativa descartada:** servir la API bajo `/api` en el mismo proyecto que Flutter Web.
 * **Motivo:** la raíz del repositorio tiene un build de Flutter y no contiene `package.json`; separar ambos proyectos evita mezclar comandos de compilación y variables de entorno. Como aún no existe el ID del proyecto Firebase, `.firebaserc` queda sin alias y el despliegue exige `--project`; se descartó inventar un ID provisional.
+* **Actualización de despliegue:** con el ID real, `.firebaserc` fija `aprueba-app-modulo-preguntas` como proyecto predeterminado (ADR-25). La configuración de Vercel de la API está en `backend/vercel.json` (ADR-26).
 
 ---
 
@@ -282,10 +285,29 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-24: Ubicación de Firestore para el proyecto de desarrollo
 
-* **Estado:** **DECIDIDA POR EL EQUIPO, PENDIENTE DE APLICACIÓN**
+* **Estado:** **DECIDIDA POR EL EQUIPO, APLICADA EL 2026-09-23 (ver ADR-25)**
 * **Decisión:** crear la base Firestore predeterminada del proyecto Firebase propio de desarrollo en la región `southamerica-east1` (São Paulo). Configurar las funciones del proyecto Vercel de la API en `gru1` (São Paulo). La app Flutter Web sigue en su proyecto Vercel separado.
 * **Alternativa descartada:** `southamerica-west1` (Santiago). Firestore la ofrece, pero [Vercel no tiene una región de funciones en Santiago](https://vercel.com/docs/regions). Con la API en `gru1`, cada acceso a la base cruzaría entre São Paulo y Santiago. También se descarta dejar la región predeterminada `iad1` de Vercel.
 * **Motivo:** según ADR-21, el cliente consulta Firestore solo por la API. Ubicar API y base en la misma ciudad evita ese tramo adicional en cada lectura y escritura. [Firestore permite ambas regiones sudamericanas](https://firebase.google.com/docs/firestore/locations) y [Vercel recomienda ejecutar las funciones cerca de la base](https://vercel.com/docs/functions/configuring-functions/region). La cuota gratuita de Firestore se aplica a [una base por proyecto](https://firebase.google.com/docs/firestore/pricing). La ubicación de una base ya creada no se puede cambiar; antes de provisionarla se debe comprobar que el proyecto nuevo no tenga una ubicación fijada por otro recurso.
+
+---
+
+### ADR-25: Ubicación de Firestore y región de la API aplicadas
+
+* **Estado:** **APLICADA EL 2026-09-23**
+* **Decisión:** ADR-24 quedó aplicada en el proyecto Firebase `aprueba-app-modulo-preguntas` (número 1073481331997), en plan Spark. La base `(default)` es Firestore nativo, edición Standard, en `southamerica-east1`, creada el 2026-09-23 a las 02:58 UTC y con la cuota gratuita asignada. La API corre en el proyecto de Vercel `aprueba-app-modulo-preguntas-api` con la región de funciones en `gru1`: `vercel inspect` del despliegue de producción muestra la función `index` en `gru1`. Con el ID ya creado, `.firebaserc` lo fija como proyecto predeterminado.
+* **Alternativa descartada:** dejar `.firebaserc` sin proyecto y exigir `--project` en cada despliegue, como establecía ADR-17. Esa regla existía porque el ID todavía no estaba creado. No hubo que evaluar un cambio de región para la API: la base ya estaba en la ubicación de ADR-24, que no se puede cambiar después de creada.
+* **Verificación:** el MCP de Firebase confirmó la ubicación de la base y la facturación deshabilitada. Las reglas activas coinciden con `firestore.rules`, y una lectura anónima por la API REST de Firestore sobre `questions`, `answers`, `corrections`, `tests`, `skills` y `users/{uid}/state/practice` devuelve 403 `PERMISSION_DENIED`. Los cuatro índices compuestos de `firestore.indexes.json` quedaron en estado `READY`. El proyecto también tiene una instancia de Realtime Database que el módulo no usa; sus reglas niegan lectura y escritura.
+
+---
+
+### ADR-26: Preset Express y despliegues de Git solo desde main
+
+* **Estado:** **IMPLEMENTADA Y APROBADA EL 2026-09-23**
+* **Hallazgo:** el proyecto de Vercel de la API se había creado con el preset Other, sin Express. El primer despliegue con la CLI falló por otra razón: sin un `vercel.json` en `backend/`, la CLI aplicó el de la raíz, que es de la app web, y ejecutó `bash vercel-build.sh` junto con el rewrite a `/index.html`.
+* **Decisión:** `backend/vercel.json` declara `"framework": "express"` y limita los despliegues de Git con `git.deploymentEnabled`, usando `"**": false` y `"main": true`. Vercel despliega una rama si al menos una regla que la cubre vale `true`, así que solo `main` genera despliegues, y van a producción. El proyecto quedó conectado a `Jere4k1080/aprueba_app_modulo_preguntas` con `vercel git connect`. La CLI sigue pudiendo desplegar cualquier rama.
+* **Alternativas descartadas:** cambiar el preset y el Ignored Build Step desde el panel de Vercel. Funcionaría, pero la configuración quedaría fuera del repositorio y sin revisión. También se descartó `ignoreCommand` en `vercel.json`, porque Vercel crea el despliegue y después lo cancela.
+* **Consecuencias:** Vercel lee git.deploymentEnabled del commit que se empuja. El primer despliegue de producción salió del commit 80def89 de la rama feature/deploy-backend-vercel. En ese momento, el código de backend/ era idéntico al de main; solo difería backend/vercel.json. El PR #12 llevó esa configuración a main el 2026-09-23. Después de la fusión, /health respondió 200 y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin.
 
 ---
 
