@@ -2,6 +2,7 @@
 
 Referencia de esquemas para el script de seed del backend (`npm run seed`).
 Los ids usados en los ejemplos son los que el frontend espera.
+Los datos viven en `backend/src/seed/data.js`.
 
 ---
 
@@ -50,19 +51,19 @@ Habilidad dentro de una prueba. El id es un slug generado.
   "name": "Comprensión de textos literarios",
   "testId": "lectora",
   "domain": "Comprensión lectora",
-  "level": 1,
+  "level": 2,
   "maxLevel": 4,
-  "prerequisiteIds": [],
+  "prerequisiteIds": ["sk_demo_lectora_localizar"],
   "status": "active",
   "resources": [
     {
-      "type": "video",
-      "title": "Análisis de textos narrativos",
-      "url": "https://youtube.com/watch?v=...",
-      "duration": "12 min",
-      "source": "YouTube"
+      "type": "pdf",
+      "title": "Temario y modelos de prueba oficiales de Competencia Lectora",
+      "url": "https://demre.cl/",
+      "source": "DEMRE"
     }
-  ]
+  ],
+  "isDemo": true
 }
 ```
 
@@ -77,6 +78,7 @@ Habilidad dentro de una prueba. El id es un slug generado.
 | `prerequisiteIds` | `string[]` | ✔ | IDs de habilidades prerequisito |
 | `status` | `string` | ✔ | `done` \| `active` \| `locked` |
 | `resources` | `SkillResource[]` | ✔ | Material de apoyo |
+| `isDemo` | `boolean?` | | `true` en las habilidades de demostración del seed |
 
 **`SkillResource`** (objeto embebido):
 
@@ -87,6 +89,10 @@ Habilidad dentro de una prueba. El id es un slug generado.
 | `url` | `string?` | |
 | `duration` | `string?` | |
 | `source` | `string?` | |
+
+El seed carga 20 habilidades de demostración, cuatro por prueba, con prerrequisitos
+dentro del árbol y recursos de DEMRE, Khan Academy, Memoria Chilena, la BCN o el INE.
+Las nuevas usan IDs `sk_demo_<prueba>_<tema>`; `sk_lectora_comp_lit` conserva el suyo.
 
 ---
 
@@ -104,7 +110,7 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
   "axis": "Comprensión lectora",
   "skillId": "sk_lectora_comp_lit",
   "difficulty": "d2",
-  "statement": "¿Cuál es la idea principal del fragmento?",
+  "statement": "Lee el fragmento y responde.\n\n> Cuando llegó la fábrica de cemento... \n\n¿Cuál es la idea principal del fragmento?",
   "options": [
     "La modernización de la industria",
     "El impacto ambiental del progreso",
@@ -112,7 +118,7 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
     "Los avances tecnológicos del siglo XX"
   ],
   "correctAnswer": "B",
-  "explanation": "El fragmento describe las consecuencias ambientales...",
+  "explanation": "1. El fragmento parte con la llegada de la fábrica...\nVerificación: ...",
   "cohortSpeedThresholds": {
     "p25": 15000,
     "p50": 25000,
@@ -136,6 +142,14 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
 | `explanation` | `string?` | | Explicación corta |
 | `cohortSpeedThresholds` | `map?` | | Umbrales precalculados en ms (`p25`, `p50`, `p75`, `p90`) |
 | `status` | `string` | ✔ | `active` \| `draft` \| `disabled` |
+| `isDemo` | `boolean?` | | `true` en las preguntas de demostración del seed |
+
+El seed carga 20 preguntas de demostración, una por cada combinación de prueba y
+dificultad. Las escribió el equipo; no vienen del banco de la empresa. Las nuevas usan
+IDs `q_demo_<prueba>_<dificultad>`, por ejemplo `q_demo_m1_d3`. `q_lectora_001` conserva
+su ID porque la respuesta, la recorrección y el estado de práctica de `usr_demo` la
+referencian. La explicación va en texto, con pasos numerados y una línea final de
+verificación.
 
 ---
 
@@ -259,4 +273,10 @@ Estado de sesión y preguntas respondidas por el alumno. Usado por `GET /practic
 | `lastQuestionId` | `string?` | | Última pregunta entregada |
 | `lastAnsweredAt` | `timestamp?` | | Fecha de última respuesta |
 | `activeSessionId` | `string?` | | ID de la sesión actual |
+
+El seed crea este documento para dos usuarios. `usr_demo` tiene respondida
+`q_lectora_001`, así que le quedan 19 preguntas. `usr_demo_nuevo` tiene
+`answeredQuestionIds` vacío y sirve para mostrar el flujo desde cero. Ninguno tiene
+documento `users/{uid}`: el diccionario de datos todavía no define ese documento ni
+dónde se guardan la cuota y las preferencias.
 

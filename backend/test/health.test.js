@@ -178,6 +178,37 @@ async function runTests() {
   }
   console.log('✓ Prueba 9: Seed remoto exige SEED_ALLOW_REMOTE=true.');
 
+  // 10. El banco de demostración del seed es consistente
+  const seedData = require('../src/seed/data');
+  const testIds = new Set(seedData.tests.map((t) => t.id));
+  const skillById = new Map(seedData.skills.map((s) => [s.id, s]));
+  const questionIds = new Set(seedData.questions.map((q) => q.id));
+  assert.strictEqual(skillById.size, seedData.skills.length, 'Hay IDs de habilidades repetidos');
+  assert.strictEqual(questionIds.size, seedData.questions.length, 'Hay IDs de preguntas repetidos');
+  for (const s of seedData.skills) {
+    assert.ok(s.isDemo && testIds.has(s.testId), `${s.id}: marca de demostración o prueba inválida`);
+    for (const p of s.prerequisiteIds) assert.ok(skillById.has(p) && p !== s.id, `${s.id}: prerrequisito inválido ${p}`);
+  }
+  const celdas = new Set();
+  for (const q of seedData.questions) {
+    assert.ok(q.isDemo && testIds.has(q.testId) && ['d1', 'd2', 'd3', 'd4'].includes(q.difficulty), `${q.id}: marca, prueba o dificultad inválida`);
+    assert.ok(q.options.length >= 4 && q.options.length <= 5, `${q.id}: debe tener 4 o 5 alternativas`);
+    assert.strictEqual(new Set(q.options).size, q.options.length, `${q.id}: alternativas repetidas`);
+    assert.ok('ABCDE'.slice(0, q.options.length).includes(q.correctAnswer), `${q.id}: correctAnswer fuera de las alternativas`);
+    assert.strictEqual(skillById.get(q.skillId)?.testId, q.testId, `${q.id}: skillId inexistente o de otra prueba`);
+    const { p25, p50, p75, p90 } = q.cohortSpeedThresholds;
+    assert.ok(p25 < p50 && p50 < p75 && p75 < p90, `${q.id}: umbrales de rapidez no crecientes`);
+    assert.ok(q.explanation, `${q.id}: falta la explicación`);
+    celdas.add(`${q.testId}/${q.difficulty}`);
+  }
+  assert.strictEqual(celdas.size, 20, 'Faltan preguntas en alguna combinación de prueba y dificultad');
+  for (const [uid, state] of Object.entries(seedData.practiceStates)) {
+    assert.ok(state.answeredQuestionIds.every((id) => questionIds.has(id)), `${uid}: responde preguntas inexistentes`);
+    assert.ok(state.answeredQuestionIds.length < questionIds.size, `${uid}: no le quedan preguntas por responder`);
+  }
+  assert.deepStrictEqual(seedData.practiceStates.usr_demo_nuevo.answeredQuestionIds, []);
+  console.log('✓ Prueba 10: El banco de demostración cubre 5 pruebas y 4 dificultades con referencias válidas.');
+
   server.close();
   console.log('[Backend Tests] ¡Todas las pruebas de infraestructura pasaron con éxito!\n');
 }

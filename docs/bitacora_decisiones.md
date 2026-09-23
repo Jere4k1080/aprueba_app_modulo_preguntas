@@ -263,6 +263,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Decisión:** `npm run seed` opera con el emulador; fuera de él exige `SEED_ALLOW_REMOTE=true` antes de abrir Firestore.
 * **Alternativa descartada:** permitir que la variable de credenciales por sí sola habilite el seed remoto.
 * **Motivo:** el script usa IDs fijos con `.set()` y puede reemplazar documentos existentes y sus marcas de tiempo en el proyecto real.
+* **Actualización (2026-09-23):** el seed ya carga datos en el proyecto real, así que sus preguntas y habilidades llevan `isDemo: true` y los documentos nuevos usan IDs con el segmento `demo`, como `q_demo_m1_d3` o `sk_demo_m1_operatoria`. Volver a correr el seed no pisa preguntas reales aunque la empresa use IDs como `q_m1_001`, y los datos de demostración se pueden filtrar o borrar con una consulta. Se descartaron los IDs correlativos sin marca, porque podían coincidir con los del banco real y el seed los habría sobrescrito. `q_lectora_001` y `sk_lectora_comp_lit` conservan su ID porque otros documentos del seed los referencian.
 
 ---
 

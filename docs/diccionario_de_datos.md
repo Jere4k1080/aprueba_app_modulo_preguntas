@@ -61,6 +61,7 @@ erDiagram
 | `prerequisiteIds` | `Array<String>` | Sí | Lista de `skills.id` | Prerrequisitos de aprendizaje requeridos. |
 | `status` | `String` | Sí | `done` \| `active` \| `locked` | Estado del nodo pedagógico. |
 | `resources` | `Array<Map>` | No | Lista de objetos de recurso | Material didáctico asociado (ver sub-esquema). |
+| `isDemo` | `Boolean?` | No | `true` o ausente | Marca las habilidades de demostración que carga el seed (ADR-22). |
 
 #### Sub-esquema: `SkillResource` (Map embebido)
 * `type`: `String` (`video` | `pdf` | `exercise`)
@@ -90,6 +91,7 @@ erDiagram
 | `explanation` | `String?` | No | Texto explicativo | Argumentación de la alternativa correcta. |
 | `cohortSpeedThresholds` | `Map<String, Integer>?` | No | `{"p25": 15000, "p50": 25000, "p75": 45000, "p90": 60000}` | Umbrales de rapidez precalculados (en ms) para asignación O(1) de percentil sin consultar toda la colección answers. |
 | `status` | `String` | Sí | `active` \| `draft` \| `disabled` | Estado de publicación en el banco. |
+| `isDemo` | `Boolean?` | No | `true` o ausente | Marca las preguntas de demostración que carga el seed; no provienen del banco de la empresa (ADR-22). |
 
 ---
 
