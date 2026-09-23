@@ -317,6 +317,45 @@ const questions = [
     UMBRALES.d4),
 ];
 
+// Usuarios de demostración con los campos obligatorios de users/{uid} del modelo de
+// datos de la empresa (v1.0). En producción los crea el registro, que está fuera de
+// nuestro alcance (ADR-27). El seed completa quota.date, lastActiveDate y las fechas.
+const sinMedallas = { bronze: 0, silver: 0, gold: 0, diamond: 0, platinum: 0 };
+const usuario = (id, name, datos) => ({
+  id,
+  name,
+  nameLower: name.toLowerCase(),
+  email: `${id}@demo.aprueba.invalid`,
+  emailLower: `${id}@demo.aprueba.invalid`,
+  authProvider: 'password',
+  avatarColor: '#1A365D',
+  locale: 'es',
+  theme: 'light',
+  country: 'CL',
+  plan: 'free',
+  planStatus: 'none',
+  practiceFormat: 'random',
+  difficulty: 'd1',
+  dailyReminder: false,
+  ...datos,
+});
+
+const users = [
+  usuario('usr_demo', 'Estudiante Demo', {
+    streak: 1,
+    selectedTests: ['lectora', 'm1', 'm2', 'cien', 'hist'],
+    medals: { ...sinMedallas, bronze: 1 },
+    quota: { used: 1, max: 10, bonusSchool: false, bonusAddress: false, unlimited: false },
+  }),
+  // Estudiante nuevo: cuota base, sin preguntas respondidas y dos pruebas elegidas.
+  usuario('usr_demo_nuevo', 'Estudiante Nuevo', {
+    streak: 0,
+    selectedTests: ['lectora', 'm1'],
+    medals: sinMedallas,
+    quota: { used: 0, max: 10, bonusSchool: false, bonusAddress: false, unlimited: false },
+  }),
+];
+
 // Estado de práctica de los usuarios de demostración (ADR-09). El seed agrega
 // lastAnsweredAt cuando hay preguntas respondidas.
 const practiceStates = {
@@ -325,4 +364,4 @@ const practiceStates = {
   usr_demo_nuevo: { answeredQuestionIds: [] },
 };
 
-module.exports = { tests, skills, questions, practiceStates };
+module.exports = { tests, skills, questions, users, practiceStates };

@@ -34,6 +34,9 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 22. [ADR-22: Confirmación para ejecutar el seed remoto](#adr-22-confirmación-para-ejecutar-el-seed-remoto)
 23. [ADR-23: Recálculo diario del percentil con Vercel Cron](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
 24. [ADR-24: Ubicación de Firestore para el proyecto de desarrollo](#adr-24-ubicación-de-firestore-para-el-proyecto-de-desarrollo)
+27. [ADR-27: Cuota y preferencias en `users/{uid}` según el modelo de la empresa](#adr-27-cuota-y-preferencias-en-usersuid-según-el-modelo-de-la-empresa)
+28. [ADR-28: Supuesto sobre preferencias y cuota que el modelo de la empresa no define](#adr-28-supuesto-sobre-preferencias-y-cuota-que-el-modelo-de-la-empresa-no-define)
+29. [ADR-29: Respuesta de `GET /practice/next` sin pruebas seleccionadas](#adr-29-respuesta-de-get-practicenext-sin-pruebas-seleccionadas)
 
 ---
 
@@ -283,3 +286,32 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Decisión:** crear la base Firestore predeterminada del proyecto Firebase propio de desarrollo en la región `southamerica-east1` (São Paulo). Configurar las funciones del proyecto Vercel de la API en `gru1` (São Paulo). La app Flutter Web sigue en su proyecto Vercel separado.
 * **Alternativa descartada:** `southamerica-west1` (Santiago). Firestore la ofrece, pero [Vercel no tiene una región de funciones en Santiago](https://vercel.com/docs/regions). Con la API en `gru1`, cada acceso a la base cruzaría entre São Paulo y Santiago. También se descarta dejar la región predeterminada `iad1` de Vercel.
 * **Motivo:** según ADR-21, el cliente consulta Firestore solo por la API. Ubicar API y base en la misma ciudad evita ese tramo adicional en cada lectura y escritura. [Firestore permite ambas regiones sudamericanas](https://firebase.google.com/docs/firestore/locations) y [Vercel recomienda ejecutar las funciones cerca de la base](https://vercel.com/docs/functions/configuring-functions/region). La cuota gratuita de Firestore se aplica a [una base por proyecto](https://firebase.google.com/docs/firestore/pricing). La ubicación de una base ya creada no se puede cambiar; antes de provisionarla se debe comprobar que el proyecto nuevo no tenga una ubicación fijada por otro recurso.
+
+---
+
+### ADR-27: Cuota y preferencias en `users/{uid}` según el modelo de la empresa
+
+* **Estado:** **APROBADA POR EL EQUIPO (2026-09-23)**
+* **Contexto:** el diccionario del módulo no definía el documento `users/{uid}`. El modelo de datos de la empresa (Aprueba, Modelo de Datos Firebase/Firestore v1.0) lo define como el perfil del alumno. Ahí la cuota es el mapa `quota` `{used, max, date, bonusSchool, bonusAddress, unlimited}`, y las preferencias `selectedTests`, `practiceFormat` y `difficulty` van en el primer nivel. La consola de administración, que construye otro equipo, lee ese documento.
+* **Decisión:** los servicios del módulo leen y escriben la cuota y las preferencias en esos campos de `users/{uid}`. El documento lo crea el registro, fuera de nuestro alcance, así que un usuario nuevo puede llegar sin él. En ese caso los servicios usan cuota base de 10, sin bonos y 0 usadas, y ninguna prueba seleccionada (ADR-29). El seed crea los dos usuarios de demostración con todos los campos obligatorios del modelo.
+* **Alternativa descartada:** guardar la cuota en `users/{uid}/state/quota`, con el mismo patrón que `state/practice` (ADR-09). Quedaba fuera del documento que lee la consola de administración.
+* **Pendiente:** confirmar con la empresa qué hacer cuando hay que descontar cuota y el documento no existe. Escribir solo `quota` dejaría un documento sin los demás campos obligatorios del modelo.
+
+---
+
+### ADR-28: Supuesto sobre preferencias y cuota que el modelo de la empresa no define
+
+* **Estado:** **SUPUESTO, PENDIENTE DE CONFIRMAR CON LA EMPRESA**
+* **Supuesto:** el contrato de la API (`Preferences`) incluye `gradeId` y `onboarded`, que el modelo de la empresa no define. `gradeId` va como texto opcional en el primer nivel de `users/{uid}`, igual que `country`, `school` y `region`. `onboarded` no se guarda: se deriva de que `selectedTests` tenga al menos una prueba. También se supone que `quota.date` es un texto `YYYY-MM-DD` en el huso de reinicio de ADR-11, con el formato de `lastActiveDate`, y que `quota.max` es el límite del día con los bonos ya sumados.
+* **Motivo:** el modelo de la empresa pone las preferencias en el primer nivel del documento, sin un mapa propio, y guarda los días como texto en `lastActiveDate`. Seguir esa estructura evita inventar campos que la consola no conoce.
+* **Alternativa descartada:** un mapa `preferences` con todos los campos del contrato. Duplicaba `selectedTests`, `practiceFormat` y `difficulty`, que el modelo ya tiene en el primer nivel.
+* **Impacto si es falso:** cambia dónde `PUT /me/preferences` guarda el grado, cómo se calcula `onboarded` y cómo se compara `quota.date` al reiniciar la cuota.
+
+---
+
+### ADR-29: Respuesta de `GET /practice/next` sin pruebas seleccionadas
+
+* **Estado:** **DECIDIDA, PENDIENTE DE RATIFICACIÓN**
+* **Decisión:** si `selectedTests` está vacío o no existe, incluido el caso sin documento `users/{uid}`, `GET /practice/next` responde 404 con `NO_QUESTIONS_AVAILABLE`, `field: "selectedTests"` y `details: { "reason": "NO_TESTS_SELECTED" }`. El cliente reconoce el caso por `field` y lleva al estudiante a elegir sus pruebas en vez de mostrar el banco vacío, como pide la regla de negocio 8.
+* **Alternativas descartadas:** servir preguntas de todas las pruebas con banco contradice la regla de negocio 7, que solo permite preguntas de las pruebas seleccionadas. Un código de error nuevo cambiaría el catálogo del contrato v1.0, que es de la empresa. `BUSINESS_RULE_VIOLATION` es genérico: el cliente igual necesitaría `details` para saber a qué pantalla ir.
+* **Impacto:** el cliente tiene que leer `field` en `NO_QUESTIONS_AVAILABLE`. Cuando las pruebas elegidas ya no tienen preguntas pendientes, la respuesta es la misma sin `field` ni `details`.

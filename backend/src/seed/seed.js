@@ -1,5 +1,6 @@
 const { getDb, admin } = require('../config/firebase');
-const { tests, skills, questions, practiceStates } = require('./data');
+const config = require('../config');
+const { tests, skills, questions, users, practiceStates } = require('./data');
 
 /**
  * Script de carga de datos semilla (Seed) en Firestore.
@@ -32,7 +33,20 @@ async function seedDatabase() {
   }
   console.log(`[Seed] ${questions.length} preguntas insertadas en /questions`);
 
-  // 4. Colección answers (colección raíz con userId)
+  // 4. Documentos users/{uid} de los usuarios de demostración (ADR-27)
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: config.quota.resetTimezone }).format(new Date());
+  for (const { id, ...usuario } of users) {
+    await db.collection('users').doc(id).set({
+      ...usuario,
+      quota: { ...usuario.quota, date: hoy },
+      lastActiveDate: hoy,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  console.log(`[Seed] ${users.length} usuarios de demostración insertados en /users`);
+
+  // 5. Colección answers (colección raíz con userId)
   const answers = [
     {
       id: 'ans_001',
@@ -51,7 +65,7 @@ async function seedDatabase() {
   }
   console.log(`[Seed] ${answers.length} respuestas insertadas en /answers`);
 
-  // 5. Colección corrections (colección raíz con userId)
+  // 6. Colección corrections (colección raíz con userId)
   const corrections = [
     {
       id: 'cor_001',
@@ -72,7 +86,7 @@ async function seedDatabase() {
   }
   console.log(`[Seed] ${corrections.length} recorrecciones insertadas en /corrections`);
 
-  // 6. Subcolección users/{uid}/medalLedger
+  // 7. Subcolección users/{uid}/medalLedger
   await db
     .collection('users')
     .doc('usr_demo')
@@ -88,7 +102,7 @@ async function seedDatabase() {
     });
   console.log('[Seed] 1 movimiento de medalla insertado en users/usr_demo/medalLedger');
 
-  // 7. Documento de estado users/{uid}/state/practice (ADR-09)
+  // 8. Documento de estado users/{uid}/state/practice (ADR-09)
   for (const [uid, state] of Object.entries(practiceStates)) {
     const doc = state.answeredQuestionIds.length > 0 ? { ...state, lastAnsweredAt: serverTimestamp() } : state;
     await db.collection('users').doc(uid).collection('state').doc('practice').set(doc);

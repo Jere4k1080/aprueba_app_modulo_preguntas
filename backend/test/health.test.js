@@ -202,12 +202,21 @@ async function runTests() {
     celdas.add(`${q.testId}/${q.difficulty}`);
   }
   assert.strictEqual(celdas.size, 20, 'Faltan preguntas en alguna combinación de prueba y dificultad');
-  for (const [uid, state] of Object.entries(seedData.practiceStates)) {
-    assert.ok(state.answeredQuestionIds.every((id) => questionIds.has(id)), `${uid}: responde preguntas inexistentes`);
-    assert.ok(state.answeredQuestionIds.length < questionIds.size, `${uid}: no le quedan preguntas por responder`);
+  assert.ok(Object.keys(seedData.practiceStates).every((uid) => seedData.users.some((u) => u.id === uid)), 'Estado de práctica sin usuario');
+  for (const u of seedData.users) {
+    const { used, max, bonusSchool, bonusAddress, unlimited } = u.quota;
+    assert.ok(u.selectedTests.every((t) => testIds.has(t)), `${u.id}: prueba seleccionada inexistente`);
+    assert.ok(['random', 'facsim'].includes(u.practiceFormat) && ['d1', 'd2', 'd3', 'd4'].includes(u.difficulty), `${u.id}: preferencias inválidas`);
+    assert.ok(used <= max && [bonusSchool, bonusAddress, unlimited].every((b) => typeof b === 'boolean'), `${u.id}: cuota inválida`);
+    const respondidas = seedData.practiceStates[u.id]?.answeredQuestionIds ?? [];
+    assert.ok(respondidas.every((id) => questionIds.has(id)), `${u.id}: responde preguntas inexistentes`);
+    const pendientes = seedData.questions.filter((q) => u.selectedTests.includes(q.testId) && !respondidas.includes(q.id));
+    assert.ok(pendientes.length > 0, `${u.id}: no le quedan preguntas por responder en sus pruebas`);
   }
+  const nuevo = seedData.users.find((u) => u.id === 'usr_demo_nuevo');
+  assert.deepStrictEqual(nuevo.quota, { used: 0, max: 10, bonusSchool: false, bonusAddress: false, unlimited: false });
   assert.deepStrictEqual(seedData.practiceStates.usr_demo_nuevo.answeredQuestionIds, []);
-  console.log('✓ Prueba 10: El banco de demostración cubre 5 pruebas y 4 dificultades con referencias válidas.');
+  console.log('✓ Prueba 10: El banco de demostración cubre 5 pruebas y 4 dificultades, con usuarios y referencias válidas.');
 
   server.close();
   console.log('[Backend Tests] ¡Todas las pruebas de infraestructura pasaron con éxito!\n');

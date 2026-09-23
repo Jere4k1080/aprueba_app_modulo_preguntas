@@ -164,6 +164,35 @@ erDiagram
 
 ---
 
+### 2.8 Documento `users/{uid}`
+* **Ámbito:** Colección raíz. El ID del documento es el UID de Firebase Authentication.
+* **Propósito:** Perfil, preferencias y estado de juego del alumno. Lo define el modelo de datos de la empresa (Aprueba, Modelo de Datos Firebase/Firestore v1.0) y lo crea el registro, que está fuera del alcance del módulo. La consola de administración, que construye otro equipo, lee estos campos.
+* **Política de Seguridad:** Acceso directo del cliente bloqueado (ADR-21). La API lee y escribe solo los campos de esta tabla; el resto del documento lo define el modelo de la empresa.
+* **Ausencia del documento:** un usuario nuevo puede llegar sin él. Los servicios lo toleran: cuota base de 10, sin bonos y 0 usadas, y ninguna prueba seleccionada (ADR-27 y ADR-29).
+
+| Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
+|---|---|:---:|---|---|
+| `selectedTests` | `Array<String>` | Sí | Lista de `tests.id` | Pruebas elegidas. `GET /practice/next` solo sirve preguntas de estas pruebas. |
+| `practiceFormat` | `String` | Sí | `random` \| `facsim` | Formato de práctica. `facsim` requiere plan de pago. En la API se llama `format`. |
+| `difficulty` | `String` | Sí | `d1` \| `d2` \| `d3` \| `d4` | Dificultad preferida. |
+| `country` | `String?` | No | Código ISO | País, que persiste `PUT /me/preferences`. |
+| `locale` | `String` | Sí | `es` \| `en` | Idioma. En la API se llama `language`. |
+| `gradeId` | `String?` | No | Texto | Grado del estudiante, que persiste `PUT /me/preferences`. Supuesto: el modelo de la empresa no lo define (ADR-28). |
+| `school` | `String?` | No | Texto | Colegio declarado; habilita el bono de colegio. |
+| `region` | `String?` | No | Texto | Región declarada; habilita el bono de región. |
+| `plan` | `String` | Sí | `free` \| `uni` \| `all` | Plan vigente, copiado desde `subscriptions` por la empresa. |
+| `quota` | `Map` | Sí | Ver sub-esquema | Estado de la cuota diaria. |
+
+#### Sub-esquema: `quota` (Map embebido)
+* `used`: `Integer` (preguntas usadas en el día)
+* `max`: `Integer` (límite del día: 10 base, 5 más por colegio y 5 más por región, con tope de 20)
+* `date`: `String` (`YYYY-MM-DD` en el huso de reinicio de ADR-11; el formato es un supuesto, ADR-28)
+* `bonusSchool`: `Boolean` (bono de colegio ya reclamado)
+* `bonusAddress`: `Boolean` (bono de región ya reclamado)
+* `unlimited`: `Boolean` (plan de pago sin límite diario)
+
+---
+
 ## 3. Catálogo de Índices Compuestos
 
 Definidos formalmente en [`firestore.indexes.json`](../firestore.indexes.json):

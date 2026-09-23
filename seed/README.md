@@ -225,6 +225,42 @@ sin importar el usuario.
 
 ---
 
+## Documento `users/{uid}`
+
+Perfil y estado de juego del alumno, según el modelo de datos de la empresa (v1.0). El
+ID es el UID de Firebase Authentication. En producción lo crea el registro, que está
+fuera de nuestro alcance; el seed crea los dos usuarios de demostración con todos los
+campos obligatorios del modelo para que la consola de administración pueda leerlos.
+
+```jsonc
+// users/usr_demo (extracto: campos que usa el módulo)
+{
+  "selectedTests": ["lectora", "m1", "m2", "cien", "hist"],
+  "practiceFormat": "random",
+  "difficulty": "d1",
+  "locale": "es",
+  "country": "CL",
+  "plan": "free",
+  "quota": {
+    "used": 1,
+    "max": 10,
+    "date": "2026-09-23",
+    "bonusSchool": false,
+    "bonusAddress": false,
+    "unlimited": false
+  }
+}
+```
+
+Los campos y el sub-esquema de `quota` están en la sección 2.8 del diccionario de datos.
+`usr_demo` eligió las cinco pruebas y usó 1 de 10 preguntas. `usr_demo_nuevo` eligió
+`lectora` y `m1` y tiene la cuota base: 0 de 10, sin bonos. Sus correos terminan en
+`@demo.aprueba.invalid`, un dominio reservado que no recibe correo. Si un usuario llega
+sin este documento, los servicios usan la cuota base y ninguna prueba seleccionada
+(ADR-27 y ADR-29).
+
+---
+
 ## Subcolección `users/{uid}/medalLedger`
 
 Registro de movimientos de medallas de cada usuario. Solo el backend escribe.
@@ -277,7 +313,6 @@ Estado de sesión y preguntas respondidas por el alumno. Usado por `GET /practic
 
 El seed crea este documento para dos usuarios. `usr_demo` tiene respondida
 `q_lectora_001`, así que le quedan 19 preguntas. `usr_demo_nuevo` tiene
-`answeredQuestionIds` vacío y sirve para mostrar el flujo desde cero. Ninguno tiene
-documento `users/{uid}`: el diccionario de datos todavía no define ese documento ni
-dónde se guardan la cuota y las preferencias.
+`answeredQuestionIds` vacío y sirve para mostrar el flujo desde cero con sus 8
+preguntas de `lectora` y `m1`.
 
