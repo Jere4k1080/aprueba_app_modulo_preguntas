@@ -249,4 +249,4 @@ Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-23:
     -H "Access-Control-Request-Method: GET"
   ```
 
-Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed está cargado en ese proyecto desde el 2026-09-23: son 11 documentos de prueba con IDs fijos, entre ellos `questions/q_lectora_001`, y un cliente anónimo recibe 403 al leerlos. Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
