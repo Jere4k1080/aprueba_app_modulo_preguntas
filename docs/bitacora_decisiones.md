@@ -36,6 +36,9 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 24. [ADR-24: Ubicación de Firestore para el proyecto de desarrollo](#adr-24-ubicación-de-firestore-para-el-proyecto-de-desarrollo)
 25. [ADR-25: Ubicación de Firestore y región de la API aplicadas](#adr-25-ubicación-de-firestore-y-región-de-la-api-aplicadas)
 26. [ADR-26: Preset Express y despliegues de Git solo desde main](#adr-26-preset-express-y-despliegues-de-git-solo-desde-main)
+27. [ADR-27: Cuota y preferencias en `users/{uid}` según el modelo de la empresa](#adr-27-cuota-y-preferencias-en-usersuid-según-el-modelo-de-la-empresa)
+28. [ADR-28: Supuesto sobre preferencias y cuota que el modelo de la empresa no define](#adr-28-supuesto-sobre-preferencias-y-cuota-que-el-modelo-de-la-empresa-no-define)
+29. [ADR-29: Respuesta de `GET /practice/next` sin pruebas seleccionadas](#adr-29-respuesta-de-get-practicenext-sin-pruebas-seleccionadas)
 
 ---
 
@@ -183,6 +186,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** `backend/src/seed/seed.js` insertaba `answeredAt`, `createdAt` (en `corrections` y en `medalLedger`) y `lastAnsweredAt` como texto, usando `new Date().toISOString()`.
 * **Motivo de la corrección:** `docs/diccionario_de_datos.md` documenta esos cuatro campos como `Timestamp` de Firestore, no como string. El script funcionaba igual porque el orden alfabético de una cadena ISO-8601 coincide con el orden cronológico, así que el índice `answers(questionId ASC, answeredAt DESC)` seguía ordenando bien. Pero el tipo real no coincidía con el documentado: se rompe en cuanto algo compare el campo contra `admin.firestore.Timestamp.now()` en una Cloud Function, en una regla de seguridad, o llame `.toDate()` sobre un valor que en realidad es un string. El seed va a poblar el emulador durante las nueve iteraciones restantes, así que conviene que el tipo sea el correcto desde ahora y no cuando ya haya código dependiendo del string.
 * **Decisión final:** Los cuatro campos pasan a `admin.firestore.Timestamp.now()`, importando `admin` desde `backend/src/config/firebase.js` (que ya lo exporta). `reviewedAt` no se tocó: sigue en `null` hasta que un moderador resuelva la recorrección, como ya documentaba el diccionario de datos.
+* **Precisión (2026-09-23):** `Timestamp.now()` toma el reloj de la máquina que corre el seed. En la carga del 2026-09-23 ese reloj iba unos 13 s adelantado y `answeredAt` quedó 12,8 s después del `createTime` que asignó el servidor. El seed pasa a `admin.firestore.FieldValue.serverTimestamp()`, y Firestore escribe la hora de su servidor al confirmar cada escritura. El tipo sigue siendo `Timestamp`, así que la decisión anterior se mantiene.
 
 ---
 
@@ -266,6 +270,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Decisión:** `npm run seed` opera con el emulador; fuera de él exige `SEED_ALLOW_REMOTE=true` antes de abrir Firestore.
 * **Alternativa descartada:** permitir que la variable de credenciales por sí sola habilite el seed remoto.
 * **Motivo:** el script usa IDs fijos con `.set()` y puede reemplazar documentos existentes y sus marcas de tiempo en el proyecto real.
+* **Actualización (2026-09-23):** el seed ya carga datos en el proyecto real, así que sus preguntas y habilidades llevan `isDemo: true` y los documentos nuevos usan IDs con el segmento `demo`, como `q_demo_m1_d3` o `sk_demo_m1_operatoria`. Volver a correr el seed no pisa preguntas reales aunque la empresa use IDs como `q_m1_001`, y los datos de demostración se pueden filtrar o borrar con una consulta. Se descartaron los IDs correlativos sin marca, porque podían coincidir con los del banco real y el seed los habría sobrescrito. `q_lectora_001` y `sk_lectora_comp_lit` conservan su ID porque otros documentos del seed los referencian.
 
 ---
 
@@ -298,8 +303,37 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-26: Preset Express y despliegues de Git solo desde main
 
-* **Estado:** **IMPLEMENTADA, PENDIENTE DE REVISIÓN CRUZADA**
+* **Estado:** **IMPLEMENTADA Y APROBADA EL 2026-09-23**
 * **Hallazgo:** el proyecto de Vercel de la API se había creado con el preset Other, sin Express. El primer despliegue con la CLI falló por otra razón: sin un `vercel.json` en `backend/`, la CLI aplicó el de la raíz, que es de la app web, y ejecutó `bash vercel-build.sh` junto con el rewrite a `/index.html`.
 * **Decisión:** `backend/vercel.json` declara `"framework": "express"` y limita los despliegues de Git con `git.deploymentEnabled`, usando `"**": false` y `"main": true`. Vercel despliega una rama si al menos una regla que la cubre vale `true`, así que solo `main` genera despliegues, y van a producción. El proyecto quedó conectado a `Jere4k1080/aprueba_app_modulo_preguntas` con `vercel git connect`. La CLI sigue pudiendo desplegar cualquier rama.
 * **Alternativas descartadas:** cambiar el preset y el Ignored Build Step desde el panel de Vercel. Funcionaría, pero la configuración quedaría fuera del repositorio y sin revisión. También se descartó `ignoreCommand` en `vercel.json`, porque Vercel crea el despliegue y después lo cancela.
-* **Consecuencias:** Vercel lee `git.deploymentEnabled` del commit que se empuja. Mientras este cambio no llegue a `main`, una rama creada antes desde `main` generaría una vista previa de la API si alguien la empuja. El primer despliegue de producción salió del commit `80def89` de la rama `feature/deploy-backend-vercel`, porque sin este archivo la CLI no puede desplegar la API. El código de `backend/` es idéntico al de `main`; solo difiere `backend/vercel.json`.
+* **Consecuencias:** Vercel lee git.deploymentEnabled del commit que se empuja. El primer despliegue de producción salió del commit 80def89 de la rama feature/deploy-backend-vercel. En ese momento, el código de backend/ era idéntico al de main; solo difería backend/vercel.json. El PR #12 llevó esa configuración a main el 2026-09-23. Después de la fusión, /health respondió 200 y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin.
+
+---
+
+### ADR-27: Cuota y preferencias en `users/{uid}` según el modelo de la empresa
+
+* **Estado:** **APROBADA POR EL EQUIPO (2026-09-23)**
+* **Contexto:** el diccionario del módulo no definía el documento `users/{uid}`. El modelo de datos de la empresa (Aprueba, Modelo de Datos Firebase/Firestore v1.0) lo define como el perfil del alumno. Ahí la cuota es el mapa `quota` `{used, max, date, bonusSchool, bonusAddress, unlimited}`, y las preferencias `selectedTests`, `practiceFormat` y `difficulty` van en el primer nivel. La consola de administración, que construye otro equipo, lee ese documento.
+* **Decisión:** los servicios del módulo leen y escriben la cuota y las preferencias en esos campos de `users/{uid}`. El documento lo crea el registro, fuera de nuestro alcance, así que un usuario nuevo puede llegar sin él. En ese caso los servicios usan cuota base de 10, sin bonos y 0 usadas, y ninguna prueba seleccionada (ADR-29). El seed crea los dos usuarios de demostración con todos los campos obligatorios del modelo.
+* **Alternativa descartada:** guardar la cuota en `users/{uid}/state/quota`, con el mismo patrón que `state/practice` (ADR-09). Quedaba fuera del documento que lee la consola de administración.
+* **Pendiente:** confirmar con la empresa qué hacer cuando hay que descontar cuota y el documento no existe. Escribir solo `quota` dejaría un documento sin los demás campos obligatorios del modelo.
+
+---
+
+### ADR-28: Supuesto sobre preferencias y cuota que el modelo de la empresa no define
+
+* **Estado:** **SUPUESTO, PENDIENTE DE CONFIRMAR CON LA EMPRESA**
+* **Supuesto:** el contrato de la API (`Preferences`) incluye `gradeId` y `onboarded`, que el modelo de la empresa no define. `gradeId` va como texto opcional en el primer nivel de `users/{uid}`, igual que `country`, `school` y `region`. `onboarded` no se guarda: se deriva de que `selectedTests` tenga al menos una prueba. También se supone que `quota.date` es un texto `YYYY-MM-DD` en el huso de reinicio de ADR-11, con el formato de `lastActiveDate`, y que `quota.max` es el límite del día con los bonos ya sumados.
+* **Motivo:** el modelo de la empresa pone las preferencias en el primer nivel del documento, sin un mapa propio, y guarda los días como texto en `lastActiveDate`. Seguir esa estructura evita inventar campos que la consola no conoce.
+* **Alternativa descartada:** un mapa `preferences` con todos los campos del contrato. Duplicaba `selectedTests`, `practiceFormat` y `difficulty`, que el modelo ya tiene en el primer nivel.
+* **Impacto si es falso:** cambia dónde `PUT /me/preferences` guarda el grado, cómo se calcula `onboarded` y cómo se compara `quota.date` al reiniciar la cuota.
+
+---
+
+### ADR-29: Respuesta de `GET /practice/next` sin pruebas seleccionadas
+
+* **Estado:** **DECIDIDA, PENDIENTE DE RATIFICACIÓN**
+* **Decisión:** si `selectedTests` está vacío o no existe, incluido el caso sin documento `users/{uid}`, `GET /practice/next` responde 404 con `NO_QUESTIONS_AVAILABLE`, `field: "selectedTests"` y `details: { "reason": "NO_TESTS_SELECTED" }`. El cliente reconoce el caso por `field` y lleva al estudiante a elegir sus pruebas en vez de mostrar el banco vacío, como pide la regla de negocio 8.
+* **Alternativas descartadas:** servir preguntas de todas las pruebas con banco contradice la regla de negocio 7, que solo permite preguntas de las pruebas seleccionadas. Un código de error nuevo cambiaría el catálogo del contrato v1.0, que es de la empresa. `BUSINESS_RULE_VIOLATION` es genérico: el cliente igual necesitaría `details` para saber a qué pantalla ir.
+* **Impacto:** el cliente tiene que leer `field` en `NO_QUESTIONS_AVAILABLE`. Cuando las pruebas elegidas ya no tienen preguntas pendientes, la respuesta es la misma sin `field` ni `details`.

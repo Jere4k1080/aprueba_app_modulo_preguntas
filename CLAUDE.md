@@ -237,16 +237,7 @@ En los documentos, usa datos concretos del proyecto —nombres de archivo, núme
 
 Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-23:
 
-- El PR #12 (despliegue de Firestore y la API) espera revisión cruzada. Hasta que se fusione, `backend/vercel.json` no está en `main` y la API de producción corre desde el commit `80def89` de su rama
 - ADR-09 a ADR-12 pendientes de ratificación
 - El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
 - Los trece servicios del módulo no están implementados. La API está desplegada en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1`, pero solo responde `/health`
-- `ALLOWED_ORIGIN_PATTERN` está definida en production y preview de la API y entra en vigor con el primer despliegue desde Git, al fusionar el PR #12. Antes de ese despliegue, este preflight responde 200 sin `Access-Control-Allow-Origin`; después debe devolver esa cabecera con el origen de la vista previa:
-
-  ```bash
-  curl -s -i -X OPTIONS https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1/health \
-    -H "Origin: https://aprueba-app-modulo-preguntas-git-main-aprueba-app.vercel.app" \
-    -H "Access-Control-Request-Method: GET"
-  ```
-
-Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
