@@ -264,7 +264,7 @@ Solo nombres. Los valores se administran en cada proyecto de Vercel y no se vers
 
 La app web usa `API_BASE_URL` en production y preview, con la URL de la API terminada en `/api/v1`. `vercel-build.sh` la lee al compilar, así que cambiar su valor obliga a volver a desplegar la app.
 
-La API usa `NODE_ENV`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID` y `ALLOWED_ORIGINS`, todas en production y preview. `JWT_SECRET` tiene un valor distinto en cada entorno. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría Firebase Admin al emulador, ni `SEED_ALLOW_REMOTE`. `ALLOWED_ORIGIN_PATTERN` es opcional y hoy no está definida: solo pasan CORS los orígenes exactos de `ALLOWED_ORIGINS`, y las URLs de vista previa de la app web cambian en cada despliegue. El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL`, `QUOTA_RESET_TIMEZONE`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`) queda con los valores por defecto de `backend/src/config/index.js`, que son los mismos del ejemplo.
+La API usa `NODE_ENV`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` y `ALLOWED_ORIGIN_PATTERN`, todas en production y preview. `JWT_SECRET` tiene un valor distinto en cada entorno. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. Las URLs de vista previa de la app web cambian en cada despliegue, así que pasan CORS por `ALLOWED_ORIGIN_PATTERN`, que vale `^https://aprueba-app-modulo-preguntas-[a-z0-9-]+-aprueba-app\.vercel\.app$`. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría Firebase Admin al emulador, ni `SEED_ALLOW_REMOTE`. El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL`, `QUOTA_RESET_TIMEZONE`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`) queda con los valores por defecto de `backend/src/config/index.js`, que son los mismos del ejemplo.
 
 Para rotar la cuenta de servicio se descarga un JSON nuevo desde la consola de Firebase y se guarda fuera del repositorio. En PowerShell, `[Convert]::ToBase64String([IO.File]::ReadAllBytes('RUTA_AL_JSON'))` lo convierte a base64, y ese resultado reemplaza `FIREBASE_SERVICE_ACCOUNT_BASE64` en los dos entornos.
 
@@ -278,7 +278,7 @@ Las reglas y los índices de Firestore se publican aparte, desde la raíz del re
 npx firebase-tools deploy --only firestore --project aprueba-app-modulo-preguntas
 ```
 
-Un despliegue manual de la API se hace desde la raíz de un checkout limpio, por ejemplo un `git worktree`, y no desde `backend/`: con Root Directory `backend/` la CLI busca `backend/backend` y falla. Tampoco sirve la copia de trabajo habitual, porque la CLI de Vercel no respeta `.gitignore` y subiría el `.env` local junto con los artefactos de Flutter. El 2026-09-23, `npx vercel deploy` sin `--prod` desde un checkout en `main` creó un despliegue de producción. Para una vista previa conviene pasar siempre `--target preview`.
+Un despliegue manual de la API se hace desde la raíz del repositorio y no desde `backend/`: con Root Directory `backend/` la CLI busca `backend/backend` y falla. Desde la raíz, la CLI sube el repositorio completo y no respeta `.gitignore`; solo excluye lo que lista `.vercelignore`. Por eso es más seguro hacerlo desde un checkout limpio, por ejemplo un `git worktree`. El 2026-09-23, `npx vercel deploy` sin `--prod` desde un checkout en `main` creó un despliegue de producción. Para una vista previa conviene pasar siempre `--target preview`.
 
 ### Verificación
 
@@ -294,13 +294,13 @@ curl -s -i -X OPTIONS https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1
   -H "Access-Control-Request-Method: GET"
 ```
 
-La respuesta es 204 con `Access-Control-Allow-Origin` igual al origen de la app. Con un origen que no está en `ALLOWED_ORIGINS` esa cabecera no aparece.
+La respuesta es 204 con `Access-Control-Allow-Origin` igual al origen de la app. Las vistas previas de la app web se prueban con el mismo comando y un origen como `https://aprueba-app-modulo-preguntas-git-main-aprueba-app.vercel.app`, que entra por `ALLOWED_ORIGIN_PATTERN`. Con un origen que no está en `ALLOWED_ORIGINS` ni calza con el patrón, esa cabecera no aparece.
 
 Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión en Vercel. Se prueban con `npx vercel curl URL -- -s -i`. En su primer uso, ese comando crea en el proyecto un secreto de "Protection Bypass for Automation".
 
 ### Datos de prueba
 
-El seed no está cargado en el proyecto real y `SEED_ALLOW_REMOTE` no está definida en Vercel. Si el equipo decide cargarlo, se define `SEED_ALLOW_REMOTE=true` solo para esa ejecución y se retira después. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
+`SEED_ALLOW_REMOTE` no se define en Vercel. Para cargar el seed en el proyecto real se ejecuta `npm run seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque `dotenv` carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
 
 ---
 
