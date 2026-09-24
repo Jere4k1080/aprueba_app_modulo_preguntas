@@ -5,8 +5,11 @@ import 'dart:typed_data';
 import 'package:aprueba_app/core/network/api_client.dart';
 import 'package:aprueba_app/core/network/api_exception.dart';
 import 'package:aprueba_app/data/repositories/auth_repository.dart';
+import 'package:aprueba_app/providers/app_providers.dart';
+import 'package:aprueba_app/providers/auth_controller.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Adaptador HTTP falso. Decide el código de estado según la petición y guarda
@@ -62,6 +65,14 @@ class _FakeTokens {
 }
 
 String? _auth(RequestOptions o) => o.headers['Authorization'] as String?;
+
+/// Cuenta las llamadas a logout sin tocar Firebase ni Drift.
+class _LogoutSpy extends AuthController {
+  int logouts = 0;
+
+  @override
+  Future<void> logout() async => logouts++;
+}
 
 void main() {
   late _FakeTokens tokens;
@@ -218,6 +229,56 @@ void main() {
     expect(adapter.requests.single.headers.containsKey('Authorization'), isFalse);
     expect(tokens.refreshes, 0);
     expect(expirations, 0);
+  });
+
+  test('si Firebase invalidó la cuenta al renovar, cierra la sesión', () async {
+    String? current = 'inicial';
+    final adapter = _FakeAdapter((_) => 401);
+    final api = ApiClient(
+      idToken: ({bool forceRefresh = false}) async {
+        if (!forceRefresh) return current;
+        current = null; // el SDK cierra su sesión antes de lanzar
+        throw FirebaseAuthException(code: 'user-disabled');
+      },
+      dio: Dio()..httpClientAdapter = adapter,
+      onSessionExpired: () => expirations++,
+    );
+    await expectLater(api.get('/me'), throwsA(isA<ApiException>()));
+
+    expect(adapter.requests, hasLength(1));
+    expect(expirations, 1);
+  });
+
+  ProviderContainer sesion(_LogoutSpy spy, {required bool loggedIn}) {
+    final container = ProviderContainer(overrides: [
+      authControllerProvider.overrideWith(() => spy),
+      isLoggedInProvider.overrideWith((ref) => loggedIn),
+    ]);
+    addTearDown(container.dispose);
+    return container;
+  }
+
+  test('la sesión vencida usa el logout explícito, que borra la caché de Drift, una sola vez', () {
+    final spy = _LogoutSpy();
+    final container = sesion(spy, loggedIn: true);
+    final api = container.read(apiClientProvider);
+
+    // Varios 401 simultáneos, y el /me que dispara el propio logout, llegan aquí.
+    for (var i = 0; i < 3; i++) {
+      api.onSessionExpired!();
+    }
+
+    expect(spy.logouts, 1);
+    expect(container.read(isLoggedInProvider), isFalse);
+  });
+
+  test('sin sesión, un 401 no vuelve a hacer logout', () {
+    // Sin esta guarda, logout invalida meProvider, /me responde 401 sin token y
+    // vuelve a llamar a logout, en un ciclo que borra las preferencias de Drift.
+    final spy = _LogoutSpy();
+    sesion(spy, loggedIn: false).read(apiClientProvider).onSessionExpired!();
+
+    expect(spy.logouts, 0);
   });
 
   group('errores de Firebase Auth', () {

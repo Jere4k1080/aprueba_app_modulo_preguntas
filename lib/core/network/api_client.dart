@@ -79,9 +79,11 @@ class ApiClient {
                 .whenComplete(() => _renewing = null));
           }
         } catch (_) {
-          // Firebase no pudo renovar (sin red, demasiadas solicitudes) y la
+          // Firebase no pudo renovar. Sin red o con demasiadas solicitudes la
           // sesión sigue abierta. Si invalidó la cuenta, su SDK ya cerró la
-          // sesión y el siguiente 401 llega sin token.
+          // sesión y no queda usuario: se cierra también aquí.
+          final current = await _idToken(forceRefresh: false).catchError((_) => '');
+          if (current == null) onSessionExpired?.call();
           return handler.next(e);
         }
         if (token == null) {

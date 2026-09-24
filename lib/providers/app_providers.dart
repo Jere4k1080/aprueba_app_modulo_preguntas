@@ -20,6 +20,7 @@ import '../data/services/phone_auth_service.dart';
 import '../data/services/push_service.dart';
 import '../data/services/social_auth_service.dart';
 import '../data/services/stripe_service.dart';
+import 'auth_controller.dart';
 import 'local_prefs.dart';
 
 export 'local_prefs.dart';
@@ -39,9 +40,14 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     idToken: ({bool forceRefresh = false}) async =>
         FirebaseAuth.instance.currentUser?.getIdToken(forceRefresh),
     language: () => ref.read(localPrefsProvider).locale,
+    // El mismo logout del botón: además de cerrar Firebase, borra la caché de
+    // Drift, donde CachedQuestions guarda correctAnswer después de responder.
+    // La bandera baja antes del logout asíncrono: los 401 simultáneos y el /me
+    // que dispara logout al invalidar meProvider salen aquí sin repetirlo.
     onSessionExpired: () {
-      FirebaseAuth.instance.signOut();
+      if (!ref.read(isLoggedInProvider)) return;
       ref.read(isLoggedInProvider.notifier).state = false;
+      ref.read(authControllerProvider.notifier).logout();
     },
   );
 });
