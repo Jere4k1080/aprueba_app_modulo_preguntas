@@ -8,8 +8,8 @@
 !.env.example
 serviceAccount.json
 **/serviceAccount*.json
-**/google-services.json
-**/GoogleService-Info.plist
+# google-services.json y GoogleService-Info.plist sí se versionan: son la
+# configuración de cliente de Firebase, pública por diseño.
 *.jks
 *.keystore
 key.properties

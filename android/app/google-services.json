@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1073481331997",
+    "firebase_url": "https://aprueba-app-modulo-preguntas-default-rtdb.firebaseio.com",
+    "project_id": "aprueba-app-modulo-preguntas",
+    "storage_bucket": "aprueba-app-modulo-preguntas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1073481331997:android:7507404966c5cd997dddf4",
+        "android_client_info": {
+          "package_name": "cl.aprueba.aprueba_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbjs4GmER4lgt-BHSHiQ0YC2R5k6CCwKY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
