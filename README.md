@@ -93,7 +93,7 @@ Además: la lógica de cuota diaria escalonada y la economía de recompensas, el
 
 ### No incluido
 
-Registro y autenticación, onboarding, pantalla de inicio, sistema de medallas y canjes, regalos y beneficios, grupos de estudio, comunidad, marketplace de tutores, muro de pago y suscripciones, ajustes y notificaciones.
+Registro y autenticación, onboarding, pantalla de inicio, sistema de medallas y canjes, regalos y beneficios, grupos de estudio, comunidad, marketplace de tutores, muro de pago y suscripciones, ajustes y notificaciones. La excepción es el login: Alloxentric autorizó tocar lo necesario para pasar a Firebase Auth (ADR-41).
 
 Tampoco la consola de administración, el generador de preguntas, el sitio web del alumno ni la landing de marketing.
 
@@ -110,9 +110,10 @@ La pasarela de pago, el inicio de sesión social y las notificaciones push se co
 | Framework | Flutter 3.22+ / Dart 3.3+ | Un solo código para iOS y Android |
 | Estado | Riverpod | Gestión de estado reactiva y testeable |
 | Navegación | GoRouter | Enrutamiento declarativo |
-| Red | Dio | Cliente HTTP con interceptor de renovación de tokens |
+| Red | Dio | Cliente HTTP. Su interceptor adjunta el ID token de Firebase y lo renueva una vez ante un 401 |
+| Autenticación | Firebase Auth (`firebase_auth`) | Inicio de sesión con correo y contraseña. Entrega el ID token que valida la API |
 | Persistencia local | Drift (SQLite) | Caché para repaso sin conexión |
-| Almacenamiento seguro | flutter_secure_storage | Custodia del refresh token |
+| Almacenamiento seguro | flutter_secure_storage | Lo usan el registro y el login social heredados, que no pasaron a Firebase. La sesión la guarda Firebase Auth |
 
 ### Backend
 
@@ -121,7 +122,7 @@ La pasarela de pago, el inicio de sesión social y las notificaciones push se co
 | Lenguaje | Python 3.12 | Entorno de ejecución |
 | Framework | FastAPI con Pydantic v2, sobre Uvicorn | API REST bajo `/api/v1` |
 | Base de datos | Firestore (`google-cloud-firestore`, cliente asíncrono) | Persistencia, con emulador para desarrollo local |
-| Autenticación | JWT HS256 (PyJWT) | Access token de 15 min + refresh de 30 días con rotación. La contraparte decidió pasar a Firebase Auth en una entrega posterior |
+| Autenticación | Firebase Auth, con `firebase-admin` 7.7.0 | `verify_id_token` valida el ID token que envía la app. El backend no emite ni renueva tokens (ADR-40) |
 | Empaquetado | Docker | Imagen para Cloud Run en `backend/Dockerfile` |
 
 ### Justificación de las decisiones principales
@@ -144,10 +145,12 @@ flowchart TD
         REPO["Repositorios"]
         CACHE[("Drift · SQLite<br/>caché offline")]
         API["ApiClient · Dio"]
+        FBA["Firebase Auth SDK"]
     end
 
     subgraph server["Backend"]
         FASTAPI["Python 3.12 + FastAPI<br/>/api/v1"]
+        ADMIN["firebase-admin<br/>verify_id_token"]
         SDK["google-cloud-firestore"]
     end
 
@@ -157,7 +160,9 @@ flowchart TD
     PROV --> REPO
     REPO --> API
     REPO <--> CACHE
-    API -->|"HTTPS · JWT Bearer"| FASTAPI
+    FBA -->|"ID token"| API
+    API -->|"HTTPS · Bearer con ID token de Firebase"| FASTAPI
+    FASTAPI --> ADMIN
     FASTAPI --> SDK
     SDK --> DB
 ```
@@ -168,7 +173,11 @@ La interfaz nunca conversa directamente con la red. Toda petición atraviesa la 
 
 ### Manejo de sesión
 
-El access token viaja en la cabecera `Authorization`. Ante una respuesta 401, el interceptor de Dio renueva las credenciales con el refresh token, que rota en cada uso, y reintenta la petición original de forma transparente. Si la renovación falla, la sesión se marca como cerrada y el router redirige al inicio.
+El estudiante inicia sesión con correo y contraseña en Firebase Auth. Firebase guarda la sesión en el dispositivo y entrega un ID token que dura una hora y que su SDK renueva solo. `ApiClient` lo envía en la cabecera `Authorization` junto con `Accept-Language`, que lleva el idioma elegido en la app. El backend lo valida con `verify_id_token` de `firebase-admin` y no emite tokens propios.
+
+Ante una respuesta 401, el interceptor de Dio pide a Firebase un token nuevo con `getIdToken(forceRefresh: true)` y reintenta la petición una sola vez. Si el reintento también da 401, o Firebase ya no tiene usuario, cierra la sesión con el mismo logout del botón de ajustes, que borra la caché de Drift, y el router redirige al inicio. Un token vencido da `AUTH_TOKEN_EXPIRED` y uno ausente o inválido da `AUTH_REQUIRED`, los dos con status 401. Las decisiones están en ADR-40 y en las propuestas ADR-43 a ADR-55 de la [bitácora](docs/bitacora_decisiones.md).
+
+La verificación del teléfono por SMS en el registro quedó detrás de `PHONE_VERIFICATION_ENABLED`, apagada por defecto. El registro, el login social, el olvido de contraseña y su restablecimiento siguen llamando a rutas `/auth/*` que el backend no tiene, así que hoy la única vía de entrada es el login con cuentas creadas en la consola de Firebase (ADR-41).
 
 ### Contrato de respuestas
 
@@ -212,9 +221,19 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 
 flutter run --dart-define=API_BASE_URL=http://127.0.0.1:4000/api/v1
+
+# Web, contra la API desplegada
+flutter build web --release \
+  --dart-define=API_BASE_URL=https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1
 ```
 
 > Sin ejecutar `build_runner` el proyecto no compila, porque la capa de persistencia local depende de código generado.
+
+`API_BASE_URL` se pasa siempre. Su valor por defecto en `lib/core/config/app_config.dart` es `https://api.staging.aprueba.cl/api/v1`, heredado del cliente, y esa API no es la del módulo. `PHONE_VERIFICATION_ENABLED` vale `false` si no se pasa, y el registro salta los pasos de teléfono. Con `--dart-define=PHONE_VERIFICATION_ENABLED=true` esos pasos vuelven.
+
+La configuración de cliente de Firebase ya está en el repositorio: `lib/firebase_options.dart`, `android/app/google-services.json` e `ios/Runner/GoogleService-Info.plist`, del proyecto `aprueba-app-modulo-preguntas`. No hace falta correr `flutterfire configure`. Si se corre, reemplaza `firebase_options.dart` con el mismo formato (ADR-42).
+
+La app arranca aunque Firebase no cargue, por ejemplo en web con `gstatic.com` bloqueado, pero lo hace sin sesión y el login tampoco funciona hasta que Firebase cargue (ADR-54).
 
 ### Backend
 
@@ -234,17 +253,17 @@ En Windows el intérprete es `.venv/Scripts/python.exe`. [`backend/README.md`](b
 
 ### Configuración
 
-No hay credenciales en el código. Todos los valores sensibles se inyectan mediante `--dart-define` en el cliente y variables de entorno en el backend.
+No hay credenciales en el código. Los valores sensibles se inyectan mediante `--dart-define` en el cliente y variables de entorno en el backend. La `apiKey` de los archivos de cliente de Firebase no es una credencial: identifica el proyecto y viaja dentro de cualquier build de la app. Los datos los protegen `firestore.rules`, que niega todo acceso al cliente, y la verificación del ID token en la API. La cuenta de servicio del backend sí es secreta y nunca se versiona (ADR-42).
 
 ### Verificación
 
 ```bash
 flutter analyze                    # análisis estático
 flutter test                       # pruebas unitarias
-cd backend && .venv/bin/python -m pytest   # 24 pruebas del backend
+cd backend && .venv/bin/python -m pytest   # 31 pruebas del backend
 ```
 
-Una de las pruebas del backend necesita el emulador de Firestore. Sin él, pytest informa 23 aprobadas y 1 omitida.
+El 2026-09-24, `flutter analyze` informó 38 avisos, todos informativos, sin advertencias ni errores, y `flutter test` dio 45 pruebas aprobadas. Una de las pruebas del backend necesita el emulador de Firestore. Sin él, pytest informa 30 aprobadas y 1 omitida.
 
 ---
 
@@ -276,7 +295,9 @@ Solo nombres. Los valores se administran en cada proyecto de Vercel y no se vers
 
 La app web usa `API_BASE_URL` en production y preview, con la URL de la API terminada en `/api/v1`. `vercel-build.sh` la lee al compilar, así que cambiar su valor obliga a volver a desplegar la app.
 
-La API usa `APP_ENV`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` y `ALLOWED_ORIGIN_PATTERN`, todas en production y preview. `APP_ENV` vale `production` en production y en preview desde el 2026-09-24. La API en Node no la lee. Vercel define `VERCEL=1`, y con esa variable la API no arranca si falta `APP_ENV` (ADR-36). `NODE_ENV` quedó del backend Node y ya no se lee. `JWT_SECRET` tiene un valor distinto en cada entorno. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. Las URLs de vista previa de la app web cambian en cada despliegue, así que pasan CORS por `ALLOWED_ORIGIN_PATTERN`, que vale `^https://aprueba-app-modulo-preguntas-[a-z0-9-]+-aprueba-app\.vercel\.app$`. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría la API al emulador, ni `SEED_ALLOW_REMOTE`. El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL`, `QUOTA_RESET_TIMEZONE`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`) queda con los valores por defecto de `backend/app/core/config.py`, que son los mismos del ejemplo.
+La API usa `APP_ENV`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` y `ALLOWED_ORIGIN_PATTERN`, todas en production y preview. `APP_ENV` vale `production` en production y en preview desde el 2026-09-24. La API en Node no la lee. Vercel define `VERCEL=1`, y con esa variable la API no arranca si falta `APP_ENV` (ADR-36). `FIREBASE_PROJECT_ID` es también la audiencia que exige `verify_id_token`, así que tiene que ser `aprueba-app-modulo-preguntas`, el proyecto donde la app inicia sesión, o quedar sin valor para que se use el `project_id` de la cuenta de servicio. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. Las URLs de vista previa de la app web cambian en cada despliegue, así que pasan CORS por `ALLOWED_ORIGIN_PATTERN`, que vale `^https://aprueba-app-modulo-preguntas-[a-z0-9-]+-aprueba-app\.vercel\.app$`. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría la API al emulador, ni `SEED_ALLOW_REMOTE`. Tampoco `FIREBASE_AUTH_EMULATOR_HOST`: con ella la API no arranca fuera de local (ADR-50). El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL` y `QUOTA_RESET_TIMEZONE`) queda con los valores por defecto de `backend/app/core/config.py`, que son los mismos del ejemplo.
+
+`JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV` quedaron del backend Node y ya no se leen, porque la sesión pasó a Firebase Auth (ADR-40). `Settings` ignora las variables que no declara, así que no impiden el arranque, pero hay que borrarlas del proyecto al desplegar.
 
 Para rotar la cuenta de servicio se descarga un JSON nuevo desde la consola de Firebase y se guarda fuera del repositorio. En PowerShell, `[Convert]::ToBase64String([IO.File]::ReadAllBytes('RUTA_AL_JSON'))` lo convierte a base64, y ese resultado reemplaza `FIREBASE_SERVICE_ACCOUNT_BASE64` en los dos entornos.
 
@@ -331,13 +352,14 @@ Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión e
 │   │   └── repositories/        un repositorio por dominio
 │   ├── features/
 │   │   └── practice/            ← módulo de preguntas
-│   └── providers/               wiring de Riverpod
+│   ├── providers/               wiring de Riverpod
+│   └── firebase_options.dart    configuración de cliente de Firebase (ADR-42)
 ├── test/                        pruebas unitarias
 │
 ├── backend/                     API REST (Python 3.12 + FastAPI)
 │   ├── app/
-│   │   ├── core/                configuración, envelope, errores, idioma, auth y paginación
-│   │   ├── db/                  cliente de Firestore
+│   │   ├── core/                configuración, envelope, errores, idioma, token de Firebase y paginación
+│   │   ├── db/                  cliente de Firestore y Firebase Admin
 │   │   ├── routers/             definición de endpoints
 │   │   ├── schemas/             modelos Pydantic
 │   │   ├── services/            lógica de negocio

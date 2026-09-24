@@ -29,7 +29,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 17. [ADR-17: Proyecto de Vercel separado para el backend](#adr-17-proyecto-de-vercel-separado-para-el-backend)
 18. [ADR-18: Cuenta de servicio de Firebase en base64](#adr-18-cuenta-de-servicio-de-firebase-en-base64)
 19. [ADR-19: CORS por lista de orígenes y patrón](#adr-19-cors-por-lista-de-orígenes-y-patrón)
-20. [ADR-20: JWT_SECRET obligatorio en producción](#adr-20-jwt_secret-obligatorio-en-producción)
+20. [ADR-20: JWT_SECRET obligatorio en producción (Sustituida por ADR-40)](#adr-20-jwt_secret-obligatorio-en-producción)
 21. [ADR-21: Firestore accesible solo desde la API](#adr-21-firestore-accesible-solo-desde-la-api)
 22. [ADR-22: Confirmación para ejecutar el seed remoto](#adr-22-confirmación-para-ejecutar-el-seed-remoto)
 23. [ADR-23: Recálculo diario del percentil con Vercel Cron](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
@@ -47,8 +47,24 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 35. [ADR-35: `HEAD` en `/health` (Propuesta)](#adr-35-head-en-health)
 36. [ADR-36: `APP_ENV` obligatorio en Vercel y Cloud Run (Propuesta)](#adr-36-app_env-obligatorio-en-vercel-y-cloud-run)
 37. [ADR-37: Umbral no numérico en `calculate_cohort_percentile` (Propuesta)](#adr-37-umbral-no-numérico-en-calculate_cohort_percentile)
-38. [ADR-38: Claims que `get_current_user` no verifica (Propuesta)](#adr-38-claims-que-get_current_user-no-verifica)
+38. [ADR-38: Claims que `get_current_user` no verifica (Propuesta, sustituida por ADR-40)](#adr-38-claims-que-get_current_user-no-verifica)
 39. [ADR-39: Solicitud previa de CORS con Starlette (Propuesta)](#adr-39-solicitud-previa-de-cors-con-starlette)
+40. [ADR-40: Autenticación con Firebase Auth](#adr-40-autenticación-con-firebase-auth)
+41. [ADR-41: Cambio de alcance autorizado: login y registro](#adr-41-cambio-de-alcance-autorizado-login-y-registro)
+42. [ADR-42: Configuración de cliente de Firebase versionada](#adr-42-configuración-de-cliente-de-firebase-versionada)
+43. [ADR-43: `verify_id_token` sin revisar revocación (Propuesta)](#adr-43-verify_id_token-sin-revisar-revocación)
+44. [ADR-44: Rol y plan desde custom claims mientras `users` está en pausa (Propuesta)](#adr-44-rol-y-plan-desde-custom-claims-mientras-users-está-en-pausa)
+45. [ADR-45: `CertificateFetchError` como 503 `SERVICE_UNAVAILABLE` (Propuesta)](#adr-45-certificatefetcherror-como-503-service_unavailable)
+46. [ADR-46: Espera de 10 s para los certificados de Google (Propuesta)](#adr-46-espera-de-10-s-para-los-certificados-de-google)
+47. [ADR-47: Tolerancia de 5 s en el reloj al verificar tokens (Propuesta)](#adr-47-tolerancia-de-5-s-en-el-reloj-al-verificar-tokens)
+48. [ADR-48: `TypeError` de `firebase_admin` como 401 y `ValueError` como 500 (Propuesta)](#adr-48-typeerror-de-firebase_admin-como-401-y-valueerror-como-500)
+49. [ADR-49: Firebase Admin con la configuración de Firestore (Propuesta)](#adr-49-firebase-admin-con-la-configuración-de-firestore)
+50. [ADR-50: `FIREBASE_AUTH_EMULATOR_HOST` solo en local con el emulador de Firestore (Propuesta)](#adr-50-firebase_auth_emulator_host-solo-en-local-con-el-emulador-de-firestore)
+51. [ADR-51: Usuario opcional con cabecera inválida (Propuesta)](#adr-51-usuario-opcional-con-cabecera-inválida)
+52. [ADR-52: `onSessionExpired` idempotente con el logout de ajustes (Propuesta)](#adr-52-onsessionexpired-idempotente-con-el-logout-de-ajustes)
+53. [ADR-53: Cierre de sesión cuando Firebase invalida la cuenta al renovar (Propuesta)](#adr-53-cierre-de-sesión-cuando-firebase-invalida-la-cuenta-al-renovar)
+54. [ADR-54: Arranque sin sesión si Firebase no carga (Propuesta)](#adr-54-arranque-sin-sesión-si-firebase-no-carga)
+55. [ADR-55: Códigos de error de Firebase Auth en la app (Propuesta)](#adr-55-códigos-de-error-de-firebase-auth-en-la-app)
 
 ---
 
@@ -247,6 +263,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** depender de un archivo JSON mediante `GOOGLE_APPLICATION_CREDENTIALS` o aceptar credenciales predeterminadas de forma implícita.
 * **Motivo:** Vercel recibe secretos por variables de entorno. El base64 conserva los saltos de línea de la cuenta de servicio y el fallo explícito evita iniciar contra un proyecto distinto al previsto.
 * **Actualización (2026-09-23):** con FastAPI (ADR-30) ya no hay Firebase Admin. `backend/app/db/firestore.py` decodifica la variable y crea un único `AsyncClient` de `google-cloud-firestore` con las credenciales de la cuenta de servicio. La prioridad del emulador y el fallo al iniciar se mantienen. La decodificación acepta, como `Buffer.from` en Node, el valor sin relleno y el alfabeto URL seguro. Un `FIRESTORE_EMULATOR_HOST` vacío cuenta como ausente. En Cloud Run también se exige esta variable, sin credenciales predeterminadas.
+* **Actualización (2026-09-24):** Firebase Admin vuelve al backend, solo para verificar los tokens de Firebase Auth (ADR-40). Usa la misma variable y la misma decodificación que Firestore, y la misma prioridad del emulador (ADR-49).
 
 ---
 
@@ -267,6 +284,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** conservar el secreto público de respaldo en producción.
 * **Motivo:** ese valor está versionado como ejemplo y permitiría firmar tokens válidos si el operador omite la variable.
 * **Actualización (2026-09-23):** con FastAPI (ADR-30) la condición es `APP_ENV=production`, porque `NODE_ENV` ya no se lee. `Settings` corta el arranque si `JWT_SECRET` falta o tiene solo espacios. No exige el largo mínimo de 32 bytes que pide Max (ADR-31).
+* **Actualización (2026-09-24):** sustituida por ADR-40. El backend verifica tokens de Firebase Auth y ya no firma ni verifica JWT propios. `JWT_SECRET` salió de `Settings` y de `backend/.env.example`, y la API ya no la exige en producción.
 
 ---
 
@@ -372,6 +390,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * ADR-12 sigue vigente con `sanitize_question()` en `backend/app/services/questions.py`. ADR-19 sigue vigente con el `CORSMiddleware` de Starlette en vez del paquete `cors`.
   * ADR-21 no cambia. El cliente `google-cloud-firestore` con la cuenta de servicio tampoco pasa por las reglas, como Firebase Admin.
   * Diferencias con Node que no son decisiones: Starlette distingue mayúsculas en las rutas y responde 307 a una ruta con barra final. `uptimeSeconds` cuenta desde que se importa el router. Salvo `seed/`, los subpaquetes de `app/` no tienen `__init__.py` y funcionan como paquetes de espacio de nombres. Si Vercel los rechaza, basta con agregar archivos vacíos.
+* **Actualización (2026-09-24):** la entrega de Firebase Auth quedó en ADR-40. La verificación de JWT que portó esta ADR ya no existe.
 
 ---
 
@@ -424,6 +443,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Las colecciones de la sección 2.8 y la forma que Max da a `users`, `corrections`, `questions` y las medallas. Max usa `state`, `resolvedBy`, `resolvedAt` y `rewardGranted` en `corrections`, el prefijo `qst_` en `questions` y la colección raíz `medalTransactions`. El módulo sigue con `status`, `reviewedBy`, `reviewedAt` y `potentialReward`, el prefijo `q_` y `users/{uid}/medalLedger` (ADR-01). El cambio está en pausa por instrucción del equipo hasta acordar un modelo único con Max.
 * **Alternativa descartada:** copiar el andamiaje de Max completo, que traía dependencias y colecciones de la consola que el módulo no usa. También se descartó conservar las convenciones de Node (`details` en `null`, mensajes de `catalog.js`, `requestId` del cliente, traza visible en development). Max declara el mismo contrato de la empresa que sigue el módulo, y dos lecturas distintas del envelope en la misma base harían divergir a los clientes.
 * **Consecuencias:** ADR-29 define `details` como objeto y con esta convención tiene que ser una lista. Lo que no cubren el documento de Max ni el encargo de esta entrega quedó como propuesta en ADR-32 a ADR-39.
+* **Actualización (2026-09-24):** con ADR-40 salieron `PyJWT`, `JWT_SECRET`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`. Los puntos de esta ADR sobre `PyJWT` sin `[crypto]`, el port de `get_current_user` y el largo de `JWT_SECRET` quedaron sin objeto. `get_current_user` verifica ahora el ID token de Firebase. El mensaje de `AUTH_TOKEN_EXPIRED` dejó de ser el de la sección 2.5, que remite al refresh token de la consola. Los otros nueve errores estándar conservan el texto de Max.
 
 ---
 
@@ -495,6 +515,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativas descartadas:** dejar las verificaciones por defecto de PyJWT, que rechazan un `aud` no pedido y un `sub` o un `jti` que no sean texto. Tokens que Node aceptaba habrían dado 401. También se descartó el `decode()` de Max, que exige `iss: "aprueba-admin"` y `typ`, claims de los tokens de la consola.
 * **Motivo:** ninguna ruta usa la dependencia todavía y Firebase Auth la reemplaza. Mientras tanto acepta lo mismo que aceptaba Node.
 * **Diferencias con Node:** `jsonwebtoken` aceptaba también HS384 y HS512, y exigía `Bearer ` con mayúscula. `test_get_current_user` cubre los casos.
+* **Actualización (2026-09-24):** sustituida por ADR-40. `get_current_user` ya no decodifica JWT con HS256: valida el ID token de Firebase con `verify_id_token`, que revisa firma, `aud`, `iss`, `sub`, `iat` y `exp`. `test_get_current_user` se reemplazó por las pruebas de ADR-40.
 
 ---
 
@@ -505,3 +526,206 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** envolver el rechazo en el envelope o forzar 204. El navegador no expone el cuerpo de una solicitud previa, así que el cambio agregaba código sin efecto en el cliente.
 * **Motivo:** Express respondía 204 a la permitida y 200 sin la cabecera a la rechazada. Para el navegador el resultado es el mismo en los dos casos.
 * **Consecuencias:** la verificación del despliegue en `README.md` espera 200 y no 204. `allow_origin_regex` usa `re.fullmatch`, y Node usaba `RegExp.test`, que busca en cualquier parte. Con un patrón anclado, como el de Vercel, el resultado no cambia. Uno sin anclas dejaría pasar menos orígenes que en Node.
+
+---
+
+### ADR-40: Autenticación con Firebase Auth
+
+* **Estado:** **DECIDIDA POR LA CONTRAPARTE (2026-09-23), IMPLEMENTADA EN `feature/firebase-auth`, PENDIENTE DE REVISIÓN CRUZADA**
+* **Fuente:** decisión de Max, de Alloxentric, comunicada al equipo el 23/09/2026. Max firma su especificación del backend de administración como Wellq Co, pero esta decisión no está en ese documento: su sección 2.6 describe solo el login propio de la consola. ADR-30 ya la anunciaba. Ese mismo día la contraparte autorizó sacar la verificación por SMS del registro.
+* **Decisión en el backend:**
+  * `get_current_user`, en `backend/app/core/deps.py`, valida el ID token de Firebase con `firebase_admin.auth.verify_id_token`. La llamada corre en `run_in_threadpool`, porque bloquea mientras baja los certificados públicos de Google.
+  * Un token vencido da 401 `AUTH_TOKEN_EXPIRED`. Sin cabecera, con un esquema distinto de `Bearer`, con el token vacío o con un token rechazado da 401 `AUTH_REQUIRED`. Las dos respuestas llevan el envelope.
+  * El mensaje de `AUTH_TOKEN_EXPIRED` en `backend/app/core/errors.py` pasó de "El token de acceso expiró; renuévalo con el refresh token." a "El token de acceso expiró. La app debe pedir uno nuevo a Firebase y reintentar.", con su versión en inglés. El alumno no tiene un refresh token propio: el token lo renueva el SDK de Firebase. Es el único de los diez errores estándar cuyo texto ya no es el de la sección 2.5 de Max, que remite al refresh token de la consola (ADR-31).
+  * Firebase Admin sale de la misma configuración que Firestore y solo verifica tokens. Firestore sigue con el `AsyncClient` de `google-cloud-firestore` (ADR-30). `create_app()` llama a `get_firebase_app()` después de `get_db()`, así que la API no arranca sin `FIRESTORE_EMULATOR_HOST` ni `FIREBASE_SERVICE_ACCOUNT_BASE64` (ADR-49).
+  * `backend/requirements.txt` cambia `PyJWT==2.15.0` por `firebase-admin==7.7.0`. La instalación solo agregó paquetes y no movió ninguna versión fijada. `pyjwt` 2.15.0 sigue instalado como dependencia de `firebase-admin`. `JWT_SECRET`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN` salieron de `backend/app/core/config.py` y de `backend/.env.example`. El valor de desarrollo `DEV_JWT_SECRET`, que solo estaba en `config.py`, también salió.
+* **Decisión en la app:**
+  * `AuthRepository.login` inicia sesión con correo y contraseña mediante `signInWithEmailAndPassword`. Los errores de Firebase se traducen como indica ADR-55.
+  * `ApiClient` adjunta en cada petición el ID token de Firebase y `Accept-Language` con el idioma elegido en la app, que se lee en el momento. Si el token no se puede obtener porque no hay red, la petición sale sin él y, cuando termina en `NETWORK_ERROR`, el repositorio sirve la caché.
+  * Ante un 401, `ApiClient` pide un token nuevo con `getIdToken(forceRefresh: true)` y reintenta una sola vez. Los 401 simultáneos esperan la misma renovación. Si otra petición ya renovó, se usa ese token sin forzar otro.
+  * Si el reintento vuelve a dar 401, o Firebase ya no tiene usuario, `onSessionExpired` ejecuta `AuthController.logout()`, el mismo del botón de ajustes. Ese método cierra la sesión de Firebase, borra `SecureStorage`, vacía Drift con `_db.wipe()` e invalida `meProvider`. Drift importa porque `CachedQuestions` guarda `correctAnswer` después de responder. Con `isLoggedIn` en falso el router lleva al inicio (ADR-52 y ADR-53).
+  * `lib/main.dart` inicializa Firebase con `DefaultFirebaseOptions` (ADR-42) y toma la sesión inicial del primer evento de `authStateChanges` (ADR-54). Se borró `lib/core/storage/secure_storage_bootstrap.dart`, que buscaba el refresh token, y `lib/core/network/endpoints.dart` perdió `/auth/login`, `/auth/refresh` y `/auth/logout`.
+* **Verificación por SMS:** los pasos de teléfono del registro (`/register`, `/onboarding/phone` y `/onboarding/verify-phone`) quedan detrás de `PHONE_VERIFICATION_ENABLED`, definida en `lib/core/config/app_config.dart` y apagada por defecto. Con la bandera apagada, el router lleva esas rutas a `/onboarding/locale`. El código de `PhoneAuthService` y de las pantallas de teléfono sigue en el repositorio. Con `--dart-define=PHONE_VERIFICATION_ENABLED=true` el registro vuelve a pedir y verificar el número.
+* **Alternativa descartada:** JWT propio del backend, con un access token de 15 minutos y un refresh token de 30 días que rotaba en cada uso, como describían el párrafo de sesión de `CLAUDE.md` y la tabla de tecnologías de `README.md`. ADR-20 cubría su secreto de firma y ADR-38 su verificación. El backend tendría que emitir y rotar tokens y custodiar un secreto de firma. Ninguna ruta del backend FastAPI los emitía todavía, y la contraparte eligió Firebase Auth.
+* **Sustituye:** ADR-20 (`JWT_SECRET` obligatorio en producción) y ADR-38 (claims que el port de `auth.js` no verificaba). Las dos conservan su texto, con una nota que remite aquí.
+* **Consecuencias:**
+  * Lo que esta entrega decidió sin cobertura del encargo ni del documento de Max quedó como propuesta en ADR-43 a ADR-55. El cambio de alcance en la app está en ADR-41 y la configuración de cliente de Firebase en ADR-42.
+  * Ninguna ruta usa todavía `CurrentUser` ni `OptionalUser`. La API sigue respondiendo solo `/health`.
+  * En el proyecto de Vercel de la API sobran `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV`, y falta `APP_ENV` (ADR-36). `Settings` ignora las variables que no declara, así que las que sobran no impiden el arranque. Hay que borrarlas y crear `APP_ENV` al desplegar.
+  * Nadie confirmó que el proveedor de correo y contraseña esté habilitado en Firebase Authentication del proyecto `aprueba-app-modulo-preguntas`, y no consta que existan cuentas de demostración. El registro de la app no las crea (ADR-41), así que hay que crearlas desde la consola de Firebase.
+* **Verificación (2026-09-24):** `pytest` en `backend/` da 31 aprobadas con el emulador de Firestore, 21 en `tests/test_core.py` y 10 en `tests/test_health.py`. Antes eran 24. Las pruebas reemplazan `verify_id_token` con `monkeypatch`, salvo `test_verify_id_token_real_con_firma_local`, que firma tokens RS256 con una llave generada durante la prueba y reemplaza la descarga de certificados. Ninguna usa red ni credenciales reales. `flutter test` da 45 aprobadas. En `feature/backend-fastapi` eran 29, y las 16 nuevas están en `test/api_client_auth_test.dart`. `flutter analyze` sigue en 38 avisos informativos, sin advertencias ni errores.
+
+---
+
+### ADR-41: Cambio de alcance autorizado: login y registro
+
+* **Estado:** **AUTORIZADA POR LA CONTRAPARTE (2026-09-23), IMPLEMENTADA EN `feature/firebase-auth`, PENDIENTE DE REVISIÓN CRUZADA**
+* **Contexto:** `CLAUDE.md` deja fuera del alcance el registro y la autenticación, y dice que ese código es del cliente y no se toca. Pasar a Firebase Auth (ADR-40) obligaba a cambiar el login, que pedía tokens a `/auth/login` y los renovaba con `/auth/refresh`. El 23/09/2026 Alloxentric autorizó tocar lo necesario para ese cambio y sacar la verificación por SMS.
+* **Archivos tocados fuera de `lib/features/practice/`:**
+  * `lib/core/network/api_client.dart`: el interceptor adjunta el ID token de Firebase y `Accept-Language`, renueva una vez ante un 401 y cierra la sesión cuando no puede.
+  * `lib/providers/app_providers.dart`: crea `ApiClient` con el token y el idioma, y conecta `onSessionExpired` con `AuthController.logout()` (ADR-52).
+  * `lib/providers/auth_controller.dart`: `login` deja de devolver `AuthSession`, porque Firebase no entrega tokens del backend, y pasa el idioma de la app para los mensajes de error.
+  * `lib/data/repositories/auth_repository.dart`: `login` usa `signInWithEmailAndPassword`, `logout` usa `signOut` de Firebase en vez de `/auth/logout` y `hasSession` mira `FirebaseAuth.instance.currentUser`. Agrega `authExceptionFromFirebase` (ADR-55).
+  * `lib/core/l10n/app_strings.dart`: cinco textos de error del login, en español e inglés.
+  * `lib/core/network/endpoints.dart`: quita `/auth/login`, `/auth/refresh` y `/auth/logout`, que ahora resuelve Firebase.
+  * `lib/core/storage/secure_storage_bootstrap.dart`: se borró. Decidía si había sesión buscando el refresh token.
+  * `lib/main.dart`: inicializa Firebase y lee de ahí la sesión inicial (ADR-54).
+  * `lib/core/config/app_config.dart`: agrega `PHONE_VERIFICATION_ENABLED` y quita `accessTokenTtl`, la duración informativa de 15 minutos del token propio.
+  * `lib/core/router/app_router.dart`: con la bandera apagada, `/register`, `/onboarding/phone` y `/onboarding/verify-phone` llevan a `/onboarding/locale`.
+  * `lib/data/services/phone_auth_service.dart`: inicializa Firebase con las mismas opciones que `main.dart` y cierra la sesión de Firebase apenas obtiene el ID token del teléfono. Esa sesión solo probaba el número. Con Firebase Auth como sesión de la app, dejarla abierta habría dado sesión al alumno antes de terminar el registro. Solo corre con `PHONE_VERIFICATION_ENABLED=true`.
+  * `lib/firebase_options.dart`, `android/app/google-services.json`, `ios/Runner/GoogleService-Info.plist` y `.gitignore`: configuración de cliente de Firebase (ADR-42).
+  * `test/api_client_auth_test.dart`, nuevo, y `test/drift_integrity_test.dart`, donde solo cambió la forma de construir `ApiClient`.
+* **Sin tocar a propósito:** el registro (`lib/features/auth/register_screen.dart` y `POST /auth/register`), el login social (`lib/features/auth/social_buttons.dart`, `lib/data/services/social_auth_service.dart` y `POST /auth/social`), el olvido y el restablecimiento de contraseña (`forgot_password_screen.dart`, `/auth/password/forgot` y `/auth/password/reset`), el resto del onboarding, `SecureStorage` y el modelo `AuthSession`. Siguen llamando a rutas `/auth/*` que el backend FastAPI no tiene. `pubspec.yaml` no cambió: `firebase_auth` y `firebase_core` ya estaban.
+* **Límites conocidos:**
+  * Con `PHONE_VERIFICATION_ENABLED` apagada el registro no tiene salida. `RegisterScreen`, en `/onboarding/account`, exige `isPhoneVerified` y después llama a `/auth/register`. Aunque esa ruta existiera, `/auth/register` y `/auth/social` devuelven tokens propios del backend que el interceptor ya no envía. Las cuentas de demostración se crean desde la consola de Firebase.
+  * `isLoggedInProvider` no escucha `authStateChanges` de Firebase. Si Firebase cierra la sesión por su cuenta, la app se entera con el siguiente 401 (ADR-53).
+* **Alternativa descartada:** relajar `isPhoneVerified` en `register_screen.dart` para que el registro funcione sin teléfono. El registro igual terminaría en tokens propios del backend que el interceptor ya no usa, y rehacerlo sobre Firebase es otro cambio de alcance que la contraparte no autorizó.
+* **Pendiente:** confirmar con Alloxentric qué pasa con el registro, el login social y el restablecimiento de contraseña. Una propuesta para esa conversación: mientras no pasen a Firebase, "Comenzar" (`lib/features/splash/splash_screen.dart:37`) lleva a `/login` y `SocialButtons` se oculta.
+
+---
+
+### ADR-42: Configuración de cliente de Firebase versionada
+
+* **Estado:** **IMPLEMENTADA EN `feature/firebase-auth` (2026-09-24), PENDIENTE DE REVISIÓN CRUZADA**
+* **Decisión:** se versiona la configuración de cliente del proyecto `aprueba-app-modulo-preguntas`: `lib/firebase_options.dart`, con las opciones de web, Android e iOS, más `android/app/google-services.json` e `ios/Runner/GoogleService-Info.plist`. `.gitignore` dejó de excluir los dos últimos. Ahora ignora también `**/*-firebase-adminsdk-*.json`, el nombre con que la consola de Firebase descarga la llave de una cuenta de servicio, además de los nombres de cuenta de servicio que ya excluía.
+* **Por qué la `apiKey` no es secreta:** identifica el proyecto ante las APIs de Google y viaja dentro de cualquier build de la app, así que cualquiera que tenga la app puede leerla. No da acceso a los datos: `firestore.rules` niega al cliente toda lectura y escritura (ADR-21), y la API solo acepta un ID token que `verify_id_token` haya validado (ADR-40). Con la `apiKey` sí se puede llamar a Firebase Authentication del proyecto, por ejemplo para crear una cuenta si el proveedor de correo lo permite. Esa cuenta queda autenticada, pero sigue sin poder leer Firestore. La API, en cambio, aceptaría su token como el de un alumno más, con rol `student` y plan `free`, porque `get_current_user` no lee `users/{uid}` (ADR-44).
+* **Cuenta de servicio:** sigue siendo secreta. Llega al backend solo por `FIREBASE_SERVICE_ACCOUNT_BASE64` (ADR-18). No se versiona ni se imprime.
+* **Búsqueda de secretos:** la regla 2 de `CLAUDE.md` excluye `firebase_options.dart`, `google-services.json` y `GoogleService-Info.plist`, porque el patrón de la búsqueda calza con el prefijo de su `apiKey` y los encontraría cada vez. También excluye `.dart_tool`, donde una compilación web deja la misma `apiKey` dentro de `main.dart.js`. La regla lista los archivos que siguen apareciendo y por qué.
+* **Origen de `firebase_options.dart`:** se escribió a mano con el formato de FlutterFire CLI, a partir de los archivos que entrega la consola de Firebase. `flutterfire configure` lo reemplaza sin tocar el resto del código. En macOS, Windows y Linux lanza `UnsupportedError`, como hace FlutterFire con una plataforma que no se configuró.
+* **Qué archivo se usa:** `lib/main.dart` y `PhoneAuthService` inicializan Firebase con `DefaultFirebaseOptions.currentPlatform`. Hoy ningún build nativo lee `google-services.json` ni `GoogleService-Info.plist`: Android no aplica el plugin `com.google.gms.google-services` y `ios/Runner.xcodeproj/project.pbxproj` no referencia el plist. `setup/android/build.gradle.notes.md` pide `google-services.json` para las notificaciones push, que están fuera del alcance. `setup/ios/Podfile.notes.md` pide el plist sin decir para qué.
+* **Alternativa descartada:** dejar los archivos fuera del repositorio, como hacía `.gitignore`, y generarlos en cada máquina y en cada build de Vercel. Cada integrante tendría que conseguirlos aparte y `vercel-build.sh` necesitaría otra variable, sin proteger nada, porque la `apiKey` igual queda dentro de la app publicada.
+* **Pendiente:** restringir las API keys en Google Cloud, por aplicación en Android e iOS y por referer en web. Decidir con Alloxentric si el alta de cuentas desde el cliente queda habilitada en Firebase Authentication.
+
+---
+
+### ADR-43: `verify_id_token` sin revisar revocación
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** `get_current_user` llama a `verify_id_token` con `check_revoked=False`. Un token revocado, por un cambio de contraseña o por `revoke_refresh_tokens`, se sigue aceptando hasta que expira. Lo mismo pasa con el token de un usuario deshabilitado. Un ID token de Firebase dura una hora, así que esa es la ventana máxima.
+* **Alternativa descartada:** `check_revoked=True`. Agrega una llamada a la API de Firebase Authentication en cada petición, con su latencia y su cuota. Esa llamada necesita credenciales, así que el modo emulador sin cuenta de servicio dejaría de funcionar (ADR-49).
+* **Impacto si se rechaza:** hay que manejar `auth.UserDisabledError`, que no hereda de `InvalidIdTokenError` y hoy terminaría en 500 (ADR-48). `RevokedIdTokenError` sí hereda y daría 401 `AUTH_REQUIRED`. `test_token_de_firebase_valido_entrega_el_usuario` revisa los argumentos de la llamada y tendría que cambiar.
+
+---
+
+### ADR-44: Rol y plan desde custom claims mientras `users` está en pausa
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** `get_current_user` devuelve `uid`, `email`, `role` y `plan`. `uid` es el claim que `verify_id_token` copia de `sub`. `role` sale del custom claim `role` o vale `student`, y `plan` sale del custom claim `plan` o vale `free`. No lee `users/{uid}`.
+* **Motivo:** la forma de `users` está en pausa por la contraparte hasta acordar un modelo único con Max (ADR-31). Leer el documento en cada petición sumaba un uso nuevo de esa colección.
+* **Consecuencia:** nadie asigna custom claims hoy, así que todo alumno autenticado queda como `student` con plan `free`. Si una ruta usara `plan` para la regla de negocio 5, ningún alumno podría entrar al modo facsímil. Antes de implementar `FORMAT_REQUIRES_PLAN` hay que decidir de dónde sale el plan: de un custom claim que alguien asigne o de `users/{uid}`.
+* **Alternativa descartada por ahora:** leer `users/{uid}` en cada petición y rechazar cuentas inexistentes o deshabilitadas, como `get_current_admin` en la sección 2.6 de Max. Queda para cuando `users` salga de pausa.
+* **Verificación:** `test_token_de_firebase_valido_entrega_el_usuario` cubre los valores por defecto y los claims presentes.
+
+---
+
+### ADR-45: `CertificateFetchError` como 503 `SERVICE_UNAVAILABLE`
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** si `verify_id_token` no logra bajar los certificados públicos de Google, `get_current_user` responde 503 `SERVICE_UNAVAILABLE` con el envelope.
+* **Alternativas descartadas:** 401 `AUTH_REQUIRED`, porque la app renovaría el token, recibiría otro 401 y cerraría la sesión del alumno por una caída de Google. Dejar que termine en 500 `INTERNAL_ERROR`, porque el problema está en un servicio externo y no es un defecto del backend.
+* **Motivo:** la sección 2.5 de Max usa 503 cuando un servicio dependiente no responde a tiempo. Nombra Firestore, Cloud Monitoring, Cloud Run y Stripe, no los certificados de Google; esta ADR extiende el criterio. Un 503 no activa la renovación de `ApiClient`, que solo reacciona al 401.
+* **Verificación:** `test_certificados_de_google_no_disponibles_da_503`.
+
+---
+
+### ADR-46: Espera de 10 s para los certificados de Google
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** Firebase Admin se inicia con `httpTimeout` en 10 segundos (`HTTP_TIMEOUT` en `backend/app/db/firestore.py`). `TokenVerifier` lee esa opción al bajar los certificados. Al vencer, `verify_id_token` lanza `CertificateFetchError` y la API responde 503 (ADR-45).
+* **Alternativas descartadas:** los 120 s por defecto de `firebase_admin` (`_http_client.DEFAULT_TIMEOUT_SECONDS`). Dio corta a los 20 s, así que la app ya habría abandonado la petición, y el hilo del threadpool quedaba ocupado hasta 120 s. También se descartaron los 5 s que Max usa para Firestore: la descarga de certificados es esporádica y queda en caché.
+* **Verificación:** `test_08_firebase_admin_con_la_configuracion_de_firestore` compara las opciones con `{"projectId": "aprueba-test", "httpTimeout": 10}`.
+
+---
+
+### ADR-47: Tolerancia de 5 s en el reloj al verificar tokens
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** `verify_id_token` recibe `clock_skew_seconds=5`.
+* **Alternativa descartada:** el valor por defecto, 0. `google-auth` compara segundos enteros y rechaza con "Token used too early" un token recién emitido si el reloj del servidor va algo atrasado respecto de Google. La app renovaría, recibiría otro 401 y cerraría la sesión del alumno.
+* **Costo:** un token vencido se acepta hasta 5 s más. Es poco comparado con la hora que ya acepta un token revocado (ADR-43).
+* **Verificación:** `test_verify_id_token_real_con_firma_local` acepta un token con `iat` 2 s en el futuro. Sin el parámetro fallan dos pruebas.
+
+---
+
+### ADR-48: `TypeError` de `firebase_admin` como 401 y `ValueError` como 500
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** en `get_current_user`, `ExpiredIdTokenError` se atrapa primero, porque hereda de `InvalidIdTokenError`, y da 401 `AUTH_TOKEN_EXPIRED`. `InvalidIdTokenError` y `TypeError` dan 401 `AUTH_REQUIRED`. `firebase_admin` 7.7.0 deja escapar `TypeError` con algunos tokens mal formados: el literal `eyJhbGciOiJIUzI1NiJ9.eyJ2IjowLCJkIjo1fQ.AAAA` respondía 500 con "argument of type int is not iterable", y un `kid` dentro de una lista también fallaba. Un `ValueError` no se atrapa y termina en 500, con el `requestId` en el log. `get_firebase_app()` se llama antes del `try`, para que un error al iniciar Firebase Admin tampoco se convierta en 401.
+* **Alternativa descartada:** atrapar también `ValueError`, `RevokedIdTokenError` y `UserDisabledError` como 401. Con `check_revoked=False` los dos últimos no ocurren (ADR-43). Un `ValueError` solo viene de la configuración, por ejemplo sin ID de proyecto o con `FIREBASE_AUTH_EMULATOR_HOST` escrita con esquema. Con `FIREBASE_AUTH_EMULATOR_HOST=http://127.0.0.1:9099` la API respondía 401 sin dejar nada en el log, y la app cerraba la sesión.
+* **Verificación:** `test_verify_id_token_real_con_firma_local` y `test_error_de_configuracion_en_verify_id_token_da_500`.
+
+---
+
+### ADR-49: Firebase Admin con la configuración de Firestore
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:**
+  * `get_firebase_app()` vive en `backend/app/db/firestore.py`, junto a `get_db()`. La decodificación de `FIREBASE_SERVICE_ACCOUNT_BASE64` pasó a `_service_account_info()`, que usan los dos.
+  * Con `FIRESTORE_EMULATOR_HOST`, Firebase Admin se inicia con `AnonymousCredentials()` de `google-auth` y el proyecto `FIREBASE_PROJECT_ID`, o `aprueba-dev` si falta. Verificar un token solo usa los certificados públicos, así que no hace falta una credencial.
+  * Con cuenta de servicio, la credencial es `firebase_admin.credentials.Certificate` y el proyecto es `FIREBASE_PROJECT_ID` o el `project_id` del JSON, el mismo criterio que Firestore.
+  * Si la app por defecto de Firebase ya existe, `get_firebase_app()` la devuelve, porque `create_app()` puede correr varias veces en un proceso. Se prefirió eso a una bandera a nivel de módulo, que quedaría desfasada cuando las pruebas borran la app con `delete_app`.
+* **Alternativas descartadas:** `initialize_app(None)` en modo emulador. En `firebase_admin` 7.7.0 ese valor se convierte en `ApplicationDefault`, y el primer `verify_id_token` llama a `google.auth.default()`. En una máquina sin credenciales predeterminadas la API respondía 500. También se descartó ubicar la función en `core/security.py`, donde Max tiene la firma de JWT y las contraseñas de la consola. Habría duplicado la decodificación o importado `db/` desde `core/` de todos modos.
+* **Consecuencia:** el proyecto de Firebase Admin es la audiencia (`aud`) que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`. Un backend local con `FIREBASE_PROJECT_ID=aprueba-dev`, el valor de `backend/.env.example`, los rechaza con 401 `AUTH_REQUIRED`. `.env.example` lo advierte. Cómo probar la app contra el backend local queda por decidir con el equipo.
+* **Verificación:** `test_08_firebase_admin_con_la_configuracion_de_firestore` reemplaza `google.auth.default` por una función que falla. Si el modo emulador volviera a `initialize_app(None)`, la prueba fallaría.
+
+---
+
+### ADR-50: `FIREBASE_AUTH_EMULATOR_HOST` solo en local con el emulador de Firestore
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** si `FIREBASE_AUTH_EMULATOR_HOST` tiene valor y no se cumplen `APP_ENV=local` y `FIRESTORE_EMULATOR_HOST` a la vez, `get_firebase_app()` lanza `RuntimeError` y la API no arranca. El mensaje es "FIREBASE_AUTH_EMULATOR_HOST solo se admite con APP_ENV=local y FIRESTORE_EMULATOR_HOST.". `backend/tests/conftest.py` quita la variable del entorno para que las pruebas no hereden el emulador de Auth de quien las corre.
+* **Motivo:** con esa variable, `firebase_admin` da el token por emulado y no verifica la firma. Contra el proyecto real, o en staging, aceptaría tokens falsificados.
+* **Alternativas descartadas:** no poner la guarda, porque el fallo sería silencioso y significaría saltarse la autenticación. Revisar la variable solo cuando hay cuenta de servicio, que fue la primera versión: nada impedía el mismo estado en staging con el emulador de Firestore.
+* **Verificación:** `test_08_firebase_admin_con_la_configuracion_de_firestore` revisa los casos rechazados y el permitido.
+
+---
+
+### ADR-51: Usuario opcional con cabecera inválida
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** `get_optional_user` mira si la petición trae la cabecera `Authorization`. Sin ella devuelve `None`, el usuario anónimo. Si la cabecera existe pero no sirve, por ejemplo con el esquema `Basic` o con un token rechazado, responde el mismo 401 que `get_current_user`.
+* **Alternativa descartada:** conservar el `None` que entrega `HTTPBearer(auto_error=False)`. Convertía una cabecera `Basic` o un `Bearer` vacío en un usuario anónimo, y un cliente con un error en la cabecera no se enteraba.
+* **Impacto:** ninguna ruta usa `OptionalUser` todavía. `test_usuario_opcional` cubre los casos.
+
+---
+
+### ADR-52: `onSessionExpired` idempotente con el logout de ajustes
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** en `lib/providers/app_providers.dart`, `onSessionExpired` sale sin hacer nada si `isLoggedInProvider` ya es falso. Si no, baja la bandera y recién entonces llama a `AuthController.logout()`, el mismo método del botón de ajustes.
+* **Hallazgo:** `AuthController.logout()` invalida `meProvider`. Sin sesión, el nuevo `/me` responde 401 sin token y vuelve a llamar a `onSessionExpired`. Con una sonda que usaba el `apiClientProvider` real y un adaptador que siempre respondía 401, hubo 515 peticiones y 514 logouts en 600 ms, cada uno con su borrado de Drift. Con la guarda hubo 2 peticiones y 1 logout. La misma guarda deja en un solo logout los 401 simultáneos cuyo reintento también falla.
+* **Alternativas descartadas:** un `Future` compartido en `ApiClient` para la expiración. No corta el ciclo, porque cada `/me` es una petición nueva. Repetir `AuthRepository.logout()` más el cambio de `isLoggedIn` dentro del proveedor, que duplicaba la mitad de `AuthController.logout()`.
+* **Consecuencia:** `app_providers.dart` y `auth_controller.dart` se importan entre sí. Dart lo permite, y el mismo patrón ya existe entre `app_providers.dart` y `local_prefs.dart`.
+* **Verificación:** dos pruebas en `test/api_client_auth_test.dart`. Tres llamadas con sesión dan 1 logout y dejan `isLoggedIn` en falso, y una llamada sin sesión da 0. Las dos fallaban antes del cambio. Solo cubren el cableado: un `AuthController` espía cuenta los logouts. El borrado de Drift no se prueba de punta a punta porque `AuthRepository.logout` usa `FirebaseAuth.instance` sin inyección, y un paquete de mocks nuevo quedaba fuera de las reglas.
+
+---
+
+### ADR-53: Cierre de sesión cuando Firebase invalida la cuenta al renovar
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** si `getIdToken(forceRefresh: true)` lanza una excepción, `ApiClient` vuelve a pedir el token sin forzar. Si Firebase ya no tiene usuario, porque invalidó la cuenta y su SDK cerró la sesión, llama a `onSessionExpired` en ese momento. Sin red el usuario sigue existiendo, o la consulta lanza y se toma como token vacío, así que la sesión no se cierra.
+* **Alternativa descartada:** esperar al siguiente 401, que llegaría sin token. Hasta que el alumno hiciera otra acción, `isLoggedIn` seguía en verdadero y Drift sin borrar.
+* **Verificación:** "si Firebase invalidó la cuenta al renovar, cierra la sesión" falló antes del cambio. "si Firebase no logra renovar por red, no cierra la sesión" sigue en verde. Las dos están en `test/api_client_auth_test.dart`.
+
+---
+
+### ADR-54: Arranque sin sesión si Firebase no carga
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** `lib/main.dart` espera hasta 10 s a `Firebase.initializeApp` y hasta 5 s al primer evento de `authStateChanges`. Si algo falla o vence, registra el error con `debugPrint` y la app arranca sin sesión. Pasa en web cuando `gstatic.com` está bloqueado y en escritorio, donde `DefaultFirebaseOptions` no tiene opciones.
+* **Alternativa descartada:** dejar que la excepción suba desde `main()`. La app quedaba en blanco.
+* **Consecuencia:** un alumno con sesión guardada ve la pantalla de inicio, y el login tampoco funciona mientras Firebase no cargue. La app no le explica por qué.
+
+---
+
+### ADR-55: Códigos de error de Firebase Auth en la app
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Decisión tomada al implementar:** `authExceptionFromFirebase`, en `lib/data/repositories/auth_repository.dart`, convierte cada error de Firebase Auth en una `ApiException` con un código estable y un mensaje de `app_strings.dart` en el idioma de la app. El código original de Firebase va en `details`. La tabla es:
+  * `invalid-credential`, `INVALID_LOGIN_CREDENTIALS`, `wrong-password`, `user-not-found`, `missing-password` y `channel-error` pasan a `AUTH_INVALID_CREDENTIALS`. `channel-error` es lo que Android e iOS lanzan con el correo o la contraseña vacíos.
+  * `invalid-email` pasa a `AUTH_INVALID_EMAIL` y `user-disabled` a `AUTH_USER_DISABLED`.
+  * `too-many-requests` pasa a `AUTH_TOO_MANY_REQUESTS` y `network-request-failed` a `NETWORK_ERROR`.
+  * Cualquier otro pasa a `AUTH_FAILED`, con el mensaje genérico.
+* **Motivo:** la regla de negocio 8 pide traducir los errores a estados de interfaz. El mensaje de Firebase llega en inglés y cambia entre plataformas, así que la pantalla de login no puede mostrarlo tal cual.
+* **Pendiente de confirmar:** estos códigos existen solo en la app y no están en el catálogo del backend (`backend/app/core/errors.py`) ni en el contrato de la empresa. Si el equipo los acepta, conviene documentarlos junto al catálogo.
+* **Verificación:** el grupo "errores de Firebase Auth" de `test/api_client_auth_test.dart`.
