@@ -1,0 +1,482 @@
+[
+  {
+    "id": "q_demo_lectora_d1",
+    "testId": "lectora",
+    "axis": "Localizar",
+    "skillId": "sk_demo_lectora_localizar",
+    "difficulty": "d1",
+    "statement": "Lee el texto y responde.\n\n> La biblioteca municipal amplió su horario desde marzo. De lunes a viernes abre de 9:00 a 20:00 y los sábados de 10:00 a 14:00. Los domingos permanece cerrada. Para pedir libros a domicilio basta presentar la cédula de identidad; no se cobra inscripción.\n\nSegún el texto, ¿qué se necesita para pedir libros a domicilio?",
+    "options": [
+      "Pagar una inscripción anual.",
+      "Ir a la biblioteca un día sábado.",
+      "Presentar la cédula de identidad.",
+      "Tener una cuenta en el sitio web de la biblioteca."
+    ],
+    "correctAnswer": "C",
+    "explanation": "1. La pregunta pide un dato que el texto dice de forma explícita: el requisito para pedir libros a domicilio.\n2. El texto dice: \"Para pedir libros a domicilio basta presentar la cédula de identidad\".\n3. La alternativa A contradice el texto, que aclara que no se cobra inscripción. B y D no aparecen como requisitos.\nVerificación: C es la única alternativa que repite lo que el texto afirma.",
+    "cohortSpeedThresholds": {
+      "p25": 20000,
+      "p50": 35000,
+      "p75": 55000,
+      "p90": 80000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_lectora_001",
+    "testId": "lectora",
+    "axis": "Comprensión lectora",
+    "skillId": "sk_lectora_comp_lit",
+    "difficulty": "d2",
+    "statement": "Lee el fragmento y responde.\n\n> Cuando llegó la fábrica de cemento, todo el pueblo salió a la plaza a celebrarla. Hubo trabajo para hombres y mujeres, y por primera vez las casas tuvieron luz eléctrica toda la noche. Veinte años después, don Anselmo llevó a su nieto al río donde él había aprendido a pescar. El agua bajaba gris y espesa, y en la orilla no quedaba ni un sauce. \"Aquí antes se veía el fondo\", le dijo al niño, pero el niño solo miraba el humo que cubría los cerros.\n\n¿Cuál es la idea principal del fragmento?",
+    "options": [
+      "La modernización de la industria",
+      "El impacto ambiental del progreso",
+      "La vida cotidiana en el campo",
+      "Los avances tecnológicos del siglo XX"
+    ],
+    "correctAnswer": "B",
+    "explanation": "1. El fragmento parte con la llegada de la fábrica y lo que trajo: trabajo y luz eléctrica.\n2. Veinte años después muestra las consecuencias: el río contaminado, los sauces desaparecidos y el humo sobre los cerros.\n3. Lo que une ambas partes es que ese progreso tuvo un costo para el ambiente.\nVerificación: A y D describen solo la primera parte del texto, y C es parte del escenario, no lo que el texto quiere mostrar.",
+    "cohortSpeedThresholds": {
+      "p25": 15000,
+      "p50": 25000,
+      "p75": 45000,
+      "p90": 60000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_lectora_d3",
+    "testId": "lectora",
+    "axis": "Interpretar",
+    "skillId": "sk_demo_lectora_interpretar",
+    "difficulty": "d3",
+    "statement": "Lee el texto y responde.\n\n> Camila revisó por tercera vez el pronóstico en su teléfono. Guardó el paraguas en la mochila, se puso las botas de goma y, antes de salir, le pidió a su hermano que entrara la ropa que estaba colgada en el patio.\n\n¿Qué se puede inferir del texto?",
+    "options": [
+      "El pronóstico anunciaba un día soleado.",
+      "Camila llegará tarde a clases.",
+      "El hermano de Camila olvidó su paraguas.",
+      "Camila espera que llueva."
+    ],
+    "correctAnswer": "D",
+    "explanation": "1. El texto no dice que va a llover: hay que deducirlo de lo que hace Camila.\n2. Guarda el paraguas, se pone botas de goma y pide entrar la ropa colgada. Todas son precauciones ante la lluvia.\n3. La alternativa A contradice esas precauciones, y B y C no tienen apoyo en el texto.\nVerificación: si el pronóstico anunciara sol, ninguna de esas acciones tendría sentido.",
+    "cohortSpeedThresholds": {
+      "p25": 30000,
+      "p50": 50000,
+      "p75": 75000,
+      "p90": 105000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_lectora_d4",
+    "testId": "lectora",
+    "axis": "Evaluar",
+    "skillId": "sk_demo_lectora_evaluar",
+    "difficulty": "d4",
+    "statement": "Lee el texto y responde.\n\n> Cada año se botan en Chile toneladas de alimentos que todavía se pueden comer. Mientras tanto, muchas familias no alcanzan a cubrir su canasta básica. Por eso los supermercados deberían estar obligados a donar los productos que no venden antes de su fecha de vencimiento, en lugar de desecharlos.\n\n¿Cuál es el propósito principal del texto?",
+    "options": [
+      "Convencer al lector de que los supermercados donen los alimentos que no venden.",
+      "Informar sobre las fechas de vencimiento de los alimentos.",
+      "Describir cómo funcionan los supermercados.",
+      "Narrar la experiencia de una familia con pocos recursos."
+    ],
+    "correctAnswer": "A",
+    "explanation": "1. El texto presenta un problema: se botan alimentos que todavía se pueden comer.\n2. Lo contrasta con las familias que no cubren su canasta básica.\n3. Cierra con una propuesta introducida por \"deberían\", que busca que el lector la acepte.\nVerificación: un texto que plantea un problema y defiende una solución busca convencer, no informar, describir ni narrar.",
+    "cohortSpeedThresholds": {
+      "p25": 35000,
+      "p50": 60000,
+      "p75": 90000,
+      "p90": 120000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m1_d1",
+    "testId": "m1",
+    "axis": "Números",
+    "skillId": "sk_demo_m1_operatoria",
+    "difficulty": "d1",
+    "statement": "¿Cuál es el valor de 3 + 4 · 2 − 6 ÷ 3?",
+    "options": [
+      "5",
+      "9",
+      "12",
+      "14"
+    ],
+    "correctAnswer": "B",
+    "explanation": "1. Primero se resuelven la multiplicación y la división: 4 · 2 = 8 y 6 ÷ 3 = 2.\n2. La expresión queda 3 + 8 − 2.\n3. Luego se suma y se resta de izquierda a derecha: 3 + 8 = 11 y 11 − 2 = 9.\nVerificación: sumar antes de multiplicar da (3 + 4) · 2 − 2 = 12, que es el error de la alternativa C.",
+    "cohortSpeedThresholds": {
+      "p25": 10000,
+      "p50": 20000,
+      "p75": 35000,
+      "p90": 50000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m1_d2",
+    "testId": "m1",
+    "axis": "Geometría",
+    "skillId": "sk_demo_m1_pitagoras",
+    "difficulty": "d2",
+    "statement": "Un triángulo rectángulo tiene catetos de 6 cm y 8 cm. ¿Cuánto mide su hipotenusa?",
+    "options": [
+      "10 cm",
+      "14 cm",
+      "2√7 cm",
+      "48 cm"
+    ],
+    "correctAnswer": "A",
+    "explanation": "1. En un triángulo rectángulo se cumple hipotenusa² = cateto² + cateto².\n2. 6² + 8² = 36 + 64 = 100.\n3. La hipotenusa mide √100 = 10 cm.\nVerificación: 10² = 100 = 36 + 64, y la hipotenusa resulta mayor que cada cateto, como debe ser.",
+    "cohortSpeedThresholds": {
+      "p25": 15000,
+      "p50": 30000,
+      "p75": 50000,
+      "p90": 70000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m1_d3",
+    "testId": "m1",
+    "axis": "Álgebra y funciones",
+    "skillId": "sk_demo_m1_ecuaciones",
+    "difficulty": "d3",
+    "statement": "Si 3x − 5 = 16, ¿cuál es el valor de x?",
+    "options": [
+      "11/3",
+      "21",
+      "7",
+      "63"
+    ],
+    "correctAnswer": "C",
+    "explanation": "1. Se suma 5 a ambos lados: 3x = 16 + 5 = 21.\n2. Se dividen ambos lados por 3: x = 21 ÷ 3 = 7.\nVerificación: 3 · 7 − 5 = 21 − 5 = 16.",
+    "cohortSpeedThresholds": {
+      "p25": 25000,
+      "p50": 45000,
+      "p75": 70000,
+      "p90": 100000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m1_d4",
+    "testId": "m1",
+    "axis": "Probabilidad y estadística",
+    "skillId": "sk_demo_m1_probabilidad",
+    "difficulty": "d4",
+    "statement": "Se lanzan dos dados comunes de seis caras. ¿Cuál es la probabilidad de que la suma de los puntos sea 7?",
+    "options": [
+      "1/12",
+      "1/11",
+      "7/36",
+      "1/6"
+    ],
+    "correctAnswer": "D",
+    "explanation": "1. Cada dado tiene 6 resultados, así que hay 6 · 6 = 36 resultados posibles, todos igual de probables.\n2. Los pares que suman 7 son (1, 6), (2, 5), (3, 4), (4, 3), (5, 2) y (6, 1): 6 casos favorables.\n3. La probabilidad es 6/36 = 1/6.\nVerificación: contar solo 3 pares, sin distinguir qué dado da cada número, lleva a 3/36 = 1/12, el error de la alternativa A.",
+    "cohortSpeedThresholds": {
+      "p25": 35000,
+      "p50": 60000,
+      "p75": 90000,
+      "p90": 130000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m2_d1",
+    "testId": "m2",
+    "axis": "Números",
+    "skillId": "sk_demo_m2_logaritmos",
+    "difficulty": "d1",
+    "statement": "¿Cuál es el valor de log₂ 32?",
+    "options": [
+      "16",
+      "4",
+      "5",
+      "64"
+    ],
+    "correctAnswer": "C",
+    "explanation": "1. log₂ 32 es el exponente al que hay que elevar 2 para obtener 32.\n2. 2¹ = 2, 2² = 4, 2³ = 8, 2⁴ = 16 y 2⁵ = 32.\n3. Por lo tanto, log₂ 32 = 5.\nVerificación: 2⁵ = 32. La alternativa A (16) resulta de dividir 32 por 2, que no es lo que pide el logaritmo.",
+    "cohortSpeedThresholds": {
+      "p25": 10000,
+      "p50": 20000,
+      "p75": 35000,
+      "p90": 50000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m2_d2",
+    "testId": "m2",
+    "axis": "Álgebra y funciones",
+    "skillId": "sk_demo_m2_cuadratica",
+    "difficulty": "d2",
+    "statement": "¿Cuáles son las soluciones de la ecuación x² − 5x + 6 = 0?",
+    "options": [
+      "x = 2 y x = 3",
+      "x = −2 y x = −3",
+      "x = 1 y x = 6",
+      "x = −1 y x = −6"
+    ],
+    "correctAnswer": "A",
+    "explanation": "1. Se buscan dos números cuyo producto sea 6 y cuya suma sea 5: son 2 y 3.\n2. La ecuación se factoriza como (x − 2)(x − 3) = 0.\n3. Un producto vale cero cuando uno de sus factores vale cero: x = 2 o x = 3.\nVerificación: 2² − 5 · 2 + 6 = 4 − 10 + 6 = 0 y 3² − 5 · 3 + 6 = 9 − 15 + 6 = 0.",
+    "cohortSpeedThresholds": {
+      "p25": 15000,
+      "p50": 30000,
+      "p75": 50000,
+      "p90": 70000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m2_d3",
+    "testId": "m2",
+    "axis": "Geometría",
+    "skillId": "sk_demo_m2_trigonometria",
+    "difficulty": "d3",
+    "statement": "En un triángulo rectángulo, uno de los ángulos agudos mide 30° y la hipotenusa mide 10 cm. ¿Cuánto mide el cateto opuesto a ese ángulo?",
+    "options": [
+      "5√3 cm",
+      "20 cm",
+      "10√3 cm",
+      "5 cm"
+    ],
+    "correctAnswer": "D",
+    "explanation": "1. El seno de un ángulo agudo es el cateto opuesto dividido por la hipotenusa: sen 30° = cateto opuesto / 10.\n2. Como sen 30° = 1/2, el cateto opuesto mide 10 · 1/2 = 5 cm.\nVerificación: el otro cateto mide 10 · cos 30° = 5√3 cm, y 5² + (5√3)² = 25 + 75 = 100 = 10².",
+    "cohortSpeedThresholds": {
+      "p25": 25000,
+      "p50": 45000,
+      "p75": 70000,
+      "p90": 100000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_m2_d4",
+    "testId": "m2",
+    "axis": "Probabilidad y estadística",
+    "skillId": "sk_demo_m2_prob_dependientes",
+    "difficulty": "d4",
+    "statement": "Una urna contiene 3 bolitas rojas y 2 azules. Se sacan dos bolitas al azar, una tras otra y sin devolver la primera. ¿Cuál es la probabilidad de que ambas sean rojas?",
+    "options": [
+      "9/25",
+      "3/10",
+      "6/25",
+      "3/5"
+    ],
+    "correctAnswer": "B",
+    "explanation": "1. En la primera extracción hay 3 rojas entre 5 bolitas: la probabilidad es 3/5.\n2. Sin devolver la primera, quedan 2 rojas entre 4 bolitas: la probabilidad es 2/4.\n3. Se multiplican: 3/5 · 2/4 = 6/20 = 3/10.\nVerificación: hay 10 pares posibles de bolitas y 3 de ellos son de dos rojas, así que la probabilidad es 3/10. Si se devolviera la primera bolita se obtendría 3/5 · 3/5 = 9/25, el error de la alternativa A.",
+    "cohortSpeedThresholds": {
+      "p25": 35000,
+      "p50": 60000,
+      "p75": 90000,
+      "p90": 130000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_cien_d1",
+    "testId": "cien",
+    "axis": "Biología",
+    "skillId": "sk_demo_cien_celula",
+    "difficulty": "d1",
+    "statement": "¿En qué organelo de las células vegetales ocurre la fotosíntesis?",
+    "options": [
+      "Mitocondria",
+      "Cloroplasto",
+      "Ribosoma",
+      "Vacuola"
+    ],
+    "correctAnswer": "B",
+    "explanation": "1. La fotosíntesis transforma energía luminosa en energía química y necesita clorofila.\n2. La clorofila se encuentra en los cloroplastos, organelos de las células vegetales y de las algas.\n3. La mitocondria realiza la respiración celular, el ribosoma sintetiza proteínas y la vacuola almacena agua y otras sustancias.\nVerificación: el único organelo de la lista que contiene clorofila es el cloroplasto.",
+    "cohortSpeedThresholds": {
+      "p25": 10000,
+      "p50": 20000,
+      "p75": 35000,
+      "p90": 50000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_cien_d2",
+    "testId": "cien",
+    "axis": "Física",
+    "skillId": "sk_demo_cien_rapidez",
+    "difficulty": "d2",
+    "statement": "Un bus recorre 150 km en 2 horas. ¿Cuál es su rapidez media?",
+    "options": [
+      "300 km/h",
+      "152 km/h",
+      "75 km/h",
+      "37,5 km/h"
+    ],
+    "correctAnswer": "C",
+    "explanation": "1. La rapidez media es la distancia recorrida dividida por el tiempo empleado.\n2. v = 150 km ÷ 2 h = 75 km/h.\nVerificación: a 75 km/h, en 2 horas se recorren 75 · 2 = 150 km.",
+    "cohortSpeedThresholds": {
+      "p25": 15000,
+      "p50": 30000,
+      "p75": 50000,
+      "p90": 70000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_cien_d3",
+    "testId": "cien",
+    "axis": "Química",
+    "skillId": "sk_demo_cien_masa_molar",
+    "difficulty": "d3",
+    "statement": "Considerando las masas atómicas C = 12 g/mol y O = 16 g/mol, ¿cuál es la masa molar del dióxido de carbono (CO₂)?",
+    "options": [
+      "28 g/mol",
+      "32 g/mol",
+      "60 g/mol",
+      "44 g/mol"
+    ],
+    "correctAnswer": "D",
+    "explanation": "1. La fórmula CO₂ indica 1 átomo de carbono y 2 de oxígeno.\n2. Masa molar = 1 · 12 + 2 · 16 = 12 + 32 = 44 g/mol.\nVerificación: 28 g/mol correspondería al CO, con un solo oxígeno, y 32 g/mol al O₂.",
+    "cohortSpeedThresholds": {
+      "p25": 25000,
+      "p50": 45000,
+      "p75": 70000,
+      "p90": 100000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_cien_d4",
+    "testId": "cien",
+    "axis": "Física",
+    "skillId": "sk_demo_cien_mrua",
+    "difficulty": "d4",
+    "statement": "Un carro de 2 kg parte del reposo y acelera de manera uniforme a 3 m/s² durante 4 s. ¿Qué rapidez alcanza al final de ese tiempo?",
+    "options": [
+      "12 m/s",
+      "24 m/s",
+      "6 m/s",
+      "1,5 m/s"
+    ],
+    "correctAnswer": "A",
+    "explanation": "1. En un movimiento uniformemente acelerado que parte del reposo, v = v₀ + a · t, con v₀ = 0.\n2. v = 0 + 3 m/s² · 4 s = 12 m/s.\n3. La masa del carro no interviene: haría falta para calcular la fuerza, no la rapidez.\nVerificación: la aceleración suma 3 m/s de rapidez cada segundo: 3, 6, 9 y 12 m/s al cabo de 4 s.",
+    "cohortSpeedThresholds": {
+      "p25": 35000,
+      "p50": 60000,
+      "p75": 90000,
+      "p90": 130000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_hist_d1",
+    "testId": "hist",
+    "axis": "Historia",
+    "skillId": "sk_demo_hist_independencia",
+    "difficulty": "d1",
+    "statement": "¿En qué año se proclamó la independencia de Chile?",
+    "options": [
+      "1810",
+      "1818",
+      "1833",
+      "1879"
+    ],
+    "correctAnswer": "B",
+    "explanation": "1. El 18 de septiembre de 1810 se formó la Primera Junta Nacional de Gobierno, que todavía gobernaba en nombre del rey Fernando VII.\n2. La independencia se proclamó con el Acta de Independencia, que se juró el 12 de febrero de 1818.\n3. 1833 es el año de la Constitución de 1833, y 1879, el del inicio de la Guerra del Pacífico.\nVerificación: lo que se celebra cada 18 de septiembre es la Junta de 1810, no la independencia; por eso 1810 es el error más frecuente.",
+    "cohortSpeedThresholds": {
+      "p25": 10000,
+      "p50": 20000,
+      "p75": 35000,
+      "p90": 50000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_hist_d2",
+    "testId": "hist",
+    "axis": "Sistema económico",
+    "skillId": "sk_demo_hist_oferta_demanda",
+    "difficulty": "d2",
+    "statement": "Según la ley de la demanda, si el precio de un bien sube y los demás factores se mantienen constantes, ¿qué ocurre con la cantidad demandada de ese bien?",
+    "options": [
+      "Disminuye.",
+      "Aumenta.",
+      "Se mantiene igual.",
+      "Se duplica."
+    ],
+    "correctAnswer": "A",
+    "explanation": "1. La ley de la demanda establece una relación inversa entre el precio de un bien y la cantidad que los consumidores quieren comprar.\n2. Si el precio sube y nada más cambia, los consumidores compran menos de ese bien.\nVerificación: en un gráfico, la curva de demanda baja de izquierda a derecha: a mayor precio, menor cantidad demandada.",
+    "cohortSpeedThresholds": {
+      "p25": 15000,
+      "p50": 30000,
+      "p75": 50000,
+      "p90": 70000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_hist_d3",
+    "testId": "hist",
+    "axis": "Formación ciudadana",
+    "skillId": "sk_demo_hist_estado",
+    "difficulty": "d3",
+    "statement": "Según la Constitución Política de la República de Chile, ¿qué órgano tiene como atribución exclusiva fiscalizar los actos del Gobierno?",
+    "options": [
+      "El Senado",
+      "El Tribunal Constitucional",
+      "La Corte Suprema",
+      "La Cámara de Diputadas y Diputados"
+    ],
+    "correctAnswer": "D",
+    "explanation": "1. El artículo 52 de la Constitución entrega a la Cámara de Diputadas y Diputados la atribución exclusiva de fiscalizar los actos del Gobierno.\n2. Para eso puede adoptar acuerdos, citar a ministros y crear comisiones especiales investigadoras.\n3. El artículo 53 prohíbe expresamente al Senado fiscalizar los actos del Gobierno.\nVerificación: el Tribunal Constitucional controla que las leyes se ajusten a la Constitución y la Corte Suprema encabeza el Poder Judicial; ninguno fiscaliza al Gobierno en el sentido del artículo 52.",
+    "cohortSpeedThresholds": {
+      "p25": 25000,
+      "p50": 45000,
+      "p75": 70000,
+      "p90": 100000
+    },
+    "status": "active",
+    "isDemo": true
+  },
+  {
+    "id": "q_demo_hist_d4",
+    "testId": "hist",
+    "axis": "Geografía",
+    "skillId": "sk_demo_hist_poblacion",
+    "difficulty": "d4",
+    "statement": "Un país de 10.000.000 de habitantes registró 150.000 nacimientos en un año. ¿Cuál fue su tasa bruta de natalidad?",
+    "options": [
+      "1,5 por cada 1.000 habitantes",
+      "0,015 por cada 1.000 habitantes",
+      "15 por cada 1.000 habitantes",
+      "150 por cada 1.000 habitantes"
+    ],
+    "correctAnswer": "C",
+    "explanation": "1. La tasa bruta de natalidad es el número de nacimientos de un año por cada 1.000 habitantes.\n2. Tasa = (150.000 ÷ 10.000.000) · 1.000.\n3. 150.000 ÷ 10.000.000 = 0,015, y 0,015 · 1.000 = 15.\nVerificación: 15 nacimientos por cada 1.000 habitantes, en 10.000 grupos de 1.000, dan 15 · 10.000 = 150.000 nacimientos. Olvidar multiplicar por 1.000 deja 0,015, el error de la alternativa B.",
+    "cohortSpeedThresholds": {
+      "p25": 35000,
+      "p50": 60000,
+      "p75": 90000,
+      "p90": 130000
+    },
+    "status": "active",
+    "isDemo": true
+  }
+]
