@@ -1,9 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
-import 'core/storage/secure_storage_bootstrap.dart';
 import 'data/local/database.dart';
+import 'firebase_options.dart';
 import 'providers/app_providers.dart';
 
 Future<void> main() async {
@@ -12,12 +14,24 @@ Future<void> main() async {
   // Base de datos local (caché). Se abre una sola vez y se inyecta vía Riverpod.
   final database = AppDatabase();
 
-  // Estado de sesión inicial: ¿hay refresh token guardado?
-  final secureStorage = SecureStorageBootstrap();
-  final loggedIn = await secureStorage.hasSession();
+  // La sesión es la de Firebase Auth. El primer evento de authStateChanges
+  // llega cuando Firebase terminó de restaurar la sesión guardada.
+  // Si Firebase no carga (en web, sin acceso a gstatic.com; en escritorio, sin
+  // opciones) la app arranca sin sesión en vez de quedar en blanco.
+  var loggedIn = false;
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)
+        .timeout(const Duration(seconds: 10));
+    loggedIn = await FirebaseAuth.instance
+            .authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 5)) !=
+        null;
+  } catch (e) {
+    debugPrint('Firebase no disponible: $e');
+  }
 
-  // Firebase y Stripe se inicializan de forma perezosa/segura dentro de sus
-  // servicios para no bloquear el arranque si faltan claves de configuración.
+  // Stripe se inicializa de forma perezosa dentro de su servicio.
 
   runApp(
     ProviderScope(

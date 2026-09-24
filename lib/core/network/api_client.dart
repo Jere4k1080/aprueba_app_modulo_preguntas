@@ -1,89 +1,103 @@
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
-import '../storage/secure_storage.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
-import 'endpoints.dart';
 
-/// Cliente HTTP central. Adjunta el access token, renueva con el refresh token
-/// de forma transparente (rotación) y desempaqueta el envelope { data, error, meta }.
+/// Entrega el ID token de Firebase del usuario actual, o null sin sesión.
+typedef IdTokenSource = Future<String?> Function({bool forceRefresh});
+
+/// Cliente HTTP central. Adjunta el ID token de Firebase y el idioma de la app,
+/// renueva el token una vez ante un 401 y desempaqueta el envelope
+/// { data, error, meta }.
 class ApiClient {
-  ApiClient(this._storage, {Dio? dio, this.onSessionExpired})
-      : _dio = dio ?? Dio() {
+  ApiClient({
+    required IdTokenSource idToken,
+    String Function()? language,
+    Dio? dio,
+    this.onSessionExpired,
+  })  : _idToken = idToken,
+        _language = language ?? (() => 'es'),
+        _dio = dio ?? Dio() {
     _dio.options
       ..baseUrl = AppConfig.apiBaseUrl
       ..connectTimeout = const Duration(seconds: 15)
       ..receiveTimeout = const Duration(seconds: 20)
-      ..headers['Accept'] = 'application/json'
-      ..headers['Accept-Language'] = 'es';
+      ..headers['Accept'] = 'application/json';
     _dio.interceptors.add(_authInterceptor());
   }
 
   final Dio _dio;
-  final SecureStorage _storage;
+  final IdTokenSource _idToken;
+  final String Function() _language;
+
+  /// Se llama cuando el token renovado tampoco sirve o ya no hay sesión.
   final void Function()? onSessionExpired;
-  bool _refreshing = false;
+
+  /// Renovación en curso. Los 401 simultáneos esperan la misma.
+  Future<String?>? _renewing;
+
+  static const _retried = 'authRetried';
 
   Dio get raw => _dio;
 
   InterceptorsWrapper _authInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final skipAuth = options.extra['skipAuth'] == true;
-        if (!skipAuth) {
-          final token = await _storage.accessToken;
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
+        // Se lee en cada petición para que un cambio de idioma aplique de inmediato.
+        options.headers['Accept-Language'] = _language();
+        // El reintento ya lleva el token renovado.
+        if (options.extra['skipAuth'] != true && options.extra[_retried] != true) {
+          String? token;
+          try {
+            token = await _idToken(forceRefresh: false);
+          } catch (_) {
+            // Sin red y con el token vencido, Firebase no logra renovarlo. La
+            // petición sale sin token y termina en NETWORK_ERROR, y el
+            // repositorio sirve la caché. Con red, el 401 activa la renovación.
           }
+          if (token != null) options.headers['Authorization'] = 'Bearer $token';
         }
         handler.next(options);
       },
       onError: (e, handler) async {
-        final is401 = e.response?.statusCode == 401;
-        final isRefreshCall = e.requestOptions.path == Endpoints.refresh;
-        if (is401 && !isRefreshCall && !_refreshing) {
-          try {
-            final ok = await _tryRefresh();
-            if (ok) {
-              final clone = await _retry(e.requestOptions);
-              return handler.resolve(clone);
-            }
-          } catch (_) {/* cae al manejo normal */}
-          onSessionExpired?.call();
+        final ro = e.requestOptions;
+        if (e.response?.statusCode != 401 || ro.extra['skipAuth'] == true) {
+          return handler.next(e);
         }
-        handler.next(e);
+        if (ro.extra[_retried] == true) {
+          onSessionExpired?.call();
+          return handler.next(e);
+        }
+        String? token;
+        try {
+          token = await _idToken(forceRefresh: false);
+          // Si otra petición ya renovó después de que esta saliera, basta con
+          // el token actual. Si no, se fuerza la renovación.
+          if (token != null && 'Bearer $token' == ro.headers['Authorization']) {
+            token = await (_renewing ??= _idToken(forceRefresh: true)
+                .whenComplete(() => _renewing = null));
+          }
+        } catch (_) {
+          // Firebase no pudo renovar (sin red, demasiadas solicitudes) y la
+          // sesión sigue abierta. Si invalidó la cuenta, su SDK ya cerró la
+          // sesión y el siguiente 401 llega sin token.
+          return handler.next(e);
+        }
+        if (token == null) {
+          onSessionExpired?.call();
+          return handler.next(e);
+        }
+        final retry = ro.copyWith(
+          headers: {...ro.headers, 'Authorization': 'Bearer $token'},
+          extra: {...ro.extra, _retried: true},
+        );
+        try {
+          handler.resolve(await _dio.fetch(retry));
+        } on DioException catch (retryError) {
+          handler.next(retryError);
+        }
       },
-    );
-  }
-
-  Future<bool> _tryRefresh() async {
-    final refresh = await _storage.refreshToken;
-    if (refresh == null) return false;
-    _refreshing = true;
-    try {
-      final res = await _dio.post(
-        Endpoints.refresh,
-        data: {'refreshToken': refresh},
-        options: Options(extra: {'skipAuth': true}),
-      );
-      final data = (res.data['data'] ?? {}) as Map<String, dynamic>;
-      await _storage.saveTokens(
-        access: data['accessToken'] as String,
-        refresh: (data['refreshToken'] ?? refresh) as String,
-      );
-      return true;
-    } finally {
-      _refreshing = false;
-    }
-  }
-
-  Future<Response<dynamic>> _retry(RequestOptions ro) {
-    return _dio.request(
-      ro.path,
-      data: ro.data,
-      queryParameters: ro.queryParameters,
-      options: Options(method: ro.method, headers: ro.headers, extra: ro.extra),
     );
   }
 

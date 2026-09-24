@@ -259,6 +259,11 @@ class S {
       'error_generic': 'Algo salió mal. Intenta de nuevo.',
       'retry': 'Reintentar',
       'logout': 'Cerrar sesión',
+      'auth_err_credentials': 'Correo o contraseña incorrectos.',
+      'auth_err_email': 'El correo no tiene un formato válido.',
+      'auth_err_disabled': 'Esta cuenta está deshabilitada.',
+      'auth_err_too_many': 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+      'auth_err_network': 'Sin conexión. Revisa tu red e intenta de nuevo.',
     },
     'en': {
       'start': 'Get started',
@@ -503,6 +508,11 @@ class S {
       'error_generic': 'Something went wrong. Try again.',
       'retry': 'Retry',
       'logout': 'Log out',
+      'auth_err_credentials': 'Incorrect email or password.',
+      'auth_err_email': 'The email address is not valid.',
+      'auth_err_disabled': 'This account has been disabled.',
+      'auth_err_too_many': 'Too many attempts. Wait a few minutes and try again.',
+      'auth_err_network': 'No connection. Check your network and try again.',
     },
   };
 }

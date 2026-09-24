@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/network/api_client.dart';
@@ -19,6 +20,7 @@ import '../data/services/phone_auth_service.dart';
 import '../data/services/push_service.dart';
 import '../data/services/social_auth_service.dart';
 import '../data/services/stripe_service.dart';
+import 'local_prefs.dart';
 
 export 'local_prefs.dart';
 
@@ -28,14 +30,17 @@ final databaseProvider = Provider<AppDatabase>((ref) => throw UnimplementedError
 
 final secureStorageProvider = Provider<SecureStorage>((ref) => SecureStorage());
 
-/// Estado de sesión global. El interceptor lo apaga si el refresh falla.
+/// Estado de sesión global. El interceptor lo apaga si Firebase no logra
+/// renovar el token o la API lo rechaza también renovado.
 final isLoggedInProvider = StateProvider<bool>((ref) => false);
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final storage = ref.watch(secureStorageProvider);
   return ApiClient(
-    storage,
+    idToken: ({bool forceRefresh = false}) async =>
+        FirebaseAuth.instance.currentUser?.getIdToken(forceRefresh),
+    language: () => ref.read(localPrefsProvider).locale,
     onSessionExpired: () {
+      FirebaseAuth.instance.signOut();
       ref.read(isLoggedInProvider.notifier).state = false;
     },
   );

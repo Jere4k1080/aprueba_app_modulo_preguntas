@@ -43,8 +43,15 @@ class AppConfig {
     defaultValue: !kReleaseMode,
   );
 
-  /// Tiempos de los tokens (informativo; el backend manda).
-  static const Duration accessTokenTtl = Duration(minutes: 15);
+  /// Pasos de teléfono en el registro (/register, /onboarding/phone y
+  /// /onboarding/verify-phone). Apagada por defecto: Alloxentric autorizó el
+  /// 23/09/2026 sacar la verificación por SMS, y el router lleva esas rutas a
+  /// /onboarding/locale. Con --dart-define=PHONE_VERIFICATION_ENABLED=true el
+  /// registro vuelve a pedir y verificar el teléfono.
+  static const bool phoneVerificationEnabled = bool.fromEnvironment(
+    'PHONE_VERIFICATION_ENABLED',
+    defaultValue: false,
+  );
 
   static const int defaultPageLimit = 20;
 

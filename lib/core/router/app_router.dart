@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_config.dart';
 import '../../features/auth/forgot_password_screen.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/register_screen.dart';
@@ -62,6 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     '/onboarding/account',
     '/onboarding/format',
   };
+  const phoneRoutes = {'/register', '/onboarding/phone', '/onboarding/verify-phone'};
 
   final refresh = _RefreshOn(ref);
 
@@ -77,6 +79,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!loggedIn && !isPublic) return '/splash';
       if (loggedIn && (loc == '/splash' || loc == '/login' || loc == '/register')) {
         return '/home';
+      }
+      // Sin verificación por SMS el registro empieza en país e idioma.
+      if (!AppConfig.phoneVerificationEnabled && phoneRoutes.contains(loc)) {
+        return '/onboarding/locale';
       }
       // Tutores es una función de pago. Mientras /me no haya resuelto no se
       // conoce el plan: no redirigimos para no expulsar a un usuario de pago.
