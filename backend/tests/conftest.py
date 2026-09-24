@@ -14,7 +14,7 @@ os.environ.update({
     "ALLOWED_ORIGINS": "https://app.aprueba.test,http://localhost:3000",
     "ALLOWED_ORIGIN_PATTERN": r"^https://aprueba-pr-[a-z0-9-]+\.vercel\.app$",
 })
-for name in ("JWT_SECRET", "FIREBASE_SERVICE_ACCOUNT_BASE64", "FIREBASE_PROJECT_ID", "SEED_ALLOW_REMOTE"):
+for name in ("FIREBASE_AUTH_EMULATOR_HOST", "FIREBASE_SERVICE_ACCOUNT_BASE64", "FIREBASE_PROJECT_ID", "SEED_ALLOW_REMOTE"):
     os.environ.pop(name, None)
 
 

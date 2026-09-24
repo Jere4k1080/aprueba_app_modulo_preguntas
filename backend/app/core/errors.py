@@ -25,12 +25,14 @@ class ApiError(Exception):
 
 
 # Catálogo de mensajes: code -> {es, en}. Los diez estándar llevan el texto de la
-# especificación de Alloxentric; los del módulo, el texto de backend/src/errors/catalog.js.
+# especificación de Alloxentric, salvo AUTH_TOKEN_EXPIRED, que remite a Firebase Auth (ADR-40);
+# los del módulo, el texto de backend/src/errors/catalog.js.
 # METHOD_NOT_ALLOWED y PAYLOAD_TOO_LARGE son propios de este backend y no están en la especificación.
 MESSAGES: dict[str, dict[str, str]] = {
     "VALIDATION_ERROR": {"es": "Uno o más campos no superan la validación.", "en": "One or more fields failed validation."},
     "AUTH_REQUIRED": {"es": "Falta el token de acceso o es inválido.", "en": "Missing or invalid access token."},
-    "AUTH_TOKEN_EXPIRED": {"es": "El token de acceso expiró; renuévalo con el refresh token.", "en": "Access token expired; refresh it."},
+    "AUTH_TOKEN_EXPIRED": {"es": "El token de acceso expiró. La app debe pedir uno nuevo a Firebase y reintentar.",
+                           "en": "The access token expired. The app must request a new one from Firebase and retry."},
     "AUTH_FORBIDDEN": {"es": "Tu rol no autoriza esta acción.", "en": "Your role does not allow this action."},
     "NOT_FOUND": {"es": "El recurso solicitado no existe.", "en": "The requested resource does not exist."},
     "METHOD_NOT_ALLOWED": {"es": "El método HTTP no está permitido en esta ruta.", "en": "The HTTP method is not allowed on this route."},

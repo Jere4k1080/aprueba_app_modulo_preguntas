@@ -4,9 +4,6 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Valor de desarrollo, el mismo que usaba el backend Node. Nunca se acepta en producción.
-DEV_JWT_SECRET = "dev_jwt_secret_change_in_production_min_32_chars"
-
 # Regla de negocio 1. Fijas en el código como en Node: no se leen del entorno.
 BASE_QUOTA = 10
 SCHOOL_BONUS = 5
@@ -19,10 +16,6 @@ class Settings(BaseSettings):
 
     port: int = 4000
     app_env: Literal["local", "staging", "production"] = "local"
-
-    jwt_secret: str = ""
-    jwt_expires_in: str = "15m"
-    refresh_token_expires_in: str = "30d"
 
     # Reinicio de la cuota configurable por entorno (ADR-11)
     quota_reset_hour_local: int = 0
@@ -45,9 +38,6 @@ class Settings(BaseSettings):
         # como local con la documentación abierta.
         if "app_env" not in self.model_fields_set and (os.environ.get("VERCEL") or os.environ.get("K_SERVICE")):
             raise RuntimeError("APP_ENV es obligatorio en Vercel y en Cloud Run.")
-        if self.app_env == "production" and not self.jwt_secret.strip():
-            raise RuntimeError("JWT_SECRET es obligatorio en producción.")
-        self.jwt_secret = self.jwt_secret or DEV_JWT_SECRET
 
     @property
     def cors_origins(self) -> list[str]:

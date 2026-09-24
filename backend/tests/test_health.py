@@ -1,4 +1,5 @@
-"""Port de backend/test/health.test.js: las diez pruebas, una función por prueba."""
+"""Port de backend/test/health.test.js: las diez pruebas, una función por prueba. La 08, que exigía
+JWT_SECRET en producción, prueba ahora Firebase Admin."""
 import asyncio
 import base64
 import json
@@ -6,8 +7,12 @@ import os
 import re
 from types import SimpleNamespace
 
+import firebase_admin
+import google.auth
 import pytest
 from fastapi.testclient import TestClient
+from firebase_admin import auth as firebase_auth
+from firebase_admin import credentials as firebase_credentials
 
 import app.db.firestore as firestore_db
 import app.seed as seed
@@ -161,20 +166,54 @@ def test_07_credenciales_de_firestore(monkeypatch):
         abrir()
 
 
-def test_08_produccion_sin_jwt_secret_no_arranca(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.delenv("JWT_SECRET", raising=False)
-    with pytest.raises(RuntimeError, match="JWT_SECRET es obligatorio en producción."):
-        create_app()
-    monkeypatch.setenv("JWT_SECRET", "   ")
+def test_08_firebase_admin_con_la_configuracion_de_firestore(monkeypatch):
+    def sin_credenciales_predeterminadas(*args, **kwargs):
+        raise AssertionError("firebase_admin no debe cargar las credenciales predeterminadas de Google")
+
+    monkeypatch.setattr(google.auth, "default", sin_credenciales_predeterminadas)
+
+    # Con el emulador arranca sin credenciales, y crear la app de nuevo reutiliza la de Firebase.
+    firebase_admin.delete_app(firebase_admin.get_app())
+    create_app()
+    firebase_app = firebase_admin.get_app()
+    create_app()
+    assert firebase_admin.get_app() is firebase_app
+    assert firebase_app.project_id == "aprueba-dev"
+    # verify_id_token real: un token mal formado se rechaza sin red y sin buscar credenciales.
+    with pytest.raises(firebase_auth.InvalidIdTokenError):
+        firebase_auth.verify_id_token("no.es.jwt", app=firebase_app)
+
+    # Sin emulador usa la misma cuenta de servicio que Firestore, con la misma decodificación.
+    firebase_admin.delete_app(firebase_app)
+    monkeypatch.delenv("FIRESTORE_EMULATOR_HOST")
+    info = {"type": "service_account", "project_id": "aprueba-test"}
+    monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT_BASE64", base64.b64encode(json.dumps(info).encode()).decode().rstrip("="))
+    monkeypatch.setattr(firebase_credentials, "Certificate", lambda cert: ("certificado", cert))
+    monkeypatch.setattr(firebase_admin, "initialize_app", lambda cred, options: (cred, options))
     get_settings.cache_clear()
-    with pytest.raises(RuntimeError, match="JWT_SECRET es obligatorio en producción."):
-        get_settings()
-    # Fuera de producción se usa el mismo valor de desarrollo que tenía Node.
+    # httpTimeout: sin él la descarga de certificados espera 120 s antes del 503.
+    assert firestore_db.get_firebase_app() == (("certificado", info), {"projectId": "aprueba-test", "httpTimeout": 10})
+
+    # Con el emulador de Auth, firebase_admin acepta tokens sin firma: solo en local y con el de Firestore.
+    monkeypatch.setenv("FIREBASE_AUTH_EMULATOR_HOST", "127.0.0.1:9099")
+    solo_local = "FIREBASE_AUTH_EMULATOR_HOST solo se admite con APP_ENV=local y FIRESTORE_EMULATOR_HOST"
+    with pytest.raises(RuntimeError, match=solo_local):
+        firestore_db.get_firebase_app()
+    monkeypatch.delenv("FIREBASE_SERVICE_ACCOUNT_BASE64")
+    monkeypatch.setenv("FIRESTORE_EMULATOR_HOST", "127.0.0.1:8080")
+    monkeypatch.setenv("APP_ENV", "staging")
+    get_settings.cache_clear()
+    with pytest.raises(RuntimeError, match=solo_local):
+        firestore_db.get_firebase_app()
     monkeypatch.setenv("APP_ENV", "local")
-    monkeypatch.delenv("JWT_SECRET")
     get_settings.cache_clear()
-    assert get_settings().jwt_secret == "dev_jwt_secret_change_in_production_min_32_chars"
+    assert firestore_db.get_firebase_app()[1]["projectId"] == "aprueba-dev"
+
+    monkeypatch.delenv("FIREBASE_AUTH_EMULATOR_HOST")
+    monkeypatch.delenv("FIRESTORE_EMULATOR_HOST")
+    get_settings.cache_clear()
+    with pytest.raises(RuntimeError, match="Configura FIRESTORE_EMULATOR_HOST o FIREBASE_SERVICE_ACCOUNT_BASE64"):
+        firestore_db.get_firebase_app()
 
 
 def test_09_seed_remoto_exige_seed_allow_remote(monkeypatch):

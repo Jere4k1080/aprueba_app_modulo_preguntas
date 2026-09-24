@@ -6,17 +6,24 @@ import json
 import socket
 import time
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from typing import Annotated
 
-import jwt
+import firebase_admin
+import google.oauth2.id_token
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.x509.oid import NameOID
 from fastapi import Depends, Header
 from fastapi.testclient import TestClient
+from firebase_admin import auth as firebase_auth
 from google.api_core.datetime_helpers import DatetimeWithNanoseconds
 from google.cloud.firestore import AsyncClient
 from pydantic import Field
 
-from app.core.config import Settings, get_settings
+from app.core.config import Settings
 from app.core.deps import CurrentUser, OptionalUser
 from app.core.envelope import ok
 from app.core.errors import MAX_JSON_BODY, ApiError
@@ -137,30 +144,139 @@ def test_mensaje_en_ingles_con_accept_language():
     assert res.json()["error"]["message"] == "El recurso solicitado no existe."
 
 
-def test_get_current_user(prueba):
-    secret = get_settings().jwt_secret
+BEARER = {"Authorization": "Bearer token.de.firebase"}
+BASIC = {"Authorization": "Basic dXNyOmNsYXZl"}
 
-    def token(**claims):
-        return {"Authorization": "Bearer " + jwt.encode(claims, secret, algorithm="HS256")}
 
-    res = prueba.get("/api/v1/_yo", headers=token(sub="usr_demo", email="a@b.cl", exp=int(time.time()) + 60))
+@pytest.fixture
+def verify(monkeypatch):
+    """Reemplaza firebase_admin.auth.verify_id_token, sin red ni credenciales. resultado son
+    los claims que devuelve o la excepción que lanza; llamadas guarda cada invocación."""
+    fake = SimpleNamespace(resultado={"uid": "usr_demo", "sub": "usr_demo", "email": "a@b.cl"}, llamadas=[])
+
+    def verify_id_token(token, **kwargs):
+        # Bloquea mientras baja certificados: tiene que correr en el threadpool, fuera del event loop.
+        with pytest.raises(RuntimeError):
+            asyncio.get_running_loop()
+        fake.llamadas.append((token, kwargs))
+        if isinstance(fake.resultado, Exception):
+            raise fake.resultado
+        return fake.resultado
+
+    monkeypatch.setattr(firebase_auth, "verify_id_token", verify_id_token)
+    return fake
+
+
+def test_token_de_firebase_valido_entrega_el_usuario(prueba, verify):
+    res = prueba.get("/api/v1/_yo", headers=BEARER)
     assert res.status_code == 200
     assert res.json()["data"] == {"uid": "usr_demo", "email": "a@b.cl", "role": "student", "plan": "free"}
+    firebase_app = firebase_admin.get_app()
+    assert verify.llamadas == [("token.de.firebase", {"app": firebase_app, "check_revoked": False,
+                                                      "clock_skew_seconds": 5})]
+    assert firebase_app.project_id == "aprueba-dev"
 
-    expirado = prueba.get("/api/v1/_yo", headers=token(sub="usr_demo", exp=int(time.time()) - 60))
-    assert (expirado.status_code, expirado.json()["error"]["code"]) == (401, "AUTH_TOKEN_EXPIRED")
+    # role y plan salen de los custom claims cuando vienen.
+    verify.resultado = {"uid": "usr_demo", "role": "admin", "plan": "premium"}
+    assert prueba.get("/api/v1/_yo", headers=BEARER).json()["data"] == {
+        "uid": "usr_demo", "email": None, "role": "admin", "plan": "premium"}
 
-    ajeno = {"Authorization": "Bearer " + jwt.encode({"sub": "usr_demo"}, "x" * 40, algorithm="HS256")}
-    for headers in (ajeno, {"Authorization": "Bearer basura"}, {}):
-        res = prueba.get("/api/v1/_yo", headers=headers)
+
+def test_token_de_firebase_expirado_da_auth_token_expired(prueba, verify):
+    verify.resultado = firebase_auth.ExpiredIdTokenError("Token expired", cause=None)
+    for idioma, mensaje in (
+            ({}, "El token de acceso expiró. La app debe pedir uno nuevo a Firebase y reintentar."),
+            ({"Accept-Language": "en"}, "The access token expired. The app must request a new one from Firebase and retry.")):
+        res = prueba.get("/api/v1/_yo", headers={**BEARER, **idioma})
+        assert res.status_code == 401
+        body = res.json()
+        assert body["data"] is None
+        assert body["error"] == {"code": "AUTH_TOKEN_EXPIRED", "message": mensaje, "field": None, "details": []}
+        assert body["meta"]["requestId"] == res.headers["x-request-id"]
+        assert body["meta"]["timestamp"]
+
+
+def test_token_de_firebase_invalido_da_auth_required(prueba, verify):
+    verify.resultado = firebase_auth.InvalidIdTokenError("firma inválida")
+    for idioma, mensaje in (({}, "Falta el token de acceso o es inválido."),
+                            ({"Accept-Language": "en"}, "Missing or invalid access token.")):
+        res = prueba.get("/api/v1/_yo", headers={**BEARER, **idioma})
         assert (res.status_code, res.json()["error"]["code"]) == (401, "AUTH_REQUIRED")
+        assert res.json()["error"]["message"] == mensaje
 
+
+def test_error_de_configuracion_en_verify_id_token_da_500(prueba, verify):
+    # firebase_admin lanza ValueError sin ID de proyecto o con FIREBASE_AUTH_EMULATOR_HOST mal
+    # escrita. Como 401, la app renovaría el token y cerraría la sesión sin dejar rastro en el log.
+    verify.resultado = ValueError('Invalid FIREBASE_AUTH_EMULATOR_HOST: "http://127.0.0.1:9099"')
+    res = prueba.get("/api/v1/_yo", headers=BEARER)
+    assert (res.status_code, res.json()["error"]["code"]) == (500, "INTERNAL_ERROR")
+
+
+@pytest.fixture
+def firmar(monkeypatch):
+    """Firma tokens RS256 con una llave local y reemplaza la descarga de certificados de Google.
+    Así corre el verify_id_token real de firebase_admin, sin red."""
+    llave = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    nombre = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "prueba")])
+    ahora = datetime.now(timezone.utc)
+    cert = (x509.CertificateBuilder().subject_name(nombre).issuer_name(nombre).public_key(llave.public_key())
+            .serial_number(1).not_valid_before(ahora - timedelta(days=1)).not_valid_after(ahora + timedelta(days=1))
+            .sign(llave, hashes.SHA256()))
+    pem = cert.public_bytes(serialization.Encoding.PEM).decode()
+    monkeypatch.setattr(google.oauth2.id_token, "_fetch_certs", lambda request, url: {"k1": pem})
+
+    def b64(raw: bytes) -> str:
+        return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+    def firmar_token(iat_adelantado=0, vence_en=3600, header=None):
+        t = int(time.time())
+        payload = {"iss": "https://securetoken.google.com/aprueba-dev", "aud": "aprueba-dev", "sub": "usr_real",
+                   "iat": t + iat_adelantado, "exp": t + vence_en}
+        firmado = b64(json.dumps(header or {"alg": "RS256", "kid": "k1"}).encode()) + "." + b64(json.dumps(payload).encode())
+        return firmado + "." + b64(llave.sign(firmado.encode(), padding.PKCS1v15(), hashes.SHA256()))
+
+    return firmar_token
+
+
+def test_verify_id_token_real_con_firma_local(prueba, firmar):
+    def yo(token):
+        return prueba.get("/api/v1/_yo", headers={"Authorization": f"Bearer {token}"})
+
+    # Válido, también con el reloj del servidor 2 s atrasado respecto de Google.
+    for token in (firmar(), firmar(iat_adelantado=2)):
+        res = yo(token)
+        assert (res.status_code, res.json()["data"]["uid"]) == (200, "usr_real")
+    # firebase_admin distingue el vencido por el texto 'Token expired' de google-auth.
+    assert yo(firmar(vence_en=-60)).json()["error"]["code"] == "AUTH_TOKEN_EXPIRED"
+    # Mal formados que en firebase_admin 7.7.0 lanzan TypeError: sin kid y con d numérico (no pide
+    # certificados), y con kid en una lista (falla al buscarlo entre los certificados).
+    for token in ("eyJhbGciOiJIUzI1NiJ9.eyJ2IjowLCJkIjo1fQ.AAAA", firmar(header={"alg": "RS256", "kid": ["k1"]})):
+        res = yo(token)
+        assert (res.status_code, res.json()["error"]["code"]) == (401, "AUTH_REQUIRED"), token
+
+
+def test_sin_bearer_da_auth_required_sin_llamar_a_firebase(prueba, verify):
+    for headers in ({}, BASIC, {"Authorization": "Bearer "}, {"Authorization": "Bearer"}):
+        res = prueba.get("/api/v1/_yo", headers=headers)
+        assert (res.status_code, res.json()["error"]["code"]) == (401, "AUTH_REQUIRED"), headers
+    assert verify.llamadas == []
+
+
+def test_certificados_de_google_no_disponibles_da_503(prueba, verify):
+    verify.resultado = firebase_auth.CertificateFetchError("sin red", cause=None)
+    res = prueba.get("/api/v1/_yo", headers=BEARER)
+    assert (res.status_code, res.json()["error"]["code"]) == (503, "SERVICE_UNAVAILABLE")
+
+
+def test_usuario_opcional(prueba, verify):
     assert prueba.get("/api/v1/_opcional").json()["data"] is None
-
-    # Lo que jsonwebtoken.verify aceptaba y PyJWT rechaza por defecto: aud, sub numérico, jti numérico, iat futuro.
-    for claims in ({"sub": "usr_demo", "aud": "otra"}, {"sub": 5}, {"sub": "usr_demo", "jti": 7},
-                   {"sub": "usr_demo", "iat": int(time.time()) + 3600}):
-        assert prueba.get("/api/v1/_yo", headers=token(**claims)).status_code == 200, claims
+    assert prueba.get("/api/v1/_opcional", headers=BEARER).json()["data"]["uid"] == "usr_demo"
+    # Una cabecera presente pero inválida no se trata como anónima.
+    verify.resultado = firebase_auth.InvalidIdTokenError("firma inválida")
+    for headers in (BEARER, BASIC):
+        res = prueba.get("/api/v1/_opcional", headers=headers)
+        assert (res.status_code, res.json()["error"]["code"]) == (401, "AUTH_REQUIRED"), headers
 
 
 def test_cursor_corrupto_da_validation_error(prueba):
@@ -209,7 +325,6 @@ def test_docs_solo_fuera_de_produccion(monkeypatch):
     assert schema == {"$ref": "#/components/schemas/HealthResponse"}
     assert "uptimeSeconds" in spec["components"]["schemas"]["HealthOut"]["properties"]
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("JWT_SECRET", "s" * 32)
     produccion = TestClient(create_app())
     assert produccion.get("/api/v1/docs").status_code == 404
     assert produccion.get("/api/v1/openapi.json").status_code == 404
