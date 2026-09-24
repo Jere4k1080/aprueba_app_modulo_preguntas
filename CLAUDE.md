@@ -48,11 +48,11 @@ Estas se verifican en toda auditoría. Un incumplimiento se reporta siempre, aun
 
 **1. La respuesta correcta nunca llega al cliente antes de tiempo.**
 Es la regla de integridad del producto. Se cumple en cinco lugares y hay que verificar los cinco:
-- `sanitizeQuestion()` en `backend/src/services/questionService.js` elimina `correctAnswer` antes de emitir
+- `sanitize_question()` en `backend/app/services/questions.py` elimina `correctAnswer` antes de emitir
 - `GET /practice/next` y `GET /questions/{id}` no la incluyen
 - `Question.correctAnswer` es nullable en el modelo Dart
 - `CachedQuestions.correctAnswer` entra en nulo y solo se puebla tras responder, verificado en `test/drift_integrity_test.dart`
-- `firestore.rules` niega al cliente toda lectura y escritura, así que nadie puede leer `questions` directo desde Firestore y saltarse `sanitizeQuestion()`. Decidido en ADR-21
+- `firestore.rules` niega al cliente toda lectura y escritura, así que nadie puede leer `questions` directo desde Firestore y saltarse `sanitize_question()`. Decidido en ADR-21
 
 Si un cambio toca cualquiera de esos puntos, verifica que la regla siga en pie.
 
@@ -61,8 +61,10 @@ Antes de cualquier commit:
 
 ```bash
 grep -rIl -E "serviceAccount|private_key|BEGIN PRIVATE KEY|sk_live|pk_live|AIza" . \
-  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=flutter --exclude-dir=build
+  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=flutter --exclude-dir=build --exclude-dir=.venv
 ```
+
+`--exclude-dir=.venv` deja fuera el entorno de Python del backend. Sin esa opción, las librerías de Google instaladas ahí dan decenas de coincidencias con `private_key`.
 
 Las credenciales van por `--dart-define` en el cliente y por variables de entorno en el backend. `.env.example` no lleva valores reales.
 
@@ -70,7 +72,7 @@ Las credenciales van por `--dart-define` en el cliente y por variables de entorn
 Una rama por tarea con nombre `feature/<descripción>`, un pull request por rama, y revisión de otro integrante antes de fusionar. Si te piden commitear a `main`, adviértelo antes de hacerlo.
 
 **4. No subas versiones de dependencias para que algo compile.**
-Ni en `pubspec.yaml` ni en `backend/package.json`. Si hay un conflicto de versiones, repórtalo y detente.
+Ni en `pubspec.yaml` ni en `backend/requirements.txt` o `backend/requirements-dev.txt`. Si hay un conflicto de versiones, repórtalo y detente.
 
 **5. Toda decisión tomada sin información suficiente va a `docs/bitacora_decisiones.md`**, con la alternativa descartada y el motivo. La bitácora es la mitigación declarada de la práctica XP de cliente en sitio, que el equipo no puede cumplir. No es opcional.
 
@@ -101,13 +103,14 @@ flutter analyze                                            # debe salir sin adve
 flutter test                                               # todas en verde
 flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL
 
-# Backend
+# Backend (en Windows el intérprete es .venv/Scripts/python.exe)
+npx --yes firebase-tools emulators:start --only firestore --project demo-aprueba   # emulador, desde la raíz
 cd backend
-npm install
-npm run emulator     # emulador de Firestore
-npm run seed         # datos de prueba
-npm start            # API en /api/v1
-node test/health.test.js
+uv venv --python 3.12 .venv
+uv pip install --python .venv -r requirements-dev.txt
+.venv/bin/python -m app.seed     # datos de prueba
+.venv/bin/python -m app          # API en /api/v1
+.venv/bin/python -m pytest       # 24 pruebas; sin emulador, 23 y 1 omitida
 
 # Verificadores sin SDK
 python3 tool/check_static.py .
@@ -125,7 +128,7 @@ Cuando revises trabajo hecho por otro agente, recorre esta lista y reporta el re
 **Verificaciones automáticas**
 - [ ] `flutter analyze` sin advertencias
 - [ ] `flutter test` en verde, y el número de pruebas no bajó
-- [ ] `node backend/test/health.test.js` en verde
+- [ ] `python -m pytest` en `backend/` en verde con el emulador activo, y el número de pruebas no bajó
 - [ ] `build_runner` regenera sin conflictos
 - [ ] La búsqueda de secretos no arroja resultados
 
@@ -166,12 +169,16 @@ lib/
     practice/  ← nuestro módulo: 6 pantallas
   providers/   wiring de Riverpod
 
-backend/
-  src/
-    routes/       endpoints bajo /api/v1
-    services/     lógica de negocio, incluye sanitizeQuestion()
-    middleware/   envelope, auth JWT, manejo de errores
-    seed/         carga de datos de prueba
+backend/          Python 3.12 + FastAPI
+  app/
+    main.py       create_app(): middlewares, CORS, manejo de errores, routers
+    core/         config, envelope, catálogo de errores, i18n, auth JWT, paginación
+    db/           cliente de Firestore y nombres de colecciones
+    routers/      endpoints bajo /api/v1
+    schemas/      modelos Pydantic en camelCase
+    services/     lógica de negocio, incluye sanitize_question()
+    seed/         carga de datos de prueba y banco en JSON
+  tests/          pytest
 
 docs/
   bitacora_decisiones.md    ADR del proyecto
@@ -214,6 +221,7 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-10** Percentil de cohorte con umbrales precalculados en el documento de la pregunta
 - **ADR-11** Reinicio de cuota configurable por variables de entorno
 - **ADR-12** Sanitización centralizada de `correctAnswer` en la capa de servicios
+- **ADR-30** Backend en Python 3.12 con FastAPI, por decisión de la contraparte. Sus convenciones vienen del backend de administración de Max (ADR-31)
 
 Las ADR-09 a ADR-12 son propuestas pendientes de ratificación por el equipo.
 
@@ -240,4 +248,5 @@ Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-23:
 - ADR-09 a ADR-12 pendientes de ratificación
 - El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
 - Los trece servicios del módulo no están implementados. La API está desplegada en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1`, pero solo responde `/health`
-Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+- El backend FastAPI necesita `APP_ENV` en el proyecto de Vercel de la API antes de su primer despliegue. Sin esa variable no arranca (ADR-36)
+Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.

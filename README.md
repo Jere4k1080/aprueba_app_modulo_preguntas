@@ -6,9 +6,10 @@ Proyecto de Título (Capstone) · Grupo 9 · Duoc UC San Bernardo · 2026
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.22%2B-02569B?logo=flutter&logoColor=white)
 ![Dart](https://img.shields.io/badge/Dart-3.3%2B-0175C2?logo=dart&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-Express-339933?logo=nodedotjs&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi&logoColor=white)
 ![Firestore](https://img.shields.io/badge/Firestore-Firebase-FFCA28?logo=firebase&logoColor=black)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Cloud%20Run-2496ED?logo=docker&logoColor=white)
 ![Metodología](https://img.shields.io/badge/Metodolog%C3%ADa-Extreme%20Programming-1A365D)
 
 ---
@@ -117,11 +118,11 @@ La pasarela de pago, el inicio de sesión social y las notificaciones push se co
 
 | Componente | Tecnología | Rol |
 |---|---|---|
-| Runtime | Node.js | Entorno de ejecución |
-| Framework | Express | API REST bajo `/api/v1` |
-| Base de datos | Firestore (Firebase Admin SDK) | Persistencia, con emulador para desarrollo local |
-| Autenticación | JWT | Access token de 15 min + refresh de 30 días con rotación |
-| Empaquetado | Docker y archivo de composición | Levantamiento reproducible del entorno |
+| Lenguaje | Python 3.12 | Entorno de ejecución |
+| Framework | FastAPI con Pydantic v2, sobre Uvicorn | API REST bajo `/api/v1` |
+| Base de datos | Firestore (`google-cloud-firestore`, cliente asíncrono) | Persistencia, con emulador para desarrollo local |
+| Autenticación | JWT HS256 (PyJWT) | Access token de 15 min + refresh de 30 días con rotación. La contraparte decidió pasar a Firebase Auth en una entrega posterior |
+| Empaquetado | Docker | Imagen para Cloud Run en `backend/Dockerfile` |
 
 ### Justificación de las decisiones principales
 
@@ -129,6 +130,7 @@ La pasarela de pago, el inicio de sesión social y las notificaciones push se co
 - **Riverpod** ofrece inyección de dependencias y estado testeable sin acoplar la lógica al árbol de widgets, lo que facilita escribir la prueba antes que el código.
 - **Drift** habilita el repaso sin conexión, requisito funcional del producto, con consultas tipadas y verificadas en tiempo de compilación.
 - **Firestore** es la base de datos ya adoptada por el ecosistema; mantenerla evita divergencias en el modelo de datos.
+- **FastAPI** es el framework que eligió la contraparte para el backend, el mismo del backend de administración de la consola. El módulo sigue sus convenciones de código y de respuesta (ADR-30 y ADR-31).
 
 ---
 
@@ -145,8 +147,8 @@ flowchart TD
     end
 
     subgraph server["Backend"]
-        EXPRESS["Node.js + Express<br/>/api/v1"]
-        SDK["Firebase Admin SDK"]
+        FASTAPI["Python 3.12 + FastAPI<br/>/api/v1"]
+        SDK["google-cloud-firestore"]
     end
 
     DB[("Firestore")]
@@ -155,8 +157,8 @@ flowchart TD
     PROV --> REPO
     REPO --> API
     REPO <--> CACHE
-    API -->|"HTTPS · JWT Bearer"| EXPRESS
-    EXPRESS --> SDK
+    API -->|"HTTPS · JWT Bearer"| FASTAPI
+    FASTAPI --> SDK
     SDK --> DB
 ```
 
@@ -180,7 +182,7 @@ Todas las respuestas de la API comparten una estructura común:
 }
 ```
 
-En caso de error, `data` es `null` y `error` contiene `code` (identificador estable, legible por máquina), `message` (texto listo para mostrar), `details` y `field`.
+En caso de error, `data` es `null` y `error` contiene `code` (identificador estable, legible por máquina), `message` (texto listo para mostrar), `details` (una lista, vacía por defecto) y `field`.
 
 Dos decisiones de diseño atraviesan todo el módulo:
 
@@ -195,8 +197,10 @@ Dos decisiones de diseño atraviesan todo el módulo:
 
 - Flutter 3.22 o superior (Dart 3.3+)
 - Android Studio con el SDK de Android, o Xcode para iOS
-- Node.js y npm
-- Docker, o bien Java si se prefiere levantar el emulador de Firestore de forma directa
+- Python 3.12, con uv o pip
+- Node.js, solo para correr `firebase-tools` con `npx`
+- Java 21, que usa el emulador de Firestore
+- Docker, solo para construir la imagen de Cloud Run
 
 ### Cliente móvil
 
@@ -215,13 +219,18 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:4000/api/v1
 ### Backend
 
 ```bash
+# Emulador de Firestore, desde la raíz y en otra terminal
+npx --yes firebase-tools emulators:start --only firestore --project demo-aprueba
+
 cd backend
-npm install
+uv venv --python 3.12 .venv
+uv pip install --python .venv -r requirements-dev.txt
 cp .env.example .env
-npm run emulator   # emulador de Firestore, en otra terminal
-npm run seed       # datos de prueba
-npm start          # API en http://127.0.0.1:4000/api/v1
+.venv/bin/python -m app.seed   # datos de prueba
+.venv/bin/python -m app        # API en http://127.0.0.1:4000/api/v1
 ```
+
+En Windows el intérprete es `.venv/Scripts/python.exe`. [`backend/README.md`](backend/README.md) trae la instalación con pip, las variables de entorno, las pruebas y la imagen de Docker.
 
 ### Configuración
 
@@ -232,7 +241,10 @@ No hay credenciales en el código. Todos los valores sensibles se inyectan media
 ```bash
 flutter analyze                    # análisis estático
 flutter test                       # pruebas unitarias
+cd backend && .venv/bin/python -m pytest   # 24 pruebas del backend
 ```
+
+Una de las pruebas del backend necesita el emulador de Firestore. Sin él, pytest informa 23 aprobadas y 1 omitida.
 
 ---
 
@@ -254,7 +266,7 @@ La versión web del módulo se compila y despliega automáticamente en Vercel me
 | Proyecto de Vercel | Contenido | Root Directory | URL de producción |
 |---|---|---|---|
 | `aprueba-app-modulo-preguntas` | App Flutter Web | raíz del repositorio | https://aprueba-app-modulo-preguntas.vercel.app |
-| `aprueba-app-modulo-preguntas-api` | API Express | `backend/` | https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1 |
+| `aprueba-app-modulo-preguntas-api` | API FastAPI | `backend/` | https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1 |
 
 Los dos proyectos están en el equipo `aprueba-app` de Vercel y conectados a este repositorio con `main` como rama de producción. La API corre en la región `gru1` (São Paulo). Firestore está en el proyecto Firebase `aprueba-app-modulo-preguntas`, plan Spark, con la base `(default)` en `southamerica-east1` (ADR-24 y ADR-25). `.firebaserc` fija ese proyecto como predeterminado.
 
@@ -264,13 +276,15 @@ Solo nombres. Los valores se administran en cada proyecto de Vercel y no se vers
 
 La app web usa `API_BASE_URL` en production y preview, con la URL de la API terminada en `/api/v1`. `vercel-build.sh` la lee al compilar, así que cambiar su valor obliga a volver a desplegar la app.
 
-La API usa `NODE_ENV`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` y `ALLOWED_ORIGIN_PATTERN`, todas en production y preview. `JWT_SECRET` tiene un valor distinto en cada entorno. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. Las URLs de vista previa de la app web cambian en cada despliegue, así que pasan CORS por `ALLOWED_ORIGIN_PATTERN`, que vale `^https://aprueba-app-modulo-preguntas-[a-z0-9-]+-aprueba-app\.vercel\.app$`. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría Firebase Admin al emulador, ni `SEED_ALLOW_REMOTE`. El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL`, `QUOTA_RESET_TIMEZONE`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`) queda con los valores por defecto de `backend/src/config/index.js`, que son los mismos del ejemplo.
+La API usa `APP_ENV`, `JWT_SECRET`, `FIREBASE_SERVICE_ACCOUNT_BASE64`, `FIREBASE_PROJECT_ID`, `ALLOWED_ORIGINS` y `ALLOWED_ORIGIN_PATTERN`, todas en production y preview. `APP_ENV` todavía no existe en el proyecto y hay que crearla antes de fusionar el backend FastAPI: `production` en production, y `production` o `staging` en preview. Vercel define `VERCEL=1`, y con esa variable la API no arranca si falta `APP_ENV` (ADR-36). `NODE_ENV` quedó del backend Node y ya no se lee. `JWT_SECRET` tiene un valor distinto en cada entorno. `ALLOWED_ORIGINS` lleva el origen de la app web sin barra final. Las URLs de vista previa de la app web cambian en cada despliegue, así que pasan CORS por `ALLOWED_ORIGIN_PATTERN`, que vale `^https://aprueba-app-modulo-preguntas-[a-z0-9-]+-aprueba-app\.vercel\.app$`. En Vercel no se definen `FIRESTORE_EMULATOR_HOST`, que desviaría la API al emulador, ni `SEED_ALLOW_REMOTE`. El resto de `backend/.env.example` (`PORT`, `QUOTA_RESET_HOUR_LOCAL`, `QUOTA_RESET_TIMEZONE`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`) queda con los valores por defecto de `backend/app/core/config.py`, que son los mismos del ejemplo.
 
 Para rotar la cuenta de servicio se descarga un JSON nuevo desde la consola de Firebase y se guarda fuera del repositorio. En PowerShell, `[Convert]::ToBase64String([IO.File]::ReadAllBytes('RUTA_AL_JSON'))` lo convierte a base64, y ese resultado reemplaza `FIREBASE_SERVICE_ACCOUNT_BASE64` en los dos entornos.
 
 ### Cómo se despliega
 
-Al fusionar en `main`, Vercel despliega la API y la app web a producción. `backend/vercel.json` declara el preset Express y desactiva los despliegues de Git de la API para cualquier otra rama (ADR-26). La app web sí crea vistas previas por rama.
+Al fusionar en `main`, Vercel despliega la API y la app web a producción. `backend/vercel.json` declara el preset FastAPI con `app/main.py` como función y la región `gru1`, y desactiva los despliegues de Git de la API para cualquier otra rama (ADR-26 y ADR-30). Vercel instala `backend/requirements.txt` y toma Python 3.12 de `backend/.python-version`. La app web sí crea vistas previas por rama.
+
+`backend/Dockerfile` construye la misma API para Cloud Run, el destino que usa el backend de administración. Ese servicio todavía no existe.
 
 Las reglas y los índices de Firestore se publican aparte, desde la raíz del repositorio:
 
@@ -294,13 +308,13 @@ curl -s -i -X OPTIONS https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1
   -H "Access-Control-Request-Method: GET"
 ```
 
-La respuesta es 204 con `Access-Control-Allow-Origin` igual al origen de la app. Las vistas previas de la app web se prueban con el mismo comando y un origen como `https://aprueba-app-modulo-preguntas-git-main-aprueba-app.vercel.app`, que entra por `ALLOWED_ORIGIN_PATTERN`. Con un origen que no está en `ALLOWED_ORIGINS` ni calza con el patrón, esa cabecera no aparece.
+La respuesta es 200, con cuerpo `OK` y `Access-Control-Allow-Origin` igual al origen de la app. El backend Node respondía 204; el 200 viene del `CORSMiddleware` de Starlette (ADR-39). Las vistas previas de la app web se prueban con el mismo comando y un origen como `https://aprueba-app-modulo-preguntas-git-main-aprueba-app.vercel.app`, que entra por `ALLOWED_ORIGIN_PATTERN`. Con un origen que no está en `ALLOWED_ORIGINS` ni calza con el patrón, la respuesta es 400 con el texto `Disallowed CORS origin` y sin esa cabecera.
 
 Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión en Vercel. Se prueban con `npx vercel curl URL -- -s -i`. En su primer uso, ese comando crea en el proyecto un secreto de "Protection Bypass for Automation".
 
 ### Datos de prueba
 
-`SEED_ALLOW_REMOTE` no se define en Vercel. Para cargar el seed en el proyecto real se ejecuta `npm run seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque `dotenv` carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
+`SEED_ALLOW_REMOTE` no se define en Vercel. Para cargar el seed en el proyecto real se ejecuta `.venv/bin/python -m app.seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque pydantic-settings carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
 
 ---
 
@@ -320,13 +334,17 @@ Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión e
 │   └── providers/               wiring de Riverpod
 ├── test/                        pruebas unitarias
 │
-├── backend/                     API REST (Node.js + Express)
-│   ├── src/
-│   │   ├── routes/              definición de endpoints
+├── backend/                     API REST (Python 3.12 + FastAPI)
+│   ├── app/
+│   │   ├── core/                configuración, envelope, errores, idioma, auth y paginación
+│   │   ├── db/                  cliente de Firestore
+│   │   ├── routers/             definición de endpoints
+│   │   ├── schemas/             modelos Pydantic
 │   │   ├── services/            lógica de negocio
-│   │   ├── middleware/          autenticación, errores y envelope
-│   │   └── seed/                datos de prueba
-│   └── package.json
+│   │   └── seed/                datos de prueba en JSON
+│   ├── tests/                   pruebas con pytest
+│   ├── requirements.txt
+│   └── Dockerfile               imagen para Cloud Run
 │
 ├── docs/                        documentación del proyecto
 │   ├── diccionario_de_datos.md  diccionario formal de colecciones
@@ -367,7 +385,7 @@ Al inicio de cada iteración se eligen las historias, se estiman y se dividen en
 | Refactorización | Mejora permanente del diseño existente, sin etapa separada |
 | Diseño simple | La solución más sencilla que funcione y pase las pruebas |
 | Propiedad colectiva | Cualquiera puede modificar cualquier archivo |
-| Estándares de código | Analizador estático del proyecto y convenciones de Dart y de Node |
+| Estándares de código | Analizador estático del proyecto y convenciones de Dart y de Python |
 | Entregas pequeñas | Tres entregas funcionales durante el semestre, no una sola al final |
 | Ritmo sostenible | El proyecto convive con el resto de las asignaturas |
 | Reunión de pie | Corta, para sincronizar y detectar bloqueos |

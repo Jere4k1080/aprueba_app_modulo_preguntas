@@ -48,7 +48,7 @@ erDiagram
 ### 2.2 Colección `skills`
 * **Ámbito:** Colección raíz pública.
 * **Propósito:** Árbol de competencias y habilidades curriculares por prueba.
-* **Política de Seguridad:** Acceso directo del cliente bloqueado. El backend y el seed usan Firebase Admin.
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. El backend y el seed usan `google-cloud-firestore` con la cuenta de servicio, que no pasa por las reglas.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
@@ -75,7 +75,7 @@ erDiagram
 ### 2.3 Colección `questions`
 * **Ámbito:** Colección raíz autenticada.
 * **Propósito:** Banco central de ítems de evaluación tipo PAES.
-* **Política de Seguridad:** Lectura y escritura directas del cliente bloqueadas. Firebase Admin evalúa la respuesta en el backend.
+* **Política de Seguridad:** Lectura y escritura directas del cliente bloqueadas. El backend lee la pregunta con la cuenta de servicio y evalúa ahí la respuesta.
 * **Regla de Integridad Fundamental:** El campo `correctAnswer` se almacena exclusivamente para evaluación en servidor. La API omite este campo en `GET /practice/next` y `GET /questions/:id`.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
@@ -116,7 +116,7 @@ erDiagram
 ### 2.5 Colección `corrections`
 * **Ámbito:** Colección raíz transaccional.
 * **Propósito:** Reportes de error o ambigüedad ingresados por los estudiantes sobre ítems del banco.
-* **Política de Seguridad:** Acceso directo del cliente bloqueado. La API crea la solicitud y administración la resuelve con Firebase Admin.
+* **Política de Seguridad:** Acceso directo del cliente bloqueado. La API crea la solicitud y administración la resuelve desde su propio backend, con acceso de servidor.
 
 | Campo | Tipo de Dato | Obligatorio | Restricciones / Formato | Descripción |
 |---|---|:---:|---|---|
