@@ -65,6 +65,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 53. [ADR-53: Cierre de sesión cuando Firebase invalida la cuenta al renovar (Propuesta)](#adr-53-cierre-de-sesión-cuando-firebase-invalida-la-cuenta-al-renovar)
 54. [ADR-54: Arranque sin sesión si Firebase no carga (Propuesta)](#adr-54-arranque-sin-sesión-si-firebase-no-carga)
 55. [ADR-55: Códigos de error de Firebase Auth en la app (Propuesta)](#adr-55-códigos-de-error-de-firebase-auth-en-la-app)
+56. [ADR-56: Autoría de los commits hechos por agentes](#adr-56-autoría-de-los-commits-hechos-por-agentes)
 
 ---
 
@@ -733,3 +734,15 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Motivo:** la regla de negocio 8 pide traducir los errores a estados de interfaz. El mensaje de Firebase llega en inglés y cambia entre plataformas, así que la pantalla de login no puede mostrarlo tal cual.
 * **Pendiente de confirmar:** estos códigos existen solo en la app y no están en el catálogo del backend (`backend/app/core/errors.py`) ni en el contrato de la empresa. Si el equipo los acepta, conviene documentarlos junto al catálogo.
 * **Verificación:** el grupo "errores de Firebase Auth" de `test/api_client_auth_test.dart`.
+
+---
+
+### ADR-56: Autoría de los commits hechos por agentes
+
+* **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25)**
+* **Contexto:** 35 commits de `main`, fechados entre el 2026-09-13 y el 2026-09-23, figuran como "Audit Sim <audit@local>". Un agente dejó en `.git/config` una sección `[user]` con esa identidad, que tapaba la global de quien lo operaba, Jeremias Fernandez <je.fernandezm@duocuc.cl>. De los 35, 31 llegaron dentro de las ramas de los PR #1, #4, #6, #8, #9, #10, #11, #12, #13 y #14, y 4 son los commits de fusión de los PR #2, #3, #6 y #8, hechos en local el 2026-09-13. El 2026-09-25 tuvo un efecto práctico: Vercel, en plan Hobby, bloqueó dos vistas previas de la API porque el autor del commit no era el dueño del equipo.
+* **Quién hizo el trabajo:** "Audit Sim" no es un integrante del equipo. El trabajo de esos commits lo produjeron agentes operados por el equipo, como declara el diario de reflexión de la Fase 2 (`ESPINOZA_MARTIN_2.1_APT122_DiarioReflexionFase2`, del 2026-09-17, que la pauta pide responder en grupo): "Apoyamos la producción de código en agentes de forma intensiva". 25 de los 35 commits llevan además la línea `Co-Authored-By: Claude`.
+* **Decisión:** los 35 commits de `main` no se reescriben. Las ramas del #15 y el #16, que todavía no estaban fusionadas, sí se corrigieron el 2026-09-25: sus 14 commits pasaron a Jeremias Fernandez como autor y committer, con los mismos árboles, mensajes y fechas, y se subieron con `--force-with-lease`. El árbol final de `feature/firebase-auth` quedó idéntico al que se probó ese día en la vista previa de la API. La sección `[user]` se quitó de `.git/config`, y la regla 7 de `CLAUDE.md` impide que un agente la vuelva a crear.
+* **Alternativa descartada:** reescribir `main` con `git filter-branch` y pedir al equipo que vuelva a clonar. Cambiar el autor de un commit cambia su SHA y el de todos los que vienen después, hasta la punta de `main`, así que habría que forzar la rama. Los clones del equipo quedarían con una historia que ya no existe en el remoto, y un `git pull` mezclaría la historia vieja con la nueva. Cada rama abierta sobre la historia vieja tendría que rebasarse a mano. Además, ADR-26 cita el commit `80def89`, del primer despliegue de producción, que es uno de los 35: la cita quedaría apuntando a un SHA que ya no existe.
+* **Consecuencias:** `git log` y GitHub siguen mostrando "Audit Sim" en esos 35 commits, sin enlace a ninguna cuenta. Los despliegues de `main` no se ven afectados mientras cada fusión sea un commit de fusión de `Jere4k1080`, como los que hay hasta hoy, porque Vercel revisa el autor del commit que despliega. El diario de reflexión ya registraba que los commits quedaban bajo una sola cuenta y dejaba como actividad configurar la identidad de git en cada equipo. La regla 7 lo concreta para los agentes: cada commit lleva la identidad global de quien opera el agente en ese equipo.
+* **Verificación:** `git log main --format=%an | grep -c "^Audit Sim$"` da 35. En las ramas del #15 y el #16 da 0.
