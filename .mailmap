@@ -1,0 +1,3 @@
+# Commits hechos por agentes con una identidad local en .git/config (ADR-56).
+# Los atribuye a quien operaba el agente en esa máquina. GitHub no usa este archivo.
+Jeremias Fernandez <je.fernandezm@duocuc.cl> Audit Sim <audit@local>

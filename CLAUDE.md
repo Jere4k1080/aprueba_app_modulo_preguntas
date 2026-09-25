@@ -84,6 +84,9 @@ Ni en `pubspec.yaml` ni en `backend/requirements.txt` o `backend/requirements-de
 **6. No crees modelos de Firestore en el cliente Flutter.**
 Decidido en ADR-03. La app habla con la API, no con la base de datos. Los esquemas de las colecciones viven en `seed/README.md` y en `docs/diccionario_de_datos.md`.
 
+**7. Ningún agente configura identidad de git en `.git/config`.**
+Los commits llevan la identidad global de quien opera el agente, la de `git config --global user.name` y `user.email`. Antes del primer commit, `git var GIT_AUTHOR_IDENT` tiene que mostrar a esa persona. Si `.git/config` trae una sección `[user]`, se reporta y se quita. Una identidad local dejó 35 commits de `main` a nombre de "Audit Sim" (ADR-56), y Vercel, en plan Hobby, bloquea los despliegues de commits cuyo autor no es el dueño del equipo.
+
 ---
 
 ## Límites de alcance
@@ -151,6 +154,7 @@ Cuando revises trabajo hecho por otro agente, recorre esta lista y reporta el re
 - [ ] Hay un pull request abierto
 - [ ] Las decisiones nuevas quedaron en la bitácora
 - [ ] El alcance respetado: no se tocó código del cliente fuera del módulo sin motivo
+- [ ] Los commits nuevos llevan la identidad global de quien opera el agente y `.git/config` no tiene sección `[user]` (regla 7)
 
 **Coherencia documental**
 - [ ] Vocabulario XP, sin residuos de Scrum
@@ -232,6 +236,7 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-40** Autenticación con Firebase Auth, por decisión de la contraparte. El backend verifica el ID token con `firebase-admin` y no tiene JWT propio ni refresh token. Reemplaza ADR-20 y ADR-38
 - **ADR-43** `verify_id_token` sin revisar revocación. El retraso de hasta una hora en rechazar un token revocado queda cubierto cuando se implemente el rechazo de usuarios suspendidos
 - **ADR-49**, en la parte del proyecto local, con el ajuste del 2026-09-25: en local Firestore usa el emulador con el proyecto `demo-aprueba` (`FIRESTORE_EMULATOR_PROJECT_ID`), y `FIREBASE_PROJECT_ID` lleva el ID real, `aprueba-app-modulo-preguntas`, solo para validar tokens de Firebase Auth
+- **ADR-56** Los 35 commits de "Audit Sim" en `main` no se reescriben. Los agentes commitean con la identidad global de quien los opera (regla 7)
 
 Las ADR-09 a ADR-12 son propuestas pendientes de ratificación por el equipo.
 
