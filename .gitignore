@@ -8,8 +8,10 @@
 !.env.example
 serviceAccount.json
 **/serviceAccount*.json
-**/google-services.json
-**/GoogleService-Info.plist
+# Nombre con que la consola de Firebase descarga la llave de la cuenta de servicio.
+**/*-firebase-adminsdk-*.json
+# google-services.json y GoogleService-Info.plist sí se versionan: son la
+# configuración de cliente de Firebase, pública por diseño.
 *.jks
 *.keystore
 key.properties

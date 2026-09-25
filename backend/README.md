@@ -15,8 +15,8 @@ Las versiones van fijas con `==`. La regla 4 de `CLAUDE.md` prohíbe subirlas pa
 | `pydantic` | 2.13.5 | Modelos de entrada y salida |
 | `pydantic-settings` | 2.15.0 | Configuración desde variables de entorno y `.env` |
 | `google-cloud-firestore` | 2.31.0 | Cliente asíncrono `AsyncClient` |
-| `google-auth` | 2.58.0 | Credenciales de la cuenta de servicio |
-| `PyJWT` | 2.15.0 | Verificación de tokens HS256 |
+| `google-auth` | 2.58.0 | Credenciales de la cuenta de servicio y credencial anónima de Firebase Admin en modo emulador |
+| `firebase-admin` | 7.7.0 | Solo para verificar el ID token de Firebase Auth con `auth.verify_id_token` (ADR-40) |
 | `starlette` | 1.7.0 | Base de FastAPI. Se fija porque `app/core/` la importa directo |
 | `tzdata` | 2026.4 | Husos horarios para `zoneinfo`, que Windows no trae |
 
@@ -34,9 +34,9 @@ backend/
 │   │   ├── envelope.py      ok(), created(), no_content(), meta() y RequestIdMiddleware
 │   │   ├── errors.py        ApiError, catálogo es/en, manejadores de error, JsonBodyMiddleware y UnhandledErrorMiddleware
 │   │   ├── i18n.py          idioma por Accept-Language
-│   │   ├── deps.py          get_current_user, get_optional_user y los alias DB, CurrentUser y OptionalUser
+│   │   ├── deps.py          get_current_user y get_optional_user, que validan el token de Firebase, y los alias DB, CurrentUser y OptionalUser
 │   │   └── pagination.py    encode_cursor(), decode_cursor(), PageParams y paginate()
-│   ├── db/firestore.py      AsyncClient único y nombres de colecciones (COL)
+│   ├── db/firestore.py      AsyncClient único, get_firebase_app() y nombres de colecciones (COL)
 │   ├── routers/health.py    GET y HEAD /api/v1/health
 │   ├── schemas/             CamelModel y modelos del health
 │   ├── services/questions.py
@@ -79,7 +79,7 @@ Se levanta desde la raíz del repositorio, en otra terminal:
 npx --yes firebase-tools emulators:start --only firestore --project demo-aprueba
 ```
 
-Queda en `127.0.0.1:8080`, que es el valor de `FIRESTORE_EMULATOR_HOST` en `.env.example`, y carga `firestore.rules`, el archivo de reglas que declara `firebase.json`. Necesita Node.js, solo para `npx`, y Java 21. El prefijo `demo-` hace que el emulador no busque un proyecto real. No uses aquí el ID `aprueba-app-modulo-preguntas`.
+Queda en `127.0.0.1:8080`, que es el valor de `FIRESTORE_EMULATOR_HOST` en `.env.example`, y carga `firestore.rules`, el archivo de reglas que declara `firebase.json`. Necesita Node.js, solo para `npx`, y Java 21. Se levanta como `demo-aprueba`, el mismo ID que usa el backend para Firestore (`FIRESTORE_EMULATOR_PROJECT_ID`), así que la interfaz de `http://127.0.0.1:4000` muestra lo que carga el seed. El prefijo `demo-` hace que el emulador no busque un proyecto real. `FIREBASE_PROJECT_ID` va aparte, con el proyecto real, y solo sirve para validar tokens (ADR-49).
 
 ## Datos de prueba
 
@@ -102,7 +102,7 @@ La API no arranca en estos casos:
 
 - no hay `FIRESTORE_EMULATOR_HOST` ni `FIREBASE_SERVICE_ACCOUNT_BASE64`
 - `FIREBASE_SERVICE_ACCOUNT_BASE64` no contiene un JSON válido
-- `APP_ENV=production` sin `JWT_SECRET`, o con un valor hecho solo de espacios
+- `FIREBASE_AUTH_EMULATOR_HOST` tiene valor sin `APP_ENV=local` y `FIRESTORE_EMULATOR_HOST` a la vez (ADR-50)
 - existen `VERCEL` o `K_SERVICE` y falta `APP_ENV`
 - `APP_ENV` tiene un valor fuera de `local | staging | production`
 - `ALLOWED_ORIGIN_PATTERN` no es una expresión regular válida
@@ -115,12 +115,12 @@ Fuera de producción, Swagger queda en `/api/v1/docs` y el esquema en `/api/v1/o
 |---|---|---|
 | `PORT` | `4000` | Puerto de `python -m app`. La imagen de Docker usa el `PORT` del contenedor, 8080 si no viene |
 | `APP_ENV` | `local` | `local \| staging \| production`. Obligatoria en Vercel y Cloud Run (ADR-36) |
-| `JWT_SECRET` | vacío | Obligatoria en producción (ADR-20). Fuera de producción se usa un valor de desarrollo |
-| `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN` | `15m` y `30d` | Se leen, pero ningún código emite tokens todavía |
 | `QUOTA_RESET_HOUR_LOCAL` y `QUOTA_RESET_TIMEZONE` | `0` y `America/Santiago` | Reinicio de cuota (ADR-11) |
 | `FIRESTORE_EMULATOR_HOST` | sin valor | Solo en local. Si tiene valor, manda sobre la cuenta de servicio |
-| `FIREBASE_PROJECT_ID` | sin valor | Con el emulador, `aprueba-dev` si falta. Con cuenta de servicio, el `project_id` del JSON si falta |
-| `FIREBASE_SERVICE_ACCOUNT_BASE64` | sin valor | JSON de la cuenta de servicio en base64 (ADR-18) |
+| `FIRESTORE_EMULATOR_PROJECT_ID` | `demo-aprueba` | Proyecto de Firestore con el emulador, el mismo con que se levanta. Sin emulador no se usa: Firestore toma el `project_id` de la cuenta de servicio (ADR-49) |
+| `FIREBASE_PROJECT_ID` | sin valor | Solo para validar tokens: proyecto de Firebase Admin y audiencia (`aud`) que exige `verify_id_token` (ver Autenticación). Con el emulador, `aprueba-app-modulo-preguntas` si falta. Con cuenta de servicio, el `project_id` del JSON si falta. No cambia el proyecto de Firestore (ADR-49) |
+| `FIREBASE_SERVICE_ACCOUNT_BASE64` | sin valor | JSON de la cuenta de servicio en base64, para Firestore y Firebase Admin (ADR-18). Es secreta |
+| `FIREBASE_AUTH_EMULATOR_HOST` | sin valor | Solo en local, con `APP_ENV=local` y el emulador de Firestore. Con ella `firebase_admin` no verifica la firma de los tokens. En cualquier otro caso la API no arranca (ADR-50). Se lee solo del entorno del proceso: escrita en `.env` no tiene efecto |
 | `ALLOWED_ORIGINS` | vacío | Orígenes exactos separados por comas (ADR-19) |
 | `ALLOWED_ORIGIN_PATTERN` | sin valor | Expresión regular para las vistas previas de la app web |
 | `SEED_ALLOW_REMOTE` | `false` | Habilita el seed fuera del emulador (ADR-22) |
@@ -156,13 +156,42 @@ Un POST, PUT o PATCH con `Content-Type: application/json` se revisa antes del en
 
 `uptimeSeconds` cuenta desde que se importó el router. `HEAD /api/v1/health` responde 200 sin cuerpo (ADR-35).
 
+## Autenticación
+
+El alumno inicia sesión en la app con Firebase Auth y la app envía su ID token en `Authorization: Bearer`. El backend no emite ni renueva tokens y no tiene `JWT_SECRET` (ADR-40). `get_current_user`, en `app/core/deps.py`, valida el token con `firebase_admin.auth.verify_id_token` en el threadpool, porque la llamada bloquea mientras baja los certificados públicos de Google. Ninguna ruta usa todavía `CurrentUser` ni `OptionalUser`.
+
+| Caso | Respuesta |
+|---|---|
+| Token válido | El usuario: `uid`, `email`, `role` y `plan`. `role` y `plan` salen de custom claims y valen `student` y `free` si no vienen (ADR-44) |
+| Token vencido | 401 `AUTH_TOKEN_EXPIRED`. El mensaje le pide a la app un token nuevo de Firebase |
+| Sin cabecera, esquema distinto de `Bearer`, token vacío o rechazado | 401 `AUTH_REQUIRED` |
+| Certificados de Google no disponibles, o sin respuesta en 10 s | 503 `SERVICE_UNAVAILABLE` (ADR-45 y ADR-46) |
+| `ValueError` de `firebase_admin`, que viene de la configuración | 500 `INTERNAL_ERROR`, registrado en el log (ADR-48) |
+
+Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Authorization` y el mismo 401 si la cabecera existe pero no sirve (ADR-51). La verificación usa `check_revoked=False`, así que un token revocado sirve hasta que expira, como máximo una hora (ADR-43), y tolera 5 s de diferencia de reloj (ADR-47).
+
+`get_firebase_app()`, en `app/db/firestore.py`, inicia Firebase Admin con la misma configuración que Firestore. Con `FIRESTORE_EMULATOR_HOST` usa una credencial anónima, porque verificar un token solo necesita los certificados públicos. Con `FIREBASE_SERVICE_ACCOUNT_BASE64` usa la cuenta de servicio (ADR-49). El proyecto que resulta es la audiencia que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`, así que en local `FIREBASE_PROJECT_ID` vale lo mismo, mientras Firestore usa el proyecto `demo-aprueba` del emulador. Lo decidió el equipo el 2026-09-24 y lo ajustó el 2026-09-25 (ADR-49). Con otro valor, la API local rechaza los tokens de la app con 401 `AUTH_REQUIRED`.
+
 ## Pruebas
 
 ```bash
 .venv/bin/python -m pytest
 ```
 
-Son 24: 10 en `tests/test_health.py` y 14 en `tests/test_core.py`. `test_paginacion_por_fecha_contra_el_emulador` necesita el emulador en `127.0.0.1:8080`. Sin él, pytest informa 23 aprobadas y 1 omitida. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno. Starlette 1.7 deja un aviso de obsolescencia sobre `httpx`, que se fijó en 0.28.1 como pedía el encargo.
+Son 31: 10 en `tests/test_health.py` y 21 en `tests/test_core.py`. `test_paginacion_por_fecha_contra_el_emulador` necesita el emulador en `127.0.0.1:8080`. Sin él, pytest informa 30 aprobadas y 1 omitida. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. Starlette 1.7 deja un aviso de obsolescencia sobre `httpx`, que se fijó en 0.28.1 como pedía el encargo.
+
+Las pruebas de autenticación están en `tests/test_core.py` y montan rutas de sonda (`/api/v1/_yo` y `/api/v1/_opcional`) solo dentro de la prueba. Casi todas reemplazan `verify_id_token` con `monkeypatch` y comprueban que corra fuera del event loop:
+
+- `test_token_de_firebase_valido_entrega_el_usuario`
+- `test_token_de_firebase_expirado_da_auth_token_expired`, que revisa el envelope completo en español y en inglés
+- `test_token_de_firebase_invalido_da_auth_required`
+- `test_error_de_configuracion_en_verify_id_token_da_500`
+- `test_verify_id_token_real_con_firma_local`, que corre el `verify_id_token` real con tokens RS256 firmados por una llave generada durante la prueba y sin bajar certificados
+- `test_sin_bearer_da_auth_required_sin_llamar_a_firebase`
+- `test_certificados_de_google_no_disponibles_da_503`
+- `test_usuario_opcional`
+
+En `tests/test_health.py`, `test_08_firebase_admin_con_la_configuracion_de_firestore` reemplazó a `test_08_produccion_sin_jwt_secret_no_arranca`. Revisa la credencial en modo emulador, la cuenta de servicio, `httpTimeout` y la guarda de `FIREBASE_AUTH_EMULATOR_HOST`. Ninguna prueba usa red ni credenciales reales.
 
 ## Docker y Cloud Run
 
@@ -179,6 +208,6 @@ El servicio de Cloud Run todavía no existe, y la imagen no se ha construido por
 
 La API se despliega en el proyecto `aprueba-app-modulo-preguntas-api`, con Root Directory `backend/`. `vercel.json` declara el preset `fastapi` con `app/main.py` como función, la región `gru1` (ADR-25) y deja fuera `tests/` y `.pytest_cache/`. `git.deploymentEnabled` solo habilita `main` (ADR-26). Vercel instala `requirements.txt` y toma la versión de `.python-version`.
 
-`APP_ENV` existe en el proyecto de Vercel desde el 2026-09-24, con `production` en production y en preview. Vercel define `VERCEL=1`, así que sin `APP_ENV` la función no arranca (ADR-36). `NODE_ENV` ya no la lee nadie y se borra al desplegar FastAPI.
+`APP_ENV` existe en el proyecto de Vercel desde el 2026-09-24, con `production` en production y en preview. Vercel define `VERCEL=1`, así que sin `APP_ENV` la función no arranca (ADR-36). `NODE_ENV`, `JWT_SECRET`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN` ya no las lee nadie y se borran al desplegar FastAPI (ADR-40). `FIREBASE_AUTH_EMULATOR_HOST` no se define en Vercel.
 
 Las reglas y los índices de Firestore se publican aparte, desde la raíz del repositorio, con `firebase.json`.

@@ -2,12 +2,10 @@
 class Endpoints {
   Endpoints._();
 
-  // Auth & cuenta
+  // Auth & cuenta. El login, la renovación del token y el logout los hace
+  // Firebase Auth en el cliente.
   static const register = '/auth/register';
-  static const loginEp = '/auth/login';
   static const social = '/auth/social';
-  static const refresh = '/auth/refresh';
-  static const logout = '/auth/logout';
   static const passwordForgot = '/auth/password/forgot';
   static const passwordReset = '/auth/password/reset';
   static const phoneVerificationStart = '/auth/phone/send-code';

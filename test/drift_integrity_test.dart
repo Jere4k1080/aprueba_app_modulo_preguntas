@@ -2,19 +2,11 @@ import 'dart:convert';
 
 import 'package:aprueba_app/core/network/api_client.dart';
 import 'package:aprueba_app/core/network/endpoints.dart';
-import 'package:aprueba_app/core/storage/secure_storage.dart';
 import 'package:aprueba_app/data/local/database.dart';
 import 'package:aprueba_app/data/repositories/practice_repository.dart';
 import 'package:dio/dio.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-class _FakeSecureStorage extends SecureStorage {
-  @override
-  Future<String?> get accessToken => Future.value('test_jwt_token');
-  @override
-  Future<String?> get refreshToken => Future.value('test_refresh_token');
-}
 
 void main() {
   late AppDatabase db;
@@ -78,7 +70,10 @@ void main() {
       },
     ));
 
-    final api = ApiClient(_FakeSecureStorage(), dio: dio);
+    final api = ApiClient(
+      idToken: ({bool forceRefresh = false}) async => 'test_jwt_token',
+      dio: dio,
+    );
     repository = PracticeRepository(api, db);
   });
 

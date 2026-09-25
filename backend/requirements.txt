@@ -3,8 +3,8 @@ uvicorn[standard]==0.53.0
 pydantic==2.13.5
 pydantic-settings==2.15.0
 google-cloud-firestore==2.31.0
-PyJWT==2.15.0
+firebase-admin==7.7.0
 tzdata==2026.4
-# app/ los importa directamente (starlette en core/, google.oauth2 en db/firestore.py)
+# app/ los importa directamente (starlette en core/, google.oauth2 y google.auth en db/firestore.py)
 starlette==1.7.0
 google-auth==2.58.0

@@ -6,13 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.config import get_settings
 from .core.envelope import RequestIdMiddleware
 from .core.errors import JsonBodyMiddleware, UnhandledErrorMiddleware, install_error_handlers
-from .db.firestore import get_db
+from .db.firestore import get_db, get_firebase_app
 from .routers import health
 
 
 def create_app() -> FastAPI:
-    settings = get_settings()  # falla en producción sin JWT_SECRET
+    settings = get_settings()  # falla en Vercel o Cloud Run sin APP_ENV
     get_db()  # falla al iniciar si no hay emulador ni cuenta de servicio
+    get_firebase_app()  # verifica los tokens de Firebase Auth con la misma configuración
     # Starlette compila el patrón recién en la primera petición; así un patrón inválido corta el arranque, como en Node.
     re.compile(settings.allowed_origin_pattern or "")
 

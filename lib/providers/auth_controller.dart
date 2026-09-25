@@ -38,12 +38,13 @@ class AuthController extends AsyncNotifier<void> {
     return session;
   }
 
-  Future<AuthSession> login(String email, String password) async {
+  Future<void> login(String email, String password) async {
     state = const AsyncLoading();
-    final session = await ref.read(authRepositoryProvider).login(email, password);
+    await ref
+        .read(authRepositoryProvider)
+        .login(email, password, locale: ref.read(localPrefsProvider).locale);
     ref.read(isLoggedInProvider.notifier).state = true;
     state = const AsyncData(null);
-    return session;
   }
 
   Future<AuthSession> social({

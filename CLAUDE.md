@@ -61,10 +61,15 @@ Antes de cualquier commit:
 
 ```bash
 grep -rIl -E "serviceAccount|private_key|BEGIN PRIVATE KEY|sk_live|pk_live|AIza" . \
-  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=flutter --exclude-dir=build --exclude-dir=.venv
+  --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=flutter --exclude-dir=build --exclude-dir=.venv \
+  --exclude-dir=.dart_tool --exclude=firebase_options.dart --exclude=google-services.json --exclude=GoogleService-Info.plist
 ```
 
 `--exclude-dir=.venv` deja fuera el entorno de Python del backend. Sin esa opción, las librerías de Google instaladas ahí dan decenas de coincidencias con `private_key`.
+
+Los archivos de cliente de Firebase se excluyen porque su `apiKey` empieza con `AIza` y es pública por diseño: identifica el proyecto y viaja dentro de la app, pero no da acceso a los datos, que protegen `firestore.rules` y la verificación del token en la API (ADR-42). `.dart_tool` se excluye porque una compilación web copia esa `apiKey` a `main.dart.js`. La cuenta de servicio del backend sí es secreta: solo llega por `FIREBASE_SERVICE_ACCOUNT_BASE64` y nunca se versiona.
+
+Con esas exclusiones la búsqueda devuelve cuatro archivos esperados, sin secretos: `.gitignore` y este `CLAUDE.md`, que nombran los patrones; `lib/core/config/app_config.dart`, por un comentario que menciona `pk_live`, y `backend/tests/test_core.py`, que genera una llave RSA en memoria con `rsa.generate_private_key` para firmar tokens de prueba. Cualquier otro resultado se revisa antes de commitear.
 
 Las credenciales van por `--dart-define` en el cliente y por variables de entorno en el backend. `.env.example` no lleva valores reales.
 
@@ -89,6 +94,8 @@ Dentro del alcance: `lib/features/practice/` y los servicios del backend que lo 
 
 Excepción: si `flutter analyze` reporta una advertencia en código fuera del módulo, se corrige, porque el analizador limpio es criterio de terminado. Hazlo en un commit separado para que el límite del alcance quede visible en el historial.
 
+Cambio autorizado: el 23/09/2026 Alloxentric autorizó tocar lo necesario del login para pasar a Firebase Auth y sacar la verificación por SMS. Los archivos tocados y el motivo de cada uno están en ADR-41. Siguen fuera del alcance y sin tocar la pantalla de registro (`register_screen.dart`), el login social, el olvido de contraseña y su restablecimiento. Del registro cambiaron el router, que salta los pasos de teléfono, y `PhoneAuthService`.
+
 `flutter analyze` reporta 38 avisos informativos y ninguna advertencia. 28 son deprecaciones de `withOpacity` y no se tocan, decidido en ADR-08. 14 de los 38 están en `lib/features/practice/`, 10 de ellos de `withOpacity`.
 
 ---
@@ -110,7 +117,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements-dev.txt
 .venv/bin/python -m app.seed     # datos de prueba
 .venv/bin/python -m app          # API en /api/v1
-.venv/bin/python -m pytest       # 24 pruebas; sin emulador, 23 y 1 omitida
+.venv/bin/python -m pytest       # 31 pruebas; sin emulador, 30 y 1 omitida
 
 # Verificadores sin SDK
 python3 tool/check_static.py .
@@ -130,7 +137,7 @@ Cuando revises trabajo hecho por otro agente, recorre esta lista y reporta el re
 - [ ] `flutter test` en verde, y el número de pruebas no bajó
 - [ ] `python -m pytest` en `backend/` en verde con el emulador activo, y el número de pruebas no bajó
 - [ ] `build_runner` regenera sin conflictos
-- [ ] La búsqueda de secretos no arroja resultados
+- [ ] La búsqueda de secretos no arroja nada fuera de los cuatro archivos esperados de la regla 2
 
 **Integridad del dominio**
 - [ ] La respuesta correcta sigue protegida en los cinco puntos
@@ -172,8 +179,8 @@ lib/
 backend/          Python 3.12 + FastAPI
   app/
     main.py       create_app(): middlewares, CORS, manejo de errores, routers
-    core/         config, envelope, catálogo de errores, i18n, auth JWT, paginación
-    db/           cliente de Firestore y nombres de colecciones
+    core/         config, envelope, catálogo de errores, i18n, verificación del token de Firebase, paginación
+    db/           cliente de Firestore, Firebase Admin y nombres de colecciones
     routers/      endpoints bajo /api/v1
     schemas/      modelos Pydantic en camelCase
     services/     lógica de negocio, incluye sanitize_question()
@@ -188,7 +195,7 @@ seed/README.md              esquemas de las colecciones
 
 **Flujo de datos:** UI → provider → repositorio → `ApiClient` (Dio). La interfaz nunca habla directo con la red. Cada lectura se escribe en Drift y, ante error de red, el repositorio sirve la última copia.
 
-**Sesión:** access token de 15 minutos en `Authorization`. Ante un 401 el interceptor renueva con el refresh token, que rota en cada uso, y reintenta. Si falla, cierra sesión y el router redirige al inicio.
+**Sesión:** Firebase Auth con correo y contraseña. La app envía en `Authorization` el ID token de Firebase, que dura una hora y que el SDK de Firebase renueva solo. El backend lo valida con `verify_id_token` de `firebase-admin` en `backend/app/core/deps.py`, y no emite ni renueva tokens. Ante un 401, `ApiClient` pide un token nuevo con `getIdToken(forceRefresh: true)` y reintenta una sola vez. Si el reintento vuelve a dar 401, o Firebase ya no tiene usuario, llama a `AuthController.logout()`, que cierra la sesión de Firebase y borra la caché de Drift. Después el router redirige al inicio. Decidido en ADR-40.
 
 ---
 
@@ -222,6 +229,9 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-11** Reinicio de cuota configurable por variables de entorno
 - **ADR-12** Sanitización centralizada de `correctAnswer` en la capa de servicios
 - **ADR-30** Backend en Python 3.12 con FastAPI, por decisión de la contraparte. Sus convenciones vienen del backend de administración de Max (ADR-31)
+- **ADR-40** Autenticación con Firebase Auth, por decisión de la contraparte. El backend verifica el ID token con `firebase-admin` y no tiene JWT propio ni refresh token. Reemplaza ADR-20 y ADR-38
+- **ADR-43** `verify_id_token` sin revisar revocación. El retraso de hasta una hora en rechazar un token revocado queda cubierto cuando se implemente el rechazo de usuarios suspendidos
+- **ADR-49**, en la parte del proyecto local, con el ajuste del 2026-09-25: en local Firestore usa el emulador con el proyecto `demo-aprueba` (`FIRESTORE_EMULATOR_PROJECT_ID`), y `FIREBASE_PROJECT_ID` lleva el ID real, `aprueba-app-modulo-preguntas`, solo para validar tokens de Firebase Auth
 
 Las ADR-09 a ADR-12 son propuestas pendientes de ratificación por el equipo.
 
@@ -243,11 +253,13 @@ En los documentos, usa datos concretos del proyecto —nombres de archivo, núme
 
 ## Pendientes conocidos
 
-Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-24:
+Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-25:
 
 - ADR-09 a ADR-12 pendientes de ratificación
-- ADR-32 a ADR-39 son propuestas. El equipo las ratifica después de la Entrega A, porque varias dependen de `users`
+- ADR-32 a ADR-39 y ADR-44 a ADR-55 son propuestas. El equipo las ratifica después de la Entrega A, porque varias dependen de `users`. De ADR-49 ya está decidido el proyecto local
 - El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
 - Los trece servicios del módulo no están implementados. La API está desplegada en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1`, pero solo responde `/health`
-- Al desplegar el backend FastAPI hay que borrar `NODE_ENV` del proyecto de Vercel de la API, porque ya nadie la lee
-Ya no son pendientes: `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+- Al desplegar el backend FastAPI hay que borrar `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV` del proyecto de Vercel de la API, porque ya nadie las lee (ADR-40)
+- Las dos cuentas de demostración de Firebase Authentication todavía no tienen documento `users/{uid}` en Firestore, porque la forma de `users` está en pausa
+- Con `PHONE_VERIFICATION_ENABLED` apagada el registro no tiene salida, y el login social y el restablecimiento de contraseña llaman a rutas `/auth/*` que el backend no tiene. Falta que Alloxentric defina ese camino (ADR-41)
+Ya no son pendientes: la rotación de la llave de la cuenta de servicio está cerrada. La cuenta anterior `firebase-adminsdk-fbsvc` no se pudo restaurar; la actual, con el mismo nombre, tiene una sola llave creada por el equipo, `34b4db8b`, que desde el 2026-09-25 va en `FIREBASE_SERVICE_ACCOUNT_BASE64` de production y preview de la API, y que la API toma con el despliegue automático al fusionar el #15. Las llaves `b0014dfe` y `af27835c` ya no autentican y sus JSON se borraron. El proveedor de correo y contraseña de Firebase Authentication está habilitado y hay dos cuentas de demostración, creadas desde la consola el 2026-09-24. `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.

@@ -1,3 +1,5 @@
 -r requirements.txt
 pytest==9.1.1
 httpx==0.28.1
+# tests/test_core.py la importa directo para firmar tokens de prueba
+cryptography==50.0.1
