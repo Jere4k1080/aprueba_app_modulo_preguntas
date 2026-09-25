@@ -79,7 +79,7 @@ Se levanta desde la raíz del repositorio, en otra terminal:
 npx --yes firebase-tools emulators:start --only firestore --project demo-aprueba
 ```
 
-Queda en `127.0.0.1:8080`, que es el valor de `FIRESTORE_EMULATOR_HOST` en `.env.example`, y carga `firestore.rules`, el archivo de reglas que declara `firebase.json`. Necesita Node.js, solo para `npx`, y Java 21. El prefijo `demo-` hace que el emulador no busque un proyecto real. No uses aquí el ID `aprueba-app-modulo-preguntas`.
+Queda en `127.0.0.1:8080`, que es el valor de `FIRESTORE_EMULATOR_HOST` en `.env.example`, y carga `firestore.rules`, el archivo de reglas que declara `firebase.json`. Necesita Node.js, solo para `npx`, y Java 21. El emulador se levanta como `demo-aprueba`, y el prefijo `demo-` hace que no busque un proyecto real. El backend le escribe con otro ID, `aprueba-app-modulo-preguntas`, porque `FIREBASE_PROJECT_ID` tiene que ser el proyecto donde la app inicia sesión (ADR-49). El emulador acepta ese ID y guarda sus datos aparte. Cada petición deja en `firestore-debug.log` el aviso "Multiple projectIds are not recommended in single project mode", y la interfaz de `http://127.0.0.1:4000` abre `demo-aprueba`, así que no muestra lo que carga el seed.
 
 ## Datos de prueba
 
@@ -117,7 +117,7 @@ Fuera de producción, Swagger queda en `/api/v1/docs` y el esquema en `/api/v1/o
 | `APP_ENV` | `local` | `local \| staging \| production`. Obligatoria en Vercel y Cloud Run (ADR-36) |
 | `QUOTA_RESET_HOUR_LOCAL` y `QUOTA_RESET_TIMEZONE` | `0` y `America/Santiago` | Reinicio de cuota (ADR-11) |
 | `FIRESTORE_EMULATOR_HOST` | sin valor | Solo en local. Si tiene valor, manda sobre la cuenta de servicio |
-| `FIREBASE_PROJECT_ID` | sin valor | Proyecto de Firestore y de Firebase Admin. Con el emulador, `aprueba-dev` si falta. Con cuenta de servicio, el `project_id` del JSON si falta. Es también la audiencia (`aud`) que exige `verify_id_token` (ver Autenticación) |
+| `FIREBASE_PROJECT_ID` | sin valor | Proyecto de Firestore y de Firebase Admin. Con el emulador, `aprueba-app-modulo-preguntas` si falta (ADR-49). Con cuenta de servicio, el `project_id` del JSON si falta. Es también la audiencia (`aud`) que exige `verify_id_token` (ver Autenticación) |
 | `FIREBASE_SERVICE_ACCOUNT_BASE64` | sin valor | JSON de la cuenta de servicio en base64, para Firestore y Firebase Admin (ADR-18). Es secreta |
 | `FIREBASE_AUTH_EMULATOR_HOST` | sin valor | Solo en local, con `APP_ENV=local` y el emulador de Firestore. Con ella `firebase_admin` no verifica la firma de los tokens. En cualquier otro caso la API no arranca (ADR-50). Se lee solo del entorno del proceso: escrita en `.env` no tiene efecto |
 | `ALLOWED_ORIGINS` | vacío | Orígenes exactos separados por comas (ADR-19) |
@@ -169,7 +169,7 @@ El alumno inicia sesión en la app con Firebase Auth y la app envía su ID token
 
 Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Authorization` y el mismo 401 si la cabecera existe pero no sirve (ADR-51). La verificación usa `check_revoked=False`, así que un token revocado sirve hasta que expira, como máximo una hora (ADR-43), y tolera 5 s de diferencia de reloj (ADR-47).
 
-`get_firebase_app()`, en `app/db/firestore.py`, inicia Firebase Admin con la misma configuración que Firestore. Con `FIRESTORE_EMULATOR_HOST` usa una credencial anónima, porque verificar un token solo necesita los certificados públicos. Con `FIREBASE_SERVICE_ACCOUNT_BASE64` usa la cuenta de servicio (ADR-49). El proyecto que resulta es la audiencia que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`, así que un backend local con `FIREBASE_PROJECT_ID=aprueba-dev`, el valor de `.env.example`, los rechaza con 401 `AUTH_REQUIRED`. Cómo probar la app contra el backend local está pendiente de decidir con el equipo.
+`get_firebase_app()`, en `app/db/firestore.py`, inicia Firebase Admin con la misma configuración que Firestore. Con `FIRESTORE_EMULATOR_HOST` usa una credencial anónima, porque verificar un token solo necesita los certificados públicos. Con `FIREBASE_SERVICE_ACCOUNT_BASE64` usa la cuenta de servicio (ADR-49). El proyecto que resulta es la audiencia que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`, así que en local `FIREBASE_PROJECT_ID` vale lo mismo aunque Firestore vaya al emulador. Lo decidió el equipo el 2026-09-24 (ADR-49). Con otro valor, la API local rechaza los tokens de la app con 401 `AUTH_REQUIRED`.
 
 ## Pruebas
 

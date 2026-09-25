@@ -52,13 +52,13 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 40. [ADR-40: Autenticación con Firebase Auth](#adr-40-autenticación-con-firebase-auth)
 41. [ADR-41: Cambio de alcance autorizado: login y registro](#adr-41-cambio-de-alcance-autorizado-login-y-registro)
 42. [ADR-42: Configuración de cliente de Firebase versionada](#adr-42-configuración-de-cliente-de-firebase-versionada)
-43. [ADR-43: `verify_id_token` sin revisar revocación (Propuesta)](#adr-43-verify_id_token-sin-revisar-revocación)
+43. [ADR-43: `verify_id_token` sin revisar revocación (Aceptada)](#adr-43-verify_id_token-sin-revisar-revocación)
 44. [ADR-44: Rol y plan desde custom claims mientras `users` está en pausa (Propuesta)](#adr-44-rol-y-plan-desde-custom-claims-mientras-users-está-en-pausa)
 45. [ADR-45: `CertificateFetchError` como 503 `SERVICE_UNAVAILABLE` (Propuesta)](#adr-45-certificatefetcherror-como-503-service_unavailable)
 46. [ADR-46: Espera de 10 s para los certificados de Google (Propuesta)](#adr-46-espera-de-10-s-para-los-certificados-de-google)
 47. [ADR-47: Tolerancia de 5 s en el reloj al verificar tokens (Propuesta)](#adr-47-tolerancia-de-5-s-en-el-reloj-al-verificar-tokens)
 48. [ADR-48: `TypeError` de `firebase_admin` como 401 y `ValueError` como 500 (Propuesta)](#adr-48-typeerror-de-firebase_admin-como-401-y-valueerror-como-500)
-49. [ADR-49: Firebase Admin con la configuración de Firestore (Propuesta)](#adr-49-firebase-admin-con-la-configuración-de-firestore)
+49. [ADR-49: Firebase Admin con la configuración de Firestore (Propuesta, con el proyecto local decidido)](#adr-49-firebase-admin-con-la-configuración-de-firestore)
 50. [ADR-50: `FIREBASE_AUTH_EMULATOR_HOST` solo en local con el emulador de Firestore (Propuesta)](#adr-50-firebase_auth_emulator_host-solo-en-local-con-el-emulador-de-firestore)
 51. [ADR-51: Usuario opcional con cabecera inválida (Propuesta)](#adr-51-usuario-opcional-con-cabecera-inválida)
 52. [ADR-52: `onSessionExpired` idempotente con el logout de ajustes (Propuesta)](#adr-52-onsessionexpired-idempotente-con-el-logout-de-ajustes)
@@ -551,8 +551,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Consecuencias:**
   * Lo que esta entrega decidió sin cobertura del encargo ni del documento de Max quedó como propuesta en ADR-43 a ADR-55. El cambio de alcance en la app está en ADR-41 y la configuración de cliente de Firebase en ADR-42.
   * Ninguna ruta usa todavía `CurrentUser` ni `OptionalUser`. La API sigue respondiendo solo `/health`.
-  * En el proyecto de Vercel de la API sobran `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV`, y falta `APP_ENV` (ADR-36). `Settings` ignora las variables que no declara, así que las que sobran no impiden el arranque. Hay que borrarlas y crear `APP_ENV` al desplegar.
-  * Nadie confirmó que el proveedor de correo y contraseña esté habilitado en Firebase Authentication del proyecto `aprueba-app-modulo-preguntas`, y no consta que existan cuentas de demostración. El registro de la app no las crea (ADR-41), así que hay que crearlas desde la consola de Firebase.
+  * En el proyecto de Vercel de la API sobran `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV`. `Settings` ignora las variables que no declara, así que no impiden el arranque, pero hay que borrarlas al desplegar. `APP_ENV` ya existe desde el 2026-09-24 (ADR-36).
+  * El registro de la app no crea cuentas (ADR-41). El 2026-09-24 el equipo habilitó el proveedor de correo y contraseña en Firebase Authentication del proyecto `aprueba-app-modulo-preguntas` y creó dos cuentas de demostración desde la consola. Leídas con el Admin SDK, las dos tienen el proveedor `password`, están activas y no traen custom claims, así que la API las trata como `student` con plan `free` (ADR-44). No tienen documento `users/{uid}` en Firestore, porque la forma de `users` está en pausa.
 * **Verificación (2026-09-24):** `pytest` en `backend/` da 31 aprobadas con el emulador de Firestore, 21 en `tests/test_core.py` y 10 en `tests/test_health.py`. Antes eran 24. Las pruebas reemplazan `verify_id_token` con `monkeypatch`, salvo `test_verify_id_token_real_con_firma_local`, que firma tokens RS256 con una llave generada durante la prueba y reemplaza la descarga de certificados. Ninguna usa red ni credenciales reales. `flutter test` da 45 aprobadas. En `feature/backend-fastapi` eran 29, y las 16 nuevas están en `test/api_client_auth_test.dart`. `flutter analyze` sigue en 38 avisos informativos, sin advertencias ni errores.
 
 ---
@@ -600,10 +600,11 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-43: `verify_id_token` sin revisar revocación
 
-* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Estado:** **ACEPTADA POR EL EQUIPO (2026-09-24)**
 * **Decisión tomada al implementar:** `get_current_user` llama a `verify_id_token` con `check_revoked=False`. Un token revocado, por un cambio de contraseña o por `revoke_refresh_tokens`, se sigue aceptando hasta que expira. Lo mismo pasa con el token de un usuario deshabilitado. Un ID token de Firebase dura una hora, así que esa es la ventana máxima.
 * **Alternativa descartada:** `check_revoked=True`. Agrega una llamada a la API de Firebase Authentication en cada petición, con su latencia y su cuota. Esa llamada necesita credenciales, así que el modo emulador sin cuenta de servicio dejaría de funcionar (ADR-49).
 * **Impacto si se rechaza:** hay que manejar `auth.UserDisabledError`, que no hereda de `InvalidIdTokenError` y hoy terminaría en 500 (ADR-48). `RevokedIdTokenError` sí hereda y daría 401 `AUTH_REQUIRED`. `test_token_de_firebase_valido_entrega_el_usuario` revisa los argumentos de la llamada y tendría que cambiar.
+* **Aceptación (2026-09-24):** el equipo acepta la ventana. El retraso de hasta una hora en rechazar un token revocado queda cubierto cuando se implemente el rechazo de usuarios suspendidos.
 
 ---
 
@@ -658,15 +659,17 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-49: Firebase Admin con la configuración de Firestore
 
-* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24)**
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-24). EL PROYECTO LOCAL LO DECIDIÓ EL EQUIPO EL MISMO DÍA**
 * **Decisión tomada al implementar:**
   * `get_firebase_app()` vive en `backend/app/db/firestore.py`, junto a `get_db()`. La decodificación de `FIREBASE_SERVICE_ACCOUNT_BASE64` pasó a `_service_account_info()`, que usan los dos.
-  * Con `FIRESTORE_EMULATOR_HOST`, Firebase Admin se inicia con `AnonymousCredentials()` de `google-auth` y el proyecto `FIREBASE_PROJECT_ID`, o `aprueba-dev` si falta. Verificar un token solo usa los certificados públicos, así que no hace falta una credencial.
+  * Con `FIRESTORE_EMULATOR_HOST`, Firebase Admin se inicia con `AnonymousCredentials()` de `google-auth` y el proyecto `FIREBASE_PROJECT_ID`, o `aprueba-app-modulo-preguntas` si falta. Verificar un token solo usa los certificados públicos, así que no hace falta una credencial.
   * Con cuenta de servicio, la credencial es `firebase_admin.credentials.Certificate` y el proyecto es `FIREBASE_PROJECT_ID` o el `project_id` del JSON, el mismo criterio que Firestore.
   * Si la app por defecto de Firebase ya existe, `get_firebase_app()` la devuelve, porque `create_app()` puede correr varias veces en un proceso. Se prefirió eso a una bandera a nivel de módulo, que quedaría desfasada cuando las pruebas borran la app con `delete_app`.
 * **Alternativas descartadas:** `initialize_app(None)` en modo emulador. En `firebase_admin` 7.7.0 ese valor se convierte en `ApplicationDefault`, y el primer `verify_id_token` llama a `google.auth.default()`. En una máquina sin credenciales predeterminadas la API respondía 500. También se descartó ubicar la función en `core/security.py`, donde Max tiene la firma de JWT y las contraseñas de la consola. Habría duplicado la decodificación o importado `db/` desde `core/` de todos modos.
-* **Consecuencia:** el proyecto de Firebase Admin es la audiencia (`aud`) que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`. Un backend local con `FIREBASE_PROJECT_ID=aprueba-dev`, el valor de `backend/.env.example`, los rechaza con 401 `AUTH_REQUIRED`. `.env.example` lo advierte. Cómo probar la app contra el backend local queda por decidir con el equipo.
-* **Verificación:** `test_08_firebase_admin_con_la_configuracion_de_firestore` reemplaza `google.auth.default` por una función que falla. Si el modo emulador volviera a `initialize_app(None)`, la prueba fallaría.
+* **Consecuencia:** el proyecto de Firebase Admin es la audiencia (`aud`) que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`, así que un backend con otro proyecto los rechaza con 401 `AUTH_REQUIRED`.
+* **Decisión del equipo sobre el proyecto local (2026-09-24):** en local, `FIREBASE_PROJECT_ID` es `aprueba-app-modulo-preguntas`, el mismo proyecto contra el que inicia sesión la app. El emulador se usa solo para Firestore. `backend/.env.example` trae ese valor, y `APP_PROJECT`, en `backend/app/db/firestore.py`, lo usa por defecto cuando la variable falta. Antes el valor local era `aprueba-dev`, con el que la API local rechazaba los tokens de la app. Se descartaron también una variable aparte para la audiencia y el emulador de Auth. Con esta decisión el emulador de Auth no forma parte del entorno local; ADR-50, que todavía lo admite en local, se revisa al ratificar las propuestas.
+* **Efecto en el emulador:** el comando documentado sigue levantándolo como `demo-aprueba`. El emulador acepta el otro ID y guarda esos datos aparte. Cada petición deja en `firestore-debug.log` el aviso "Multiple projectIds are not recommended in single project mode", y su interfaz abre `demo-aprueba`, así que no muestra lo que carga el seed. Falta decidir si el emulador se levanta con el mismo ID.
+* **Verificación:** `test_08_firebase_admin_con_la_configuracion_de_firestore` reemplaza `google.auth.default` por una función que falla. Si el modo emulador volviera a `initialize_app(None)`, la prueba fallaría. El 2026-09-24, con el emulador levantado como `demo-aprueba` y sin `FIREBASE_PROJECT_ID`, `python -m app.seed` dejó las 20 preguntas bajo `aprueba-app-modulo-preguntas` y ninguna bajo `demo-aprueba`.
 
 ---
 
