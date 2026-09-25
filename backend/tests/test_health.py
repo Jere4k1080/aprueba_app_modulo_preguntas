@@ -132,7 +132,8 @@ def test_07_credenciales_de_firestore(monkeypatch):
         from_service_account_info=lambda info: {"project_id": info["project_id"]})))
 
     def abrir(**env):
-        for name in ("FIRESTORE_EMULATOR_HOST", "FIREBASE_SERVICE_ACCOUNT_BASE64", "FIREBASE_PROJECT_ID"):
+        for name in ("FIRESTORE_EMULATOR_HOST", "FIRESTORE_EMULATOR_PROJECT_ID", "FIREBASE_SERVICE_ACCOUNT_BASE64",
+                     "FIREBASE_PROJECT_ID"):
             if name in env:
                 monkeypatch.setenv(name, env[name])
             else:
@@ -146,7 +147,12 @@ def test_07_credenciales_de_firestore(monkeypatch):
 
     # El emulador tiene prioridad aunque el base64 sea inválido, y el cliente se crea una sola vez.
     assert abrir(FIRESTORE_EMULATOR_HOST="127.0.0.1:8080", FIREBASE_SERVICE_ACCOUNT_BASE64="invalid") == [
-        {"project": "aprueba-app-modulo-preguntas"}]
+        {"project": "demo-aprueba"}]
+    # En el emulador Firestore usa su proyecto demo-; FIREBASE_PROJECT_ID solo valida tokens (ADR-49).
+    assert abrir(FIRESTORE_EMULATOR_HOST="127.0.0.1:8080", FIREBASE_PROJECT_ID="aprueba-app-modulo-preguntas") == [
+        {"project": "demo-aprueba"}]
+    assert abrir(FIRESTORE_EMULATOR_HOST="127.0.0.1:8080", FIRESTORE_EMULATOR_PROJECT_ID="demo-otro") == [
+        {"project": "demo-otro"}]
 
     cuenta = base64.b64encode(json.dumps({"project_id": "aprueba-test", "k": ">>>???x"}).encode()).decode()
     sin_relleno, url_segura = cuenta.rstrip("="), cuenta.replace("+", "-").replace("/", "_")
@@ -155,6 +161,9 @@ def test_07_credenciales_de_firestore(monkeypatch):
     for valor in (cuenta, sin_relleno, url_segura):
         assert abrir(FIREBASE_SERVICE_ACCOUNT_BASE64=valor) == [
             {"project": "aprueba-test", "credentials": {"project_id": "aprueba-test"}}]
+    # Con cuenta de servicio, Firestore usa el proyecto de la cuenta aunque FIREBASE_PROJECT_ID diga otro.
+    assert abrir(FIREBASE_SERVICE_ACCOUNT_BASE64=cuenta, FIREBASE_PROJECT_ID="otro-proyecto") == [
+        {"project": "aprueba-test", "credentials": {"project_id": "aprueba-test"}}]
     # Vacía cuenta como ausente, y se retira para que la librería no entre en modo emulador.
     assert abrir(FIRESTORE_EMULATOR_HOST="", FIREBASE_SERVICE_ACCOUNT_BASE64=cuenta) == [
         {"project": "aprueba-test", "credentials": {"project_id": "aprueba-test"}}]
@@ -173,6 +182,8 @@ def test_08_firebase_admin_con_la_configuracion_de_firestore(monkeypatch):
     monkeypatch.setattr(google.auth, "default", sin_credenciales_predeterminadas)
 
     # Con el emulador arranca sin credenciales, y crear la app de nuevo reutiliza la de Firebase.
+    # El proyecto demo- de Firestore no cambia el de Firebase Auth (ADR-49).
+    monkeypatch.setenv("FIRESTORE_EMULATOR_PROJECT_ID", "demo-otro")
     firebase_admin.delete_app(firebase_admin.get_app())
     create_app()
     firebase_app = firebase_admin.get_app()

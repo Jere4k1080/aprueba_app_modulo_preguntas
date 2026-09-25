@@ -25,8 +25,8 @@ class COL:
 
 
 _client: AsyncClient | None = None
-# Proyecto donde la app inicia sesión. Con el emulador de Firestore también se usa por defecto,
-# porque es la audiencia que exige verify_id_token a los tokens de la app (ADR-49).
+# Proyecto donde la app inicia sesión. Con el emulador de Firestore es el proyecto por defecto de
+# Firebase Admin, porque es la audiencia que exige verify_id_token a los tokens de la app (ADR-49).
 APP_PROJECT = "aprueba-app-modulo-preguntas"
 MISSING_CONFIG = "Configura FIRESTORE_EMULATOR_HOST o FIREBASE_SERVICE_ACCOUNT_BASE64."
 HTTP_TIMEOUT = 10  # segundos para bajar los certificados de Google; Dio corta a los 20
@@ -47,14 +47,15 @@ def _create_client(settings: Settings) -> AsyncClient:
     if settings.firestore_emulator_host:
         # La librería detecta el emulador solo por variable de entorno; si el valor vino de .env hay que exportarlo.
         os.environ["FIRESTORE_EMULATOR_HOST"] = settings.firestore_emulator_host
-        return AsyncClient(project=settings.firebase_project_id or APP_PROJECT)
+        # Proyecto demo- del emulador, el mismo que muestra su interfaz; FIREBASE_PROJECT_ID es solo para tokens.
+        return AsyncClient(project=settings.firestore_emulator_project_id)
     if settings.firebase_service_account_base64:
         info = _service_account_info(settings)
         # Una variable definida pero vacía cuenta como ausente en Settings; la librería, en cambio,
         # entraría en modo emulador con host vacío.
         os.environ.pop("FIRESTORE_EMULATOR_HOST", None)
         credentials = service_account.Credentials.from_service_account_info(info)
-        return AsyncClient(project=settings.firebase_project_id or info.get("project_id"), credentials=credentials)
+        return AsyncClient(project=info.get("project_id"), credentials=credentials)
     raise RuntimeError(MISSING_CONFIG)
 
 

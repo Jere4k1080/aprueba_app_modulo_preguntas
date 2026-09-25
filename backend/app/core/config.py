@@ -21,8 +21,11 @@ class Settings(BaseSettings):
     quota_reset_hour_local: int = 0
     quota_reset_timezone: str = "America/Santiago"
 
+    # Solo para validar tokens de Firebase Auth: es la audiencia que exige verify_id_token (ADR-49).
     firebase_project_id: str | None = None
     firestore_emulator_host: str | None = None
+    # Proyecto de Firestore dentro del emulador. Con demo- nunca toca recursos reales (ADR-49).
+    firestore_emulator_project_id: str = "demo-aprueba"
     firebase_service_account_base64: str | None = None
 
     allowed_origins: str = ""
