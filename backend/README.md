@@ -179,6 +179,6 @@ El servicio de Cloud Run todavía no existe, y la imagen no se ha construido por
 
 La API se despliega en el proyecto `aprueba-app-modulo-preguntas-api`, con Root Directory `backend/`. `vercel.json` declara el preset `fastapi` con `app/main.py` como función, la región `gru1` (ADR-25) y deja fuera `tests/` y `.pytest_cache/`. `git.deploymentEnabled` solo habilita `main` (ADR-26). Vercel instala `requirements.txt` y toma la versión de `.python-version`.
 
-Antes del primer despliegue de FastAPI hay que crear `APP_ENV` en el proyecto de Vercel: `production` en production, y `production` o `staging` en preview. Vercel define `VERCEL=1`, así que sin `APP_ENV` la función no arranca (ADR-36). `NODE_ENV` ya no la lee nadie y se puede borrar.
+`APP_ENV` existe en el proyecto de Vercel desde el 2026-09-24, con `production` en production y en preview. Vercel define `VERCEL=1`, así que sin `APP_ENV` la función no arranca (ADR-36). `NODE_ENV` ya no la lee nadie y se borra al desplegar FastAPI.
 
 Las reglas y los índices de Firestore se publican aparte, desde la raíz del repositorio, con `firebase.json`.

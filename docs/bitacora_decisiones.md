@@ -368,7 +368,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Sustituye el Express de ADR-17. `app/main.py` exporta `app` y `python -m app` escucha en local. El proyecto de Vercel separado sigue igual.
   * Sustituye el preset de ADR-26. `backend/vercel.json` declara `"framework": "fastapi"`, la región `gru1` y `app/main.py` como función. `git.deploymentEnabled` no cambia.
   * Se agrega `backend/Dockerfile` para Cloud Run, el destino del backend de administración. Vercel sigue siendo el destino activo y el servicio de Cloud Run no existe todavía.
-  * `APP_ENV` (`local | staging | production`) reemplaza a `NODE_ENV`. Hay que crearla en Vercel antes del primer despliegue (ADR-36).
+  * `APP_ENV` (`local | staging | production`) reemplaza a `NODE_ENV`. En Vercel se creó el 2026-09-24, antes del primer despliegue (ADR-36).
   * ADR-12 sigue vigente con `sanitize_question()` en `backend/app/services/questions.py`. ADR-19 sigue vigente con el `CORSMiddleware` de Starlette en vez del paquete `cors`.
   * ADR-21 no cambia. El cliente `google-cloud-firestore` con la cuenta de servicio tampoco pasa por las reglas, como Firebase Admin.
   * Diferencias con Node que no son decisiones: Starlette distingue mayúsculas en las rutas y responde 307 a una ruta con barra final. `uptimeSeconds` cuenta desde que se importa el router. Salvo `seed/`, los subpaquetes de `app/` no tienen `__init__.py` y funcionan como paquetes de espacio de nombres. Si Vercel los rechaza, basta con agregar archivos vacíos.
@@ -469,11 +469,11 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-36: `APP_ENV` obligatorio en Vercel y Cloud Run
 
-* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-23). CONDICIÓN ANTES DE FUSIONAR `feature/backend-fastapi`**
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-23). LA VARIABLE YA EXISTE EN VERCEL (2026-09-24)**
 * **Decisión tomada al portar:** `APP_ENV` acepta `local | staging | production` y vale `local` por defecto. Si existe `VERCEL` o `K_SERVICE` y `APP_ENV` no está definida, `Settings` corta el arranque con "APP_ENV es obligatorio en Vercel y en Cloud Run.". Cualquier otro valor, como `development`, también lo corta.
 * **Alternativa descartada:** usar `local` por defecto en todas partes. Un despliegue sin la variable correría como local, con `/api/v1/docs` público y el health informando `local`.
 * **Motivo:** Max define los valores de `APP_ENV` pero no qué pasa cuando falta. Vercel define `VERCEL=1` al ejecutar la función y Cloud Run define `K_SERVICE`, así que el control solo actúa en esas plataformas.
-* **Acción pendiente:** antes de fusionar, crear `APP_ENV=production` en production del proyecto de Vercel `aprueba-app-modulo-preguntas-api`, y `production` o `staging` en preview. Borrar `NODE_ENV`, que ya nadie lee. Hacer lo mismo en el servicio de Cloud Run cuando exista.
+* **Acción previa a la fusión:** hecha el 2026-09-24. `APP_ENV=production` existe en production y en preview del proyecto de Vercel `aprueba-app-modulo-preguntas-api`. Para preview el equipo eligió `production` y no `staging`. La API en Node no la lee y siguió respondiendo 200 en `/health`. Queda borrar `NODE_ENV` al desplegar FastAPI, y definir `APP_ENV` en el servicio de Cloud Run cuando exista.
 * **Límite conocido:** si el proyecto de Vercel apagara la exposición de variables de sistema, `VERCEL` no existiría y el control no actuaría. `test_app_env_obligatorio_en_vercel_y_cloud_run` cubre los dos casos.
 
 ---

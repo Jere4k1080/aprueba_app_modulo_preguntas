@@ -243,10 +243,11 @@ En los documentos, usa datos concretos del proyecto —nombres de archivo, núme
 
 ## Pendientes conocidos
 
-Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-23:
+Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-24:
 
 - ADR-09 a ADR-12 pendientes de ratificación
+- ADR-32 a ADR-39 son propuestas. El equipo las ratifica después de la Entrega A, porque varias dependen de `users`
 - El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
 - Los trece servicios del módulo no están implementados. La API está desplegada en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1`, pero solo responde `/health`
-- El backend FastAPI necesita `APP_ENV` en el proyecto de Vercel de la API antes de su primer despliegue. Sin esa variable no arranca (ADR-36)
-Ya no son pendientes: la app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+- Al desplegar el backend FastAPI hay que borrar `NODE_ENV` del proyecto de Vercel de la API, porque ya nadie la lee
+Ya no son pendientes: `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
