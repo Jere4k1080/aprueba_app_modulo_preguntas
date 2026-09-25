@@ -1,0 +1,502 @@
+[
+  {
+    "id": "sk_demo_lectora_localizar",
+    "name": "Localizar información explícita",
+    "testId": "lectora",
+    "domain": "Localizar",
+    "level": 1,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Competencia Lectora",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_lectora_comp_lit",
+    "name": "Comprensión de textos literarios",
+    "testId": "lectora",
+    "domain": "Comprensión lectora",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_lectora_localizar"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Competencia Lectora",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_lectora_interpretar",
+    "name": "Inferir información implícita",
+    "testId": "lectora",
+    "domain": "Interpretar",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_lectora_localizar"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Competencia Lectora",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_lectora_evaluar",
+    "name": "Evaluar el propósito de un texto",
+    "testId": "lectora",
+    "domain": "Evaluar",
+    "level": 3,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_lectora_interpretar"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Competencia Lectora",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m1_operatoria",
+    "name": "Operatoria con números enteros",
+    "testId": "m1",
+    "domain": "Números",
+    "level": 1,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Aritmética",
+        "url": "https://es.khanacademy.org/math/arithmetic",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M1",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m1_pitagoras",
+    "name": "Teorema de Pitágoras",
+    "testId": "m1",
+    "domain": "Geometría",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_operatoria"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Geometría",
+        "url": "https://es.khanacademy.org/math/geometry",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M1",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m1_ecuaciones",
+    "name": "Ecuaciones de primer grado",
+    "testId": "m1",
+    "domain": "Álgebra y funciones",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_operatoria"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Álgebra 1",
+        "url": "https://es.khanacademy.org/math/algebra",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M1",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m1_probabilidad",
+    "name": "Probabilidad con la regla de Laplace",
+    "testId": "m1",
+    "domain": "Probabilidad y estadística",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_operatoria"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Estadística y probabilidad",
+        "url": "https://es.khanacademy.org/math/statistics-probability",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M1",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m2_logaritmos",
+    "name": "Logaritmos",
+    "testId": "m2",
+    "domain": "Números",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_operatoria"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Álgebra 2",
+        "url": "https://es.khanacademy.org/math/algebra2",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M2",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m2_cuadratica",
+    "name": "Ecuación de segundo grado",
+    "testId": "m2",
+    "domain": "Álgebra y funciones",
+    "level": 3,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_ecuaciones"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Álgebra 1",
+        "url": "https://es.khanacademy.org/math/algebra",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M2",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m2_trigonometria",
+    "name": "Razones trigonométricas en el triángulo rectángulo",
+    "testId": "m2",
+    "domain": "Geometría",
+    "level": 3,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_pitagoras"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Trigonometría",
+        "url": "https://es.khanacademy.org/math/trigonometry",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M2",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_m2_prob_dependientes",
+    "name": "Probabilidad de eventos dependientes",
+    "testId": "m2",
+    "domain": "Probabilidad y estadística",
+    "level": 3,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_m1_probabilidad"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Estadística y probabilidad",
+        "url": "https://es.khanacademy.org/math/statistics-probability",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Matemática M2",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_cien_celula",
+    "name": "Estructura y función de la célula",
+    "testId": "cien",
+    "domain": "Biología",
+    "level": 1,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Biología",
+        "url": "https://es.khanacademy.org/science/biology",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Ciencias",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_cien_rapidez",
+    "name": "Rapidez media",
+    "testId": "cien",
+    "domain": "Física",
+    "level": 1,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Física",
+        "url": "https://es.khanacademy.org/science/physics",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Ciencias",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_cien_mrua",
+    "name": "Movimiento rectilíneo uniformemente acelerado",
+    "testId": "cien",
+    "domain": "Física",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_cien_rapidez"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Física",
+        "url": "https://es.khanacademy.org/science/physics",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Ciencias",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_cien_masa_molar",
+    "name": "Masa molar de compuestos",
+    "testId": "cien",
+    "domain": "Química",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Química",
+        "url": "https://es.khanacademy.org/science/chemistry",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Ciencias",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_hist_independencia",
+    "name": "Proceso de independencia de Chile",
+    "testId": "hist",
+    "domain": "Historia",
+    "level": 1,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Fuentes digitalizadas de historia de Chile",
+        "url": "https://www.memoriachilena.gob.cl/",
+        "source": "Memoria Chilena"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Historia y Ciencias Sociales",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_hist_oferta_demanda",
+    "name": "Oferta, demanda y precios",
+    "testId": "hist",
+    "domain": "Sistema económico",
+    "level": 1,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "video",
+        "title": "Microeconomía",
+        "url": "https://es.khanacademy.org/economics-finance-domain/microeconomics",
+        "source": "Khan Academy"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Historia y Ciencias Sociales",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_hist_estado",
+    "name": "Organización del Estado de Chile",
+    "testId": "hist",
+    "domain": "Formación ciudadana",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [
+      "sk_demo_hist_independencia"
+    ],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Constitución Política de la República",
+        "url": "https://www.bcn.cl/leychile/navegar?idNorma=242302",
+        "source": "Biblioteca del Congreso Nacional"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Historia y Ciencias Sociales",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  },
+  {
+    "id": "sk_demo_hist_poblacion",
+    "name": "Dinámica de la población",
+    "testId": "hist",
+    "domain": "Geografía",
+    "level": 2,
+    "maxLevel": 4,
+    "prerequisiteIds": [],
+    "status": "active",
+    "resources": [
+      {
+        "type": "pdf",
+        "title": "Estadísticas demográficas",
+        "url": "https://www.ine.gob.cl/",
+        "source": "INE"
+      },
+      {
+        "type": "pdf",
+        "title": "Temario y modelos de prueba oficiales de Historia y Ciencias Sociales",
+        "url": "https://demre.cl/",
+        "source": "DEMRE"
+      }
+    ],
+    "isDemo": true
+  }
+]

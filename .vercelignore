@@ -5,4 +5,6 @@ build/
 # Solo el SDK clonado en la raíz. Sin la barra inicial también caerían las carpetas flutter de ios, linux, macos y windows.
 /flutter/
 node_modules/
+.venv/
+__pycache__/
 graphify-out/

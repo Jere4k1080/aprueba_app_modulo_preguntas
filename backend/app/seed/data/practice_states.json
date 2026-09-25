@@ -1,0 +1,12 @@
+{
+  "usr_demo": {
+    "answeredQuestionIds": [
+      "q_lectora_001"
+    ],
+    "lastQuestionId": "q_lectora_001",
+    "activeSessionId": "sess_demo_01"
+  },
+  "usr_demo_nuevo": {
+    "answeredQuestionIds": []
+  }
+}

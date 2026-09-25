@@ -68,6 +68,11 @@ yarn-error.log*
 dist/
 coverage/
 
+# ─── Python y backend ────────────────────────────────────────────
+.venv/
+__pycache__/
+.pytest_cache/
+
 # Emulador de Firestore
 firebase-debug.log
 firestore-debug.log

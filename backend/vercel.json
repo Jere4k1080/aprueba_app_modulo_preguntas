@@ -1,6 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "express",
+  "framework": "fastapi",
+  "regions": ["gru1"],
+  "functions": {
+    "app/main.py": {
+      "excludeFiles": "{tests/**,.pytest_cache/**}"
+    }
+  },
   "git": {
     "deploymentEnabled": {
       "**": false,

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "lectora",
+    "label": "Comp. Lectora",
+    "color": "#1A365D",
+    "hasQuestions": true
+  },
+  {
+    "id": "m1",
+    "label": "Matemática M1",
+    "color": "#10B981",
+    "hasQuestions": true
+  },
+  {
+    "id": "m2",
+    "label": "Matemática M2",
+    "color": "#6366F1",
+    "hasQuestions": true
+  },
+  {
+    "id": "cien",
+    "label": "Ciencias",
+    "color": "#F5B041",
+    "hasQuestions": true
+  },
+  {
+    "id": "hist",
+    "label": "Historia y C. Soc.",
+    "color": "#EF4444",
+    "hasQuestions": true
+  }
+]

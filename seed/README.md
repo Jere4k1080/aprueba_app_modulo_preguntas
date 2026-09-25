@@ -1,9 +1,15 @@
 # Esquemas de colecciones Firestore — Datos semilla
 
-Referencia de esquemas para el script de seed del backend (`npm run seed`).
+Referencia de esquemas para el script de seed del backend. Se corre desde `backend/`
+con `.venv/bin/python -m app.seed` (en Windows, `.venv/Scripts/python.exe -m app.seed`),
+con el emulador de Firestore activo o con `SEED_ALLOW_REMOTE=true` (ADR-22).
 Los ids usados en los ejemplos son los que el frontend espera.
-Los datos viven en `backend/src/seed/data.js`, y las fechas las asigna el servidor de
-Firestore al escribir, con `FieldValue.serverTimestamp()` (ADR-14).
+
+Las pruebas, habilidades, preguntas, usuarios y estados de práctica viven en
+`backend/app/seed/data/`, en `tests.json`, `skills.json`, `questions.json`, `users.json` y
+`practice_states.json`. Los demás documentos de demostración, como la respuesta `ans_001`,
+están escritos en `backend/app/seed/__init__.py`. Las fechas las asigna el servidor de
+Firestore al escribir, con `SERVER_TIMESTAMP` (ADR-14).
 
 ---
 
