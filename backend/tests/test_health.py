@@ -146,7 +146,7 @@ def test_07_credenciales_de_firestore(monkeypatch):
 
     # El emulador tiene prioridad aunque el base64 sea inválido, y el cliente se crea una sola vez.
     assert abrir(FIRESTORE_EMULATOR_HOST="127.0.0.1:8080", FIREBASE_SERVICE_ACCOUNT_BASE64="invalid") == [
-        {"project": "aprueba-dev"}]
+        {"project": "aprueba-app-modulo-preguntas"}]
 
     cuenta = base64.b64encode(json.dumps({"project_id": "aprueba-test", "k": ">>>???x"}).encode()).decode()
     sin_relleno, url_segura = cuenta.rstrip("="), cuenta.replace("+", "-").replace("/", "_")
@@ -178,7 +178,7 @@ def test_08_firebase_admin_con_la_configuracion_de_firestore(monkeypatch):
     firebase_app = firebase_admin.get_app()
     create_app()
     assert firebase_admin.get_app() is firebase_app
-    assert firebase_app.project_id == "aprueba-dev"
+    assert firebase_app.project_id == "aprueba-app-modulo-preguntas"
     # verify_id_token real: un token mal formado se rechaza sin red y sin buscar credenciales.
     with pytest.raises(firebase_auth.InvalidIdTokenError):
         firebase_auth.verify_id_token("no.es.jwt", app=firebase_app)
@@ -207,7 +207,7 @@ def test_08_firebase_admin_con_la_configuracion_de_firestore(monkeypatch):
         firestore_db.get_firebase_app()
     monkeypatch.setenv("APP_ENV", "local")
     get_settings.cache_clear()
-    assert firestore_db.get_firebase_app()[1]["projectId"] == "aprueba-dev"
+    assert firestore_db.get_firebase_app()[1]["projectId"] == "aprueba-app-modulo-preguntas"
 
     monkeypatch.delenv("FIREBASE_AUTH_EMULATOR_HOST")
     monkeypatch.delenv("FIRESTORE_EMULATOR_HOST")

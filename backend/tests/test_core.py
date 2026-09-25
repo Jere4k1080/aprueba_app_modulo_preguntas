@@ -174,7 +174,7 @@ def test_token_de_firebase_valido_entrega_el_usuario(prueba, verify):
     firebase_app = firebase_admin.get_app()
     assert verify.llamadas == [("token.de.firebase", {"app": firebase_app, "check_revoked": False,
                                                       "clock_skew_seconds": 5})]
-    assert firebase_app.project_id == "aprueba-dev"
+    assert firebase_app.project_id == "aprueba-app-modulo-preguntas"
 
     # role y plan salen de los custom claims cuando vienen.
     verify.resultado = {"uid": "usr_demo", "role": "admin", "plan": "premium"}
@@ -231,7 +231,7 @@ def firmar(monkeypatch):
 
     def firmar_token(iat_adelantado=0, vence_en=3600, header=None):
         t = int(time.time())
-        payload = {"iss": "https://securetoken.google.com/aprueba-dev", "aud": "aprueba-dev", "sub": "usr_real",
+        payload = {"iss": "https://securetoken.google.com/aprueba-app-modulo-preguntas", "aud": "aprueba-app-modulo-preguntas", "sub": "usr_real",
                    "iat": t + iat_adelantado, "exp": t + vence_en}
         firmado = b64(json.dumps(header or {"alg": "RS256", "kid": "k1"}).encode()) + "." + b64(json.dumps(payload).encode())
         return firmado + "." + b64(llave.sign(firmado.encode(), padding.PKCS1v15(), hashes.SHA256()))

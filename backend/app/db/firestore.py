@@ -25,7 +25,9 @@ class COL:
 
 
 _client: AsyncClient | None = None
-EMULATOR_PROJECT = "aprueba-dev"
+# Proyecto donde la app inicia sesión. Con el emulador de Firestore también se usa por defecto,
+# porque es la audiencia que exige verify_id_token a los tokens de la app (ADR-49).
+APP_PROJECT = "aprueba-app-modulo-preguntas"
 MISSING_CONFIG = "Configura FIRESTORE_EMULATOR_HOST o FIREBASE_SERVICE_ACCOUNT_BASE64."
 HTTP_TIMEOUT = 10  # segundos para bajar los certificados de Google; Dio corta a los 20
 
@@ -45,7 +47,7 @@ def _create_client(settings: Settings) -> AsyncClient:
     if settings.firestore_emulator_host:
         # La librería detecta el emulador solo por variable de entorno; si el valor vino de .env hay que exportarlo.
         os.environ["FIRESTORE_EMULATOR_HOST"] = settings.firestore_emulator_host
-        return AsyncClient(project=settings.firebase_project_id or EMULATOR_PROJECT)
+        return AsyncClient(project=settings.firebase_project_id or APP_PROJECT)
     if settings.firebase_service_account_base64:
         info = _service_account_info(settings)
         # Una variable definida pero vacía cuenta como ausente en Settings; la librería, en cambio,
@@ -80,7 +82,7 @@ def get_firebase_app() -> firebase_admin.App:
         # Sin credencial, firebase_admin cargaría las credenciales predeterminadas de Google al
         # primer verify_id_token. Verificar un token solo usa los certificados públicos.
         return firebase_admin.initialize_app(AnonymousCredentials(), {
-            "projectId": settings.firebase_project_id or EMULATOR_PROJECT, "httpTimeout": HTTP_TIMEOUT})
+            "projectId": settings.firebase_project_id or APP_PROJECT, "httpTimeout": HTTP_TIMEOUT})
     if settings.firebase_service_account_base64:
         info = _service_account_info(settings)
         return firebase_admin.initialize_app(firebase_credentials.Certificate(info), {
