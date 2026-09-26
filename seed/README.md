@@ -1,67 +1,103 @@
-# Esquemas de colecciones Firestore — Datos semilla
+# Datos semilla de Firestore
 
-Referencia de esquemas para el script de seed del backend. Se corre desde `backend/`
-con `.venv/bin/python -m app.seed` (en Windows, `.venv/Scripts/python.exe -m app.seed`),
-con el emulador de Firestore activo o con `SEED_ALLOW_REMOTE=true` (ADR-22).
-Los ids usados en los ejemplos son los que el frontend espera.
+El seed carga en Firestore un banco de demostración y los documentos de las dos cuentas de prueba. Se corre desde `backend/` con `.venv/bin/python -m app.seed` (en Windows, `.venv/Scripts/python.exe -m app.seed`), con el emulador de Firestore activo o con `SEED_ALLOW_REMOTE=true` (ADR-22). Necesita además `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID`, los UID de Firebase Authentication de `aprueba@demo.cl` y `aprueba2@demo.cl`. Si falta uno, o si no da un ID `usr_` que acepte la administración, el seed termina con código 1 antes de abrir Firestore (ADR-58).
 
-Las pruebas, habilidades, preguntas, usuarios y estados de práctica viven en
-`backend/app/seed/data/`, en `tests.json`, `skills.json`, `questions.json`, `users.json` y
-`practice_states.json`. Los demás documentos de demostración, como la respuesta `ans_001`,
-están escritos en `backend/app/seed/__init__.py`. Las fechas las asigna el servidor de
-Firestore al escribir, con `SERVER_TIMESTAMP` (ADR-14).
+Los datos están en `backend/app/seed/data/`: `tests.json`, `skills.json`, `questions.json`, `plans.json`, `users.json`, `answers.json` y `corrections.json`. `build_documents()`, en `backend/app/seed/__init__.py`, calcula lo que depende de otros documentos: `nameLower`, `emailLower`, `medalWallet`, `badgesTotal`, `quota`, `stats`, `flagCount`, `approvedStock`, `statementPreview`, `skillMastery` y `state/practice`. Todo se escribe en un solo lote, así que se carga completo o no se carga nada. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). Los IDs son fijos y otra corrida reescribe los mismos documentos.
+
+Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md`](../docs/diccionario_de_datos.md). Este archivo muestra lo que carga el seed, con ejemplos sacados de `build_documents()`. En las rutas, `<UID>` es el UID de la cuenta y `<hora del servidor>` es el valor de `SERVER_TIMESTAMP`.
 
 ---
 
-## Colección `tests` (Raíz)
+## Qué carga
 
-Cinco documentos, uno por prueba PAES. El id del documento **es** el código de la
-prueba.
+| Ruta | Documentos | Contenido |
+|---|---:|---|
+| `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración (ADR-64) |
+| `tests` | 5 | Las pruebas PAES, con 4 preguntas aprobadas cada una |
+| `skills` | 20 | Cuatro habilidades por prueba |
+| `questions` | 20 | Una por cada combinación de prueba y dificultad |
+| `users` | 2 | `usr_<UID>` de `aprueba@demo.cl` y de `aprueba2@demo.cl` |
+| `users/{id}/answers` | 5 | Respuestas de `aprueba@demo.cl` |
+| `users/{id}/skillMastery` | 5 | Dominio de `aprueba@demo.cl` en las habilidades que respondió |
+| `users/{id}/state/practice` | 2 | Uno por cuenta |
+| `medalTransactions` | 4 | Una por cada respuesta correcta |
+| `corrections` | 1 | Solicitud pendiente de `aprueba@demo.cl` |
+
+En total son 67 documentos.
+
+`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 20 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 15 preguntas.
+
+`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 20. Le quedan las 8 preguntas de esas dos pruebas.
+
+Las dos cuentas están en el plan `free`, con `state` `active`. Su límite es 20 porque ese es el `qDay` del ejemplo de la administración, que choca con la base de 10 de la regla de negocio 1 (ADR-64).
+
+---
+
+## `plans`
+
+```jsonc
+// plans/free
+{
+  "name": { "es": "Gratis", "en": "Free" },
+  "nameLower": "gratis",
+  "price": 0,
+  "currency": "USD",
+  "color": "#64748B",
+  "features": ["f3"],
+  "limits": { "qDay": 20, "groups": 1, "tests": 1 },
+  "badges": { "login": 1, "purchase": 0, "correct": 1 },
+  "stripeProductId": null,
+  "stripePriceId": null,
+  "system": true,
+  "createdAt": "<hora del servidor>",
+  "updatedAt": "<hora del servidor>"
+}
+```
+
+`uni` tiene `qDay` 0 y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69).
+
+---
+
+## `tests`
 
 ```jsonc
 // tests/lectora
 {
-  "id": "lectora",
   "label": "Comp. Lectora",
+  "nameLower": "comp. lectora",
   "color": "#1A365D",
-  "hasQuestions": true
+  "axes": ["Localizar", "Comprensión lectora", "Interpretar", "Evaluar"],
+  "order": 1,
+  "active": true,
+  "countryId": "cl",
+  "examId": "cl_paes",
+  "approvedStock": 4
 }
 ```
 
-| Campo | Tipo | Requerido | Descripción |
-|---|---|---|---|
-| `id` | `string` | ✔ | Código de la prueba: `lectora`, `m1`, `m2`, `cien`, `hist` |
-| `label` | `string` | ✔ | Nombre legible para la UI |
-| `color` | `string` | ✔ | Color hex de la prueba |
-| `hasQuestions` | `boolean` | ✔ | `true` si hay banco de preguntas |
+| ID | `label` | `color` | `order` |
+|---|---|---|---:|
+| `lectora` | Comp. Lectora | `#1A365D` | 1 |
+| `m1` | Matemática M1 | `#10B981` | 2 |
+| `m2` | Matemática M2 | `#6366F1` | 3 |
+| `cien` | Ciencias | `#F5B041` | 4 |
+| `hist` | Historia y C. Soc. | `#EF4444` | 5 |
 
-Documentos semilla:
-
-| id | label | color |
-|---|---|---|
-| `lectora` | Comp. Lectora | `#1A365D` |
-| `m1` | Matemática M1 | `#10B981` |
-| `m2` | Matemática M2 | `#6366F1` |
-| `cien` | Ciencias | `#F5B041` |
-| `hist` | Historia y C. Soc. | `#EF4444` |
+`axes` sale de los ejes de las habilidades de cada prueba.
 
 ---
 
-## Colección `skills` (Raíz)
-
-Habilidad dentro de una prueba. El id es un slug generado.
+## `skills`
 
 ```jsonc
 // skills/sk_lectora_comp_lit
 {
-  "id": "sk_lectora_comp_lit",
-  "name": "Comprensión de textos literarios",
   "testId": "lectora",
-  "domain": "Comprensión lectora",
+  "name": "Comprensión de textos literarios",
+  "axis": "Comprensión lectora",
   "level": 2,
   "maxLevel": 4,
-  "prerequisiteIds": ["sk_demo_lectora_localizar"],
-  "status": "active",
+  "prerequisites": ["sk_demo_lectora_localizar"],
   "resources": [
     {
       "type": "pdf",
@@ -70,54 +106,25 @@ Habilidad dentro de una prueba. El id es un slug generado.
       "source": "DEMRE"
     }
   ],
-  "isDemo": true
+  "createdAt": "<hora del servidor>",
+  "updatedAt": "<hora del servidor>"
 }
 ```
 
-| Campo | Tipo | Requerido | Descripción |
-|---|---|---|---|
-| `id` | `string` | ✔ | Identificador único |
-| `name` | `string` | ✔ | Nombre de la habilidad |
-| `testId` | `string` | ✔ | FK a `tests` |
-| `domain` | `string` | ✔ | Dominio al que pertenece |
-| `level` | `int` | ✔ | Nivel actual (1–4) |
-| `maxLevel` | `int` | ✔ | Nivel máximo |
-| `prerequisiteIds` | `string[]` | ✔ | IDs de habilidades prerequisito |
-| `status` | `string` | ✔ | `done` \| `active` \| `locked` |
-| `resources` | `SkillResource[]` | ✔ | Material de apoyo |
-| `isDemo` | `boolean?` | | `true` en las habilidades de demostración del seed |
-
-**`SkillResource`** (objeto embebido):
-
-| Campo | Tipo | Requerido |
-|---|---|---|
-| `type` | `string` | ✔ (`video` \| `pdf` \| `exercise`) |
-| `title` | `string` | ✔ |
-| `url` | `string?` | |
-| `duration` | `string?` | |
-| `source` | `string?` | |
-
-El seed carga 20 habilidades de demostración, cuatro por prueba, con prerrequisitos
-dentro del árbol y recursos de DEMRE, Khan Academy, Memoria Chilena, la BCN o el INE.
-Las nuevas usan IDs `sk_demo_<prueba>_<tema>`; `sk_lectora_comp_lit` conserva el suyo.
+Son 20 habilidades, cuatro por prueba, con prerrequisitos dentro del árbol y recursos de DEMRE, Khan Academy, Memoria Chilena, la BCN o el INE. Usan IDs `sk_demo_<prueba>_<tema>`, salvo `sk_lectora_comp_lit`, que viene de la primera versión del seed. Como el modelo de junio no da a `skills` un campo de origen, las de demostración son las de `skills.json` (ADR-69).
 
 ---
 
-## Colección `questions` (Raíz)
-
-Pregunta del banco. El id es un slug generado.
-**Regla de integridad:** `correctAnswer` vive en la base de datos, pero el servicio
-backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
+## `questions`
 
 ```jsonc
-// questions/q_lectora_001
+// questions/qst_080b7064ec
 {
-  "id": "q_lectora_001",
   "testId": "lectora",
   "axis": "Comprensión lectora",
   "skillId": "sk_lectora_comp_lit",
   "difficulty": "d2",
-  "statement": "Lee el fragmento y responde.\n\n> Cuando llegó la fábrica de cemento... \n\n¿Cuál es la idea principal del fragmento?",
+  "statement": "Lee el fragmento y responde.\n\n> Cuando llegó la fábrica de cemento, ...\n\n¿Cuál es la idea principal del fragmento?",
   "options": [
     "La modernización de la industria",
     "El impacto ambiental del progreso",
@@ -126,199 +133,204 @@ backend lo proyecta y lo omite en `GET /practice/next` y `GET /questions/{id}`.
   ],
   "correctAnswer": "B",
   "explanation": "1. El fragmento parte con la llegada de la fábrica...\nVerificación: ...",
-  "cohortSpeedThresholds": {
-    "p25": 15000,
-    "p50": 25000,
-    "p75": 45000,
-    "p90": 60000
+  "requiredSkillText": "Comprensión de textos literarios",
+  "status": "published",
+  "reviewStatus": "approved",
+  "flagCount": 0,
+  "randomKey": 0.257537,
+  "stats": {
+    "timesAnswered": 1,
+    "timesCorrect": 1,
+    "sumElapsedMs": 38000,
+    "elapsedBuckets": {
+      "lt10": 0, "lt20": 0, "lt30": 0, "lt45": 1, "lt60": 0,
+      "lt90": 0, "lt120": 0, "lt180": 0, "lt300": 0, "gte300": 0
+    }
   },
-  "status": "active"
+  "source": "seed_demo",
+  "countryId": "cl",
+  "examId": "cl_paes",
+  "origin": "manual",
+  "version": 1,
+  "createdAt": "<hora del servidor>",
+  "updatedAt": "<hora del servidor>"
 }
 ```
 
-| Campo | Tipo | Requerido | Descripción |
+Las 20 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed.
+
+El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, así que la equivalencia se puede recalcular (ADR-62):
+
+| ID anterior | ID nuevo | ID anterior | ID nuevo |
 |---|---|---|---|
-| `id` | `string` | ✔ | Identificador único |
-| `testId` | `string` | ✔ | FK a `tests` |
-| `axis` | `string?` | | Eje temático |
-| `skillId` | `string?` | | FK a `skills` |
-| `difficulty` | `string` | ✔ | `d1` \| `d2` \| `d3` \| `d4` |
-| `statement` | `string` | ✔ | Enunciado |
-| `options` | `string[]` | ✔ | Alternativas A–D/E |
-| `correctAnswer` | `string` | ✔ | Letra correcta (solo backend/admin) |
-| `explanation` | `string?` | | Explicación corta |
-| `cohortSpeedThresholds` | `map?` | | Umbrales precalculados en ms (`p25`, `p50`, `p75`, `p90`) |
-| `status` | `string` | ✔ | `active` \| `draft` \| `disabled` |
-| `isDemo` | `boolean?` | | `true` en las preguntas de demostración del seed |
-
-El seed carga 20 preguntas de demostración, una por cada combinación de prueba y
-dificultad. Las escribió el equipo; no vienen del banco de la empresa. Las nuevas usan
-IDs `q_demo_<prueba>_<dificultad>`, por ejemplo `q_demo_m1_d3`. `q_lectora_001` conserva
-su ID porque la respuesta, la recorrección y el estado de práctica de `usr_demo` la
-referencian. La explicación va en texto, con pasos numerados y una línea final de
-verificación.
+| `q_demo_lectora_d1` | `qst_da7712782b` | `q_demo_m2_d3` | `qst_89abee2144` |
+| `q_lectora_001` | `qst_080b7064ec` | `q_demo_m2_d4` | `qst_5b6a511857` |
+| `q_demo_lectora_d3` | `qst_ffc9d70c58` | `q_demo_cien_d1` | `qst_89ec0bd93e` |
+| `q_demo_lectora_d4` | `qst_b55f58c63f` | `q_demo_cien_d2` | `qst_50a86416a9` |
+| `q_demo_m1_d1` | `qst_9873643c47` | `q_demo_cien_d3` | `qst_1101a72d7c` |
+| `q_demo_m1_d2` | `qst_84a0b1e1d1` | `q_demo_cien_d4` | `qst_6fa24d8150` |
+| `q_demo_m1_d3` | `qst_d627ef81f3` | `q_demo_hist_d1` | `qst_8995758927` |
+| `q_demo_m1_d4` | `qst_b72993bcce` | `q_demo_hist_d2` | `qst_f2babea270` |
+| `q_demo_m2_d1` | `qst_17392f3fb1` | `q_demo_hist_d3` | `qst_a61c41a428` |
+| `q_demo_m2_d2` | `qst_4574d5002b` | `q_demo_hist_d4` | `qst_989222c2fc` |
 
 ---
 
-## Colección `answers` (Raíz)
-
-Respuesta del alumno a una pregunta. La API la crea tras evaluar la alternativa; el cliente no escribe en Firestore.
-**Diseño:** Colección raíz para permitir agregación por `questionId` entre todos los alumnos
-al calcular el percentil de cohorte (`cohortPercentile`).
+## `users`
 
 ```jsonc
-// answers/ans_001
+// users/usr_<UID> de aprueba@demo.cl
 {
-  "id": "ans_001",
-  "userId": "usr_demo",
-  "questionId": "q_lectora_001",
-  "selected": "B",
-  "correct": true,
-  "elapsedMs": 42000,
-  "cohortPercentile": 78,
-  "answeredAt": "2026-09-15T14:30:00.000Z"
-}
-```
-
-| Campo | Tipo | Requerido |
-|---|---|---|
-| `id` | `string` | ✔ |
-| `userId` | `string` | ✔ |
-| `questionId` | `string` | ✔ |
-| `selected` | `string` | ✔ (letra A–E) |
-| `correct` | `boolean` | ✔ |
-| `elapsedMs` | `int` | ✔ |
-| `cohortPercentile` | `int?` | |
-| `answeredAt` | `timestamp` | ✔ |
-
----
-
-## Colección `corrections` (Raíz)
-
-Solicitud de recorrección de una pregunta. El cliente la envía a la API, que la crea en Firestore.
-**Diseño:** Colección raíz para permitir a administración listar todas las solicitudes pendientes
-sin importar el usuario.
-
-```jsonc
-// corrections/cor_001
-{
-  "id": "cor_001",
-  "userId": "usr_demo",
-  "questionId": "q_lectora_001",
-  "reason": "wrong_answer",
-  "comment": "La alternativa correcta debería ser C",
-  "status": "pending",
-  "potentialReward": { "amount": 250 },
-  "createdAt": "2026-09-15T14:35:00.000Z",
-  "reviewedAt": null,
-  "reviewedBy": null
-}
-```
-
-| Campo | Tipo | Requerido |
-|---|---|---|
-| `id` | `string` | ✔ |
-| `userId` | `string` | ✔ |
-| `questionId` | `string` | ✔ |
-| `reason` | `string` | ✔ (`wrong_answer` \| `ambiguous` \| `typo` \| `bad_explanation` \| `other`) |
-| `comment` | `string?` | |
-| `status` | `string` | ✔ (`pending` \| `confirmed` \| `rejected`) |
-| `potentialReward` | `object?` | `{ "amount": 250 }` |
-| `rewardGranted` | `object?` | `{ "amount": 250 }` (tras confirmación) |
-| `createdAt` | `timestamp` | ✔ |
-| `reviewedAt` | `timestamp?` | |
-| `reviewedBy` | `string?` | |
-
----
-
-## Documento `users/{uid}`
-
-Perfil y estado de juego del alumno, según el modelo de datos de la empresa (v1.0). El
-ID es el UID de Firebase Authentication. En producción lo crea el registro, que está
-fuera de nuestro alcance; el seed crea los dos usuarios de demostración con todos los
-campos obligatorios del modelo para que la consola de administración pueda leerlos.
-
-```jsonc
-// users/usr_demo (extracto: campos que usa el módulo)
-{
-  "selectedTests": ["lectora", "m1", "m2", "cien", "hist"],
-  "practiceFormat": "random",
-  "difficulty": "d1",
+  "name": "Estudiante Demo",
+  "nameLower": "estudiante demo",
+  "email": "aprueba@demo.cl",
+  "emailLower": "aprueba@demo.cl",
+  "authProvider": "password",
   "locale": "es",
   "country": "CL",
   "plan": "free",
+  "state": "active",
+  "subscriptionId": null,
+  "school": null,
+  "region": null,
+  "age": null,
+  "streak": 1,
+  "medalWallet": { "bronze": 4, "silver": 0, "gold": 0, "diamond": 0, "platinum": 0 },
+  "badgesTotal": 4,
+  "selectedTests": ["lectora", "m1", "m2", "cien", "hist"],
+  "practiceFormat": "random",
+  "difficulty": "d1",
   "quota": {
-    "used": 1,
-    "max": 10,
-    "date": "2026-09-23",
+    "used": 5,
+    "max": 20,
+    "date": "2026-09-25",
     "bonusSchool": false,
     "bonusAddress": false,
     "unlimited": false
-  }
+  },
+  "avatarColor": "#1A365D",
+  "theme": "light",
+  "planStatus": "none",
+  "dailyReminder": false,
+  "createdAt": "<hora del servidor>",
+  "updatedAt": "<hora del servidor>",
+  "lastActivityAt": "<hora del servidor>"
 }
 ```
 
-Los campos y el sub-esquema de `quota` están en la sección 2.8 del diccionario de datos.
-`usr_demo` eligió las cinco pruebas y usó 1 de 10 preguntas. `usr_demo_nuevo` eligió
-`lectora` y `m1` y tiene la cuota base: 0 de 10, sin bonos. Sus correos terminan en
-`@demo.aprueba.invalid`, un dominio reservado que no recibe correo. Si un usuario llega
-sin este documento, los servicios usan la cuota base y ninguna prueba seleccionada
-(ADR-27 y ADR-29).
+`quota.date` es el día en que corre el seed, en el huso de `QUOTA_RESET_TIMEZONE`. `aprueba2@demo.cl` tiene la misma forma, con `name` "Estudiante Nuevo", `streak` 0, `selectedTests` `["lectora", "m1"]`, la billetera en cero y `quota.used` 0.
 
 ---
 
-## Subcolección `users/{uid}/medalLedger`
-
-Registro de movimientos de medallas de cada usuario. Solo el backend escribe.
+## `users/{id}/answers`
 
 ```jsonc
-// users/usr_demo/medalLedger/ml_001
+// users/usr_<UID>/answers/ans_da7712782b
 {
-  "id": "ml_001",
-  "type": "answer_correct",
-  "tier": "bronze",
-  "amount": 1,
-  "referenceId": "q_lectora_001",
-  "createdAt": "2026-09-15T14:30:01.000Z"
+  "questionId": "qst_da7712782b",
+  "testId": "lectora",
+  "axis": "Localizar",
+  "skillId": "sk_demo_lectora_localizar",
+  "selected": "C",
+  "correct": true,
+  "elapsedMs": 24000,
+  "cohortPercentile": 50,
+  "difficulty": "d1",
+  "answeredAt": "<hora del servidor>"
 }
 ```
 
-| Campo | Tipo | Requerido |
-|---|---|---|
-| `id` | `string` | ✔ |
-| `type` | `string` | ✔ (`answer_correct` \| `correction_confirmed` \| `exchange` \| `gift`) |
-| `tier` | `string` | ✔ (`bronze` \| `silver` \| `gold` \| `diamond` \| `platinum`) |
-| `amount` | `int` | ✔ (positivo = ganó, negativo = gastó) |
-| `referenceId` | `string?` | |
-| `createdAt` | `timestamp` | ✔ |
+El ID es `ans_` más los 10 hexadecimales de la pregunta. `cohortPercentile` vale 50 porque cada respuesta del seed es la primera de su pregunta (ADR-63).
 
 ---
 
-## Documento `users/{uid}/state/practice`
-
-Estado de sesión y preguntas respondidas por el alumno. Usado por `GET /practice/next` para filtrar preguntas ya contestadas sin necesidad de escanear la colección `answers`.
+## `users/{id}/skillMastery`
 
 ```jsonc
-// users/usr_demo/state/practice
+// users/usr_<UID>/skillMastery/sk_demo_lectora_localizar
+{
+  "testId": "lectora",
+  "correct": 1,
+  "total": 1,
+  "percent": 100,
+  "level": 1,
+  "status": "in_progress",
+  "updatedAt": "<hora del servidor>"
+}
+```
+
+En el seed, `level` es el número de aciertos con tope en `maxLevel` (ADR-69).
+
+---
+
+## `users/{id}/state/practice`
+
+```jsonc
+// users/usr_<UID>/state/practice
 {
   "answeredQuestionIds": [
-    "q_lectora_001"
+    "qst_da7712782b",
+    "qst_080b7064ec",
+    "qst_9873643c47",
+    "qst_4574d5002b",
+    "qst_8995758927"
   ],
-  "lastQuestionId": "q_lectora_001",
-  "lastAnsweredAt": "2026-09-15T14:30:00.000Z",
-  "activeSessionId": "sess_demo_01"
+  "lastQuestionId": "qst_8995758927",
+  "lastAnsweredAt": "<hora del servidor>"
 }
 ```
 
-| Campo | Tipo | Requerido | Descripción |
-|---|---|---|---|
-| `answeredQuestionIds` | `string[]` | ✔ | IDs de preguntas ya respondidas |
-| `lastQuestionId` | `string?` | | Última pregunta entregada |
-| `lastAnsweredAt` | `timestamp?` | | Fecha de última respuesta |
-| `activeSessionId` | `string?` | | ID de la sesión actual |
+El de `aprueba2@demo.cl` solo tiene `answeredQuestionIds` vacío.
 
-El seed crea este documento para dos usuarios. `usr_demo` tiene respondida
-`q_lectora_001`, así que le quedan 19 preguntas. `usr_demo_nuevo` tiene
-`answeredQuestionIds` vacío y sirve para mostrar el flujo desde cero con sus 8
-preguntas de `lectora` y `m1`.
+---
 
+## `medalTransactions`
+
+```jsonc
+// medalTransactions/mtx_286ccb1fe2
+{
+  "userId": "usr_<UID>",
+  "tier": "bronze",
+  "amount": 1,
+  "reason": "answer_correct",
+  "refId": "qst_da7712782b",
+  "at": "<hora del servidor>"
+}
+```
+
+`amount` sale de `plans/free.badges.correct`. El ID es `mtx_` más 10 hexadecimales del SHA-1 de un texto fijo con el motivo, la cuenta y la pregunta, para que no cambie entre corridas.
+
+---
+
+## `corrections`
+
+```jsonc
+// corrections/cor_21ef180d4a
+{
+  "userId": "usr_<UID>",
+  "userName": "Estudiante Demo",
+  "questionId": "qst_4574d5002b",
+  "testId": "m2",
+  "axis": "Álgebra y funciones",
+  "difficulty": "d2",
+  "statementPreview": "¿Cuáles son las soluciones de la ecuación x² − 5x + 6 = 0?",
+  "reason": "Creo que la alternativa C también es correcta.",
+  "reasonCode": "wrong_answer",
+  "comment": "Creo que la alternativa C también es correcta.",
+  "proposedAnswer": "C",
+  "state": "pending",
+  "createdAt": "<hora del servidor>",
+  "resolvedAt": null,
+  "resolvedBy": null,
+  "note": null,
+  "rewardGranted": null
+}
+```
+
+Tiene todos los campos que lee `GET /admin/corrections` (ADR-61). `reasonCode` y `comment` siguen la propuesta de ADR-67.
+
+---
+
+## Datos del seed anterior
+
+El seed del 2026-09-23 dejó en el proyecto `aprueba-app-modulo-preguntas` documentos que el nuevo no reescribe: las 20 preguntas con los IDs anteriores de la tabla de `questions`, `users/usr_demo` con `medalLedger/ml_001` y `state/practice`, `users/usr_demo_nuevo` con `state/practice`, `answers/ans_001` y `corrections/cor_001`. Firestore no borra las subcolecciones al borrar un documento, así que hay que borrarlas una por una. `tests` y `skills` usan los mismos IDs y el seed nuevo los reemplaza completos. El borrado se hace después de fusionar y con confirmación del equipo.
