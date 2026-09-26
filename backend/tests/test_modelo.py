@@ -68,6 +68,7 @@ def test_documentos_del_seed_para_la_administracion():
     demo, nuevo = (user_doc_id(UIDS[r]) for r in ("demo", "nuevo"))
     plans = {r.split("/")[1]: d for r, d in docs if r.startswith("plans/")}
     assert all(p["nameLower"] == p["name"]["es"].lower() for p in plans.values()), "plans sin nameLower"
+    assert plans["free"]["limits"]["qDay"] == 10, "regla de negocio 1: base de 10 en el plan gratuito (ADR-64)"
     for doc_id in (demo, nuevo):
         u = por_ruta[f"users/{doc_id}"]
         # La consola lee name, email y createdAt con acceso obligatorio y ordena por nameLower,
@@ -120,6 +121,15 @@ def test_documentos_del_seed_para_la_administracion():
     assert all(m["percent"] == round(100 * m["correct"] / m["total"]) for m in maestria.values())
 
 
+def test_modo_facsimil_segun_features():
+    # ADR-70: el facsímil se permite si el plan incluye la funcionalidad con key mock_mode.
+    docs = dict(seed.build_documents(UIDS, "2026-09-26"))
+    facsim = [r.split("/")[1] for r, d in docs.items() if r.startswith("features/") and d["key"] == "mock_mode"]
+    assert facsim == ["f2"]
+    con_facsim = {r.split("/")[1] for r, d in docs.items() if r.startswith("plans/") and "f2" in d["features"]}
+    assert con_facsim == {"all"}, "con los planes de ejemplo de la administración solo all incluye mock_mode"
+
+
 @pytest.mark.skipif(not _emulador_activo(), reason="emulador de Firestore apagado en 127.0.0.1:8080")
 def test_seed_contra_el_emulador(monkeypatch):
     proyecto = "demo-pytest-seed"
@@ -133,7 +143,7 @@ def test_seed_contra_el_emulador(monkeypatch):
         await seed.seed_database()
         db = AsyncClient(project=proyecto)
         conteo = {c: len([d async for d in db.collection(c).stream()])
-                  for c in ("questions", "plans", "users", "tests", "skills", "medalTransactions", "corrections")}
+                  for c in ("questions", "plans", "features", "users", "tests", "skills", "medalTransactions", "corrections")}
         demo = db.collection("users").document(user_doc_id(UIDS["demo"]))
         conteo["answers"] = len([d async for d in demo.collection("answers").stream()])
         usuario = (await demo.get()).to_dict()
@@ -141,7 +151,7 @@ def test_seed_contra_el_emulador(monkeypatch):
 
     try:
         conteo, usuario = asyncio.run(sembrar_y_leer())
-        assert conteo == {"questions": 20, "plans": 3, "users": 2, "tests": 5, "skills": 20,
+        assert conteo == {"questions": 20, "plans": 3, "features": 1, "users": 2, "tests": 5, "skills": 20,
                           "medalTransactions": 4, "corrections": 1, "answers": 5}
         assert isinstance(usuario["createdAt"], datetime) and isinstance(usuario["lastActivityAt"], datetime)
         assert usuario["badgesTotal"] == 4 and usuario["quota"]["used"] == 5

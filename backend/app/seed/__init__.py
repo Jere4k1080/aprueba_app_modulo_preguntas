@@ -57,7 +57,7 @@ def _preview(statement: str) -> str:
 
 def build_documents(uids: dict[str, str], today: str) -> list[tuple[str, dict]]:
     """Arma todos los documentos del seed como (ruta, datos), sin tocar Firestore."""
-    tests, skills, plans = load("tests"), load("skills"), load("plans")
+    tests, skills, plans, features = load("tests"), load("skills"), load("plans"), load("features")
     questions = {q["id"]: copy.deepcopy(q) for q in load("questions")}
     users, answers, corrections = load("users"), load("answers"), load("corrections")
     plan_by_id = {p["id"]: p for p in plans}
@@ -68,6 +68,8 @@ def build_documents(uids: dict[str, str], today: str) -> list[tuple[str, dict]]:
         # nameLower: la administración lo usa para rechazar dos planes con el mismo nombre.
         docs.append((f"{COL.plans}/{p['id']}", {**p, "nameLower": p["name"]["es"].lower(),
                                                   "createdAt": SERVER_TIMESTAMP, "updatedAt": SERVER_TIMESTAMP}))
+    for f in features:
+        docs.append((f"{COL.features}/{f['id']}", f))
     for s in skills:
         docs.append((f"{COL.skills}/{s['id']}", {**s, "createdAt": SERVER_TIMESTAMP, "updatedAt": SERVER_TIMESTAMP}))
 

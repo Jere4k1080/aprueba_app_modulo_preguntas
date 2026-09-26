@@ -12,7 +12,7 @@
       "f3"
     ],
     "limits": {
-      "qDay": 20,
+      "qDay": 10,
       "groups": 1,
       "tests": 1
     },

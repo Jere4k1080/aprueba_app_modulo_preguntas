@@ -20,6 +20,7 @@ class COL:
     corrections = "corrections"
     users = "users"
     plans = "plans"
+    features = "features"
     medal_transactions = "medalTransactions"
     # Subcolecciones de users/{usr_<UID>}
     answers = "answers"
