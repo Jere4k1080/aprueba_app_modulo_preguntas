@@ -10,16 +10,16 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ## Índice de Decisiones
 
-1. [ADR-01: Arquitectura de colecciones Firestore: Raíz vs. Subcolección (Modificada)](#adr-01-arquitectura-de-colecciones-firestore-raíz-vs-subcolección)
+1. [ADR-01: Arquitectura de colecciones Firestore: Raíz vs. Subcolección (Modificada, sustituida por ADR-59 y ADR-60)](#adr-01-arquitectura-de-colecciones-firestore-raíz-vs-subcolección)
 2. [ADR-02: Inmutabilidad en respuestas y solicitudes de corrección (Mantenida)](#adr-02-inmutabilidad-en-respuestas-y-solicitudes-de-corrección)
 3. [ADR-03: Modelos de Firestore en el cliente Flutter (Descartada)](#adr-03-modelos-de-firestore-en-el-cliente-flutter)
 4. [ADR-04: Privacidad y campo `correctAnswer` nullable en `Question` (Mantenida)](#adr-04-privacidad-y-campo-correctanswer-nullable-en-question)
 5. [ADR-05: Parseo y contrato estricto de recompensas en `Correction` (Corregida)](#adr-05-parseo-y-contrato-estricto-de-recompensas-en-correction)
 6. [ADR-06: Esquema local en Drift y verificación de nulidad previa a respuesta (Observación activa)](#adr-06-esquema-local-en-drift-y-verificación-de-nulidad-previa-a-respuesta)
-7. [ADR-07: Poda y selección estricta de índices compuestos en Firestore (Ajustada)](#adr-07-poda-y-selección-estricta-de-índices-compuestos-en-firestore)
+7. [ADR-07: Poda y selección estricta de índices compuestos en Firestore (Ajustada, sustituida por ADR-57)](#adr-07-poda-y-selección-estricta-de-índices-compuestos-en-firestore)
 8. [ADR-08: Tratamiento de avisos del analizador estático (flutter analyze) (Aprobada)](#adr-08-tratamiento-de-avisos-del-analizador-estático-flutter-analyze)
 9. [ADR-09: Exclusión de preguntas respondidas mediante documento de estado (Propuesta para ratificación)](#adr-09-exclusión-de-preguntas-respondidas-mediante-documento-de-estado)
-10. [ADR-10: Precálculo de percentil de cohorte mediante umbrales en questions (Propuesta para ratificación)](#adr-10-precálculo-de-percentil-de-cohorte-mediante-umbrales-en-questions)
+10. [ADR-10: Precálculo de percentil de cohorte mediante umbrales en questions (Propuesta, sustituida por ADR-63)](#adr-10-precálculo-de-percentil-de-cohorte-mediante-umbrales-en-questions)
 11. [ADR-11: Reinicio configurable de cuota diaria (Propuesta para ratificación)](#adr-11-reinicio-configurable-de-cuota-diaria)
 12. [ADR-12: Proyección y sanitización centralizada de correctAnswer (Propuesta para ratificación)](#adr-12-proyección-y-sanitización-centralizada-de-correctanswer)
 13. [ADR-13: Status HTTP de FORMAT_REQUIRES_PLAN (Corregida)](#adr-13-status-http-de-format_requires_plan)
@@ -32,7 +32,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 20. [ADR-20: JWT_SECRET obligatorio en producción (Sustituida por ADR-40)](#adr-20-jwt_secret-obligatorio-en-producción)
 21. [ADR-21: Firestore accesible solo desde la API](#adr-21-firestore-accesible-solo-desde-la-api)
 22. [ADR-22: Confirmación para ejecutar el seed remoto](#adr-22-confirmación-para-ejecutar-el-seed-remoto)
-23. [ADR-23: Recálculo diario del percentil con Vercel Cron](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
+23. [ADR-23: Recálculo diario del percentil con Vercel Cron (Sustituida por ADR-63)](#adr-23-recálculo-diario-del-percentil-con-vercel-cron)
 24. [ADR-24: Ubicación de Firestore para el proyecto de desarrollo](#adr-24-ubicación-de-firestore-para-el-proyecto-de-desarrollo)
 25. [ADR-25: Ubicación de Firestore y región de la API aplicadas](#adr-25-ubicación-de-firestore-y-región-de-la-api-aplicadas)
 26. [ADR-26: Preset Express y despliegues de Git solo desde main](#adr-26-preset-express-y-despliegues-de-git-solo-desde-main)
@@ -66,6 +66,19 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 54. [ADR-54: Arranque sin sesión si Firebase no carga (Propuesta)](#adr-54-arranque-sin-sesión-si-firebase-no-carga)
 55. [ADR-55: Códigos de error de Firebase Auth en la app (Propuesta)](#adr-55-códigos-de-error-de-firebase-auth-en-la-app)
 56. [ADR-56: Autoría de los commits hechos por agentes](#adr-56-autoría-de-los-commits-hechos-por-agentes)
+57. [ADR-57: Modelo del módulo alineado con la administración](#adr-57-modelo-del-módulo-alineado-con-la-administración)
+58. [ADR-58: `users` con ID `usr_` más el UID de Firebase](#adr-58-users-con-id-usr_-más-el-uid-de-firebase)
+59. [ADR-59: `medalTransactions` en lugar de `users/{uid}/medalLedger`](#adr-59-medaltransactions-en-lugar-de-usersuidmedalledger)
+60. [ADR-60: `answers` como subcolección de `users`](#adr-60-answers-como-subcolección-de-users)
+61. [ADR-61: `corrections` con la forma que lee la cola de la administración](#adr-61-corrections-con-la-forma-que-lee-la-cola-de-la-administración)
+62. [ADR-62: `questions` con IDs `qst_` y los campos del generador](#adr-62-questions-con-ids-qst_-y-los-campos-del-generador)
+63. [ADR-63: Percentil de cohorte con el histograma de `questions.stats` (Tramos propuestos)](#adr-63-percentil-de-cohorte-con-el-histograma-de-questionsstats)
+64. [ADR-64: `plans` como fuente de la cuota base y de las medallas por acierto (Valor de `free` por confirmar)](#adr-64-plans-como-fuente-de-la-cuota-base-y-de-las-medallas-por-acierto)
+65. [ADR-65: Supuestos del modelo alineado (Supuestos)](#adr-65-supuestos-del-modelo-alineado)
+66. [ADR-66: Alta de `users` en la primera petición autenticada y `GET /me` (Propuesta)](#adr-66-alta-de-users-en-la-primera-petición-autenticada-y-get-me)
+67. [ADR-67: `reason` de la recorrección a partir del código y el comentario de la app (Propuesta)](#adr-67-reason-de-la-recorrección-a-partir-del-código-y-el-comentario-de-la-app)
+68. [ADR-68: Actividad del alumno y medalla por ingreso diario (Propuesta)](#adr-68-actividad-del-alumno-y-medalla-por-ingreso-diario)
+69. [ADR-69: Decisiones menores del modelo alineado (Propuestas)](#adr-69-decisiones-menores-del-modelo-alineado)
 
 ---
 
@@ -83,6 +96,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Se eliminaron las reglas y rutas de subcolección redundantes.
 * **Actualización de despliegue:** ADR-21 bloquea el acceso directo del cliente a Firestore. La API valida `userId` antes de escribir; las reglas ya no validan campos enviados por el estudiante.
 
+* **Actualización (2026-09-25):** sustituida en parte por ADR-59 y ADR-60. `answers` pasa a subcolección de `users` y `medalLedger` a la colección raíz `medalTransactions`. `corrections` sigue como colección raíz con `userId`, que es también la forma de la administración (ADR-61).
 ---
 
 ### ADR-02: Inmutabilidad en respuestas y solicitudes de corrección
@@ -127,6 +141,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Motivo de la corrección:** Tolerar irregularidades de formato en el cliente oculta defectos del backend y degrada la solidez del contrato formal. El contrato estipula que las recompensas viajan como objetos `{amount: int}`.
 * **Decisión final:** En [`models.dart`](../lib/data/models/models.dart), `Correction.fromJson` exige estrictamente el formato `{amount: int}` tanto para `rewardGranted` como para `potentialReward`. Si el backend no envía el formato acordado, se reporta como defecto del servicio.
 
+* **Actualización (2026-09-25):** en Firestore, `rewardGranted` pasa a `{userId, tier, amount}`, que es lo que escribe la administración, y `potentialReward` deja de guardarse (ADR-61). El contrato con la app no cambia. Al implementar las rutas, la API entrega `{amount}` en los dos campos: `rewardGranted` desde el documento y `potentialReward` con los 250 bronces fijos de la administración.
 ---
 
 ### ADR-06: Esquema local en Drift y verificación de nulidad previa a respuesta
@@ -149,6 +164,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   4. `corrections` (`userId ASC`, `createdAt DESC`) — Historial de reportes del estudiante
 * **Estado al preparar Vercel:** el andamiaje actual todavía no ejecuta consultas compuestas. Los cuatro índices están preparados para los servicios de la Iteración 3; su uso debe verificarse cuando existan esas rutas.
 
+* **Actualización (2026-09-25):** sustituida por ADR-57. `firestore.indexes.json` pasa a 10 índices compuestos: el de selección de preguntas con `randomKey` (ADR-62), dos de grupo de colecciones sobre `answers` (ADR-60) y siete sobre `corrections` (ADR-61). Los dos índices de `questions` sin `randomKey` salen. Seis de los de `corrections` son de la cola de la consola, que ahora lee los documentos que escribe el módulo, así que el motivo de la poda ya no vale para ellos.
 ---
 
 ### ADR-08: Tratamiento de avisos del analizador estático (flutter analyze)
@@ -169,6 +185,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Mantener la lista de IDs en un documento ligero de estado permite al backend leer 1 solo documento y filtrar preguntas en memoria antes de servir la siguiente.
   * El límite de 1 MB por documento de Firestore almacena cómodamente más de 30.000 IDs de preguntas, superando con creces la vida útil anual de la batería PAES.
 
+* **Actualización (2026-09-25):** se mantiene como extensión del modelo alineado (ADR-65), ahora en `users/usr_<UID>/state/practice` (ADR-58).
 ---
 
 ### ADR-10: Precálculo de percentil de cohorte mediante umbrales en questions
@@ -180,6 +197,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Un proceso programado (Cloud Function o cron nocturno) calcula los cuartiles de tiempo a partir de la colección `answers` (usando el índice `questionId + answeredAt`) y actualiza `cohortSpeedThresholds` en la pregunta.
   * Al responder, el backend compara el `elapsedMs` del alumno contra estos 4 valores fijos en tiempo $O(1)$ sin realizar ninguna consulta adicional a la base de datos.
 
+* **Actualización (2026-09-25):** sustituida por ADR-63. El percentil sale del histograma `questions.stats.elapsedBuckets`, y `cohortSpeedThresholds` salió del seed y del diccionario.
 ---
 
 ### ADR-11: Reinicio configurable de cuota diaria
@@ -307,6 +325,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Actualización (2026-09-23):** el seed ya carga datos en el proyecto real, así que sus preguntas y habilidades llevan `isDemo: true` y los documentos nuevos usan IDs con el segmento `demo`, como `q_demo_m1_d3` o `sk_demo_m1_operatoria`. Volver a correr el seed no pisa preguntas reales aunque la empresa use IDs como `q_m1_001`, y los datos de demostración se pueden filtrar o borrar con una consulta. Se descartaron los IDs correlativos sin marca, porque podían coincidir con los del banco real y el seed los habría sobrescrito. `q_lectora_001` y `sk_lectora_comp_lit` conservan su ID porque otros documentos del seed los referencian.
 * **Actualización (2026-09-23):** con FastAPI (ADR-30) el seed se corre con `python -m app.seed` desde `backend/`, en vez de `npm run seed`. La regla no cambia: sin emulador exige `SEED_ALLOW_REMOTE` y termina con código 1 antes de abrir Firestore. Como ahora es un booleano de pydantic, la variable acepta `true`, `1`, `yes`, `on`, `t` o `y`, sin distinguir mayúsculas. Node solo aceptaba el texto `true`.
 
+* **Actualización (2026-09-25):** con ADR-62 las preguntas del seed usan IDs `qst_` hexadecimales, que ya no llevan el segmento `demo`, y `isDemo` pasa a `source: "seed_demo"` (ADR-69). La consulta por `source` sigue separando las preguntas de demostración. Las habilidades conservan sus IDs y pierden `isDemo`. El seed exige además `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID` (ADR-58), también antes de abrir Firestore, y crea los documentos de `plans` (ADR-64).
 ---
 
 ### ADR-23: Recálculo diario del percentil con Vercel Cron
@@ -316,6 +335,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada por ahora:** Cloud Function programada.
 * **Motivo:** el proyecto Firebase usa Spark; [Firebase exige Blaze para desplegar Cloud Functions](https://firebase.google.com/docs/functions/get-started). La propuesta no agrega todavía ni el cron ni el endpoint.
 
+* **Actualización (2026-09-25):** sustituida por ADR-63. El histograma se actualiza al responder, así que no quedan umbrales que recalcular y el cron no hace falta.
 ---
 
 ### ADR-24: Ubicación de Firestore para el proyecto de desarrollo
@@ -355,6 +375,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** guardar la cuota en `users/{uid}/state/quota`, con el mismo patrón que `state/practice` (ADR-09). Quedaba fuera del documento que lee la consola de administración.
 * **Pendiente:** confirmar con la empresa qué hacer cuando hay que descontar cuota y el documento no existe. Escribir solo `quota` dejaría un documento sin los demás campos obligatorios del modelo.
 
+* **Actualización (2026-09-25):** el documento pasa a `users/usr_<UID>` (ADR-58), y la cuota base ya no es 10 fija: sale de `plans/{plan}.limits.qDay` (ADR-64). El pendiente sobre descontar cuota sin documento tiene una propuesta en ADR-66.
 ---
 
 ### ADR-28: Supuesto sobre preferencias y cuota que el modelo de la empresa no define
@@ -365,6 +386,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** un mapa `preferences` con todos los campos del contrato. Duplicaba `selectedTests`, `practiceFormat` y `difficulty`, que el modelo ya tiene en el primer nivel.
 * **Impacto si es falso:** cambia dónde `PUT /me/preferences` guarda el grado, cómo se calcula `onboarded` y cómo se compara `quota.date` al reiniciar la cuota.
 
+* **Actualización (2026-09-25):** la administración reemplaza `lastActiveDate` por `lastActivityAt`, que es una fecha (ADR-57). `quota.date` sigue como texto `YYYY-MM-DD` en el huso de ADR-11, aunque ya no queda un campo de día con ese formato que imitar.
 ---
 
 ### ADR-29: Respuesta de `GET /practice/next` sin pruebas seleccionadas
@@ -446,6 +468,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Consecuencias:** ADR-29 define `details` como objeto y con esta convención tiene que ser una lista. Lo que no cubren el documento de Max ni el encargo de esta entrega quedó como propuesta en ADR-32 a ADR-39.
 * **Actualización (2026-09-24):** con ADR-40 salieron `PyJWT`, `JWT_SECRET`, `JWT_EXPIRES_IN` y `REFRESH_TOKEN_EXPIRES_IN`. Los puntos de esta ADR sobre `PyJWT` sin `[crypto]`, el port de `get_current_user` y el largo de `JWT_SECRET` quedaron sin objeto. `get_current_user` verifica ahora el ID token de Firebase. El mensaje de `AUTH_TOKEN_EXPIRED` dejó de ser el de la sección 2.5, que remite al refresh token de la consola. Los otros nueve errores estándar conservan el texto de Max.
 
+* **Actualización (2026-09-25):** el punto sobre las colecciones de la sección 2.8 quedó sin objeto. Max decidió el 23/09/2026 que el módulo siga la forma de la administración, y ADR-57 la adopta.
 ---
 
 ### ADR-32: Código `METHOD_NOT_ALLOWED` para el 405
@@ -507,6 +530,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Motivo:** un documento de `questions` mal cargado no debe terminar en 500 cuando el estudiante responde. ADR-10 no dice qué hacer con umbrales inválidos.
 * **Impacto:** el percentil solo cambia cuando el documento trae umbrales inválidos. `test_02_calculate_cohort_percentile` lo cubre.
 
+* **Actualización (2026-09-25):** ADR-63 reemplaza los umbrales por el histograma de `questions.stats`. `calculate_cohort_percentile` sigue en el código hasta la iteración 4, y esta decisión queda sin objeto cuando la función salga.
 ---
 
 ### ADR-38: Claims que `get_current_user` no verifica
@@ -556,6 +580,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * El registro de la app no crea cuentas (ADR-41). El 2026-09-24 el equipo habilitó el proveedor de correo y contraseña en Firebase Authentication del proyecto `aprueba-app-modulo-preguntas` y creó dos cuentas de demostración desde la consola. Leídas con el Admin SDK, las dos tienen el proveedor `password`, están activas y no traen custom claims, así que la API las trata como `student` con plan `free` (ADR-44). No tienen documento `users/{uid}` en Firestore, porque la forma de `users` está en pausa.
 * **Verificación (2026-09-24):** `pytest` en `backend/` da 31 aprobadas con el emulador de Firestore, 21 en `tests/test_core.py` y 10 en `tests/test_health.py`. Antes eran 24. Las pruebas reemplazan `verify_id_token` con `monkeypatch`, salvo `test_verify_id_token_real_con_firma_local`, que firma tokens RS256 con una llave generada durante la prueba y reemplaza la descarga de certificados. Ninguna usa red ni credenciales reales. `flutter test` da 45 aprobadas. En `feature/backend-fastapi` eran 29, y las 16 nuevas están en `test/api_client_auth_test.dart`. `flutter analyze` sigue en 38 avisos informativos, sin advertencias ni errores.
 
+* **Actualización (2026-09-25):** las cuentas de demostración cambiaron: `admin@demo.cl` se eliminó y se creó `aprueba2@demo.cl`. El seed de ADR-57 crea `users/usr_<UID>` para `aprueba@demo.cl` y `aprueba2@demo.cl`, con los UID que recibe por variables de entorno (ADR-58).
 ---
 
 ### ADR-41: Cambio de alcance autorizado: login y registro
@@ -607,6 +632,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Impacto si se rechaza:** hay que manejar `auth.UserDisabledError`, que no hereda de `InvalidIdTokenError` y hoy terminaría en 500 (ADR-48). `RevokedIdTokenError` sí hereda y daría 401 `AUTH_REQUIRED`. `test_token_de_firebase_valido_entrega_el_usuario` revisa los argumentos de la llamada y tendría que cambiar.
 * **Aceptación (2026-09-24):** el equipo acepta la ventana. El retraso de hasta una hora en rechazar un token revocado queda cubierto cuando se implemente el rechazo de usuarios suspendidos.
 
+* **Actualización (2026-09-25):** ADR-65 fija cómo se rechaza a un suspendido: `users.state` en `suspended` da `AUTH_FORBIDDEN` 403.
 ---
 
 ### ADR-44: Rol y plan desde custom claims mientras `users` está en pausa
@@ -618,6 +644,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada por ahora:** leer `users/{uid}` en cada petición y rechazar cuentas inexistentes o deshabilitadas, como `get_current_admin` en la sección 2.6 de Max. Queda para cuando `users` salga de pausa.
 * **Verificación:** `test_token_de_firebase_valido_entrega_el_usuario` cubre los valores por defecto y los claims presentes.
 
+* **Actualización (2026-09-25):** `users` salió de la pausa con ADR-57, y la administración guarda el plan en `users/usr_<UID>.plan`. Por la regla de precedencia, al implementar la iteración 3 el plan se lee de ahí y no de los custom claims.
 ---
 
 ### ADR-45: `CertificateFetchError` como 503 `SERVICE_UNAVAILABLE`
@@ -746,3 +773,157 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** reescribir `main` con `git filter-branch` y pedir al equipo que vuelva a clonar. Cambiar el autor de un commit cambia su SHA y el de todos los que vienen después, hasta la punta de `main`, así que habría que forzar la rama. Los clones del equipo quedarían con una historia que ya no existe en el remoto, y un `git pull` mezclaría la historia vieja con la nueva. Cada rama abierta sobre la historia vieja tendría que rebasarse a mano. Además, ADR-26 cita el commit `80def89`, del primer despliegue de producción, que es uno de los 35: la cita quedaría apuntando a un SHA que ya no existe.
 * **Consecuencias:** GitHub sigue mostrando "Audit Sim" en esos 35 commits, sin enlace a ninguna cuenta, porque no lee `.mailmap`. En `git log` y `git shortlog` aparecen a nombre de Jeremias Fernandez, aunque el autor guardado en cada commit no cambia. Los despliegues de `main` no se ven afectados mientras cada fusión sea un commit de fusión de `Jere4k1080`, como los que hay hasta hoy, porque Vercel revisa el autor del commit que despliega. El diario de reflexión ya registraba que los commits quedaban bajo una sola cuenta y dejaba como actividad configurar la identidad de git en cada equipo. La regla 7 lo concreta para los agentes: cada commit lleva la identidad global de quien opera el agente en ese equipo.
 * **Verificación:** `git log main --format=%an | grep -c "^Audit Sim$"` da 35, porque `%an` muestra el autor guardado en el commit. En las ramas del #15 y el #16 da 0. En un checkout que ya tiene este `.mailmap`, la misma cuenta con `%aN`, que aplica el archivo, da 0, y `git shortlog -sne main` muestra 42 commits de Jeremias Fernandez: los 35 mapeados y los 7 que ya tenían esa identidad.
+
+---
+
+### ADR-57: Modelo del módulo alineado con la administración
+
+* **Estado:** **DECIDIDA POR LA CONTRAPARTE (2026-09-23), APLICADA EN `feature/alinear-modelo-admin`, PENDIENTE DE REVISIÓN CRUZADA**
+* **Fuente:** Max, de Alloxentric, el 23/09/2026: "Usen lo que les dé mayor compatibilidad con administración: el objetivo es un backend lo más consistente posible."
+* **Decisión:** donde la especificación de la administración (Aprueba, Consola de administración, especificación de endpoints FastAPI, septiembre de 2026) define una colección o un campo, el módulo la sigue con sus nombres y su formato de ID. Donde no dice nada, se sigue el modelo de datos de junio (Aprueba, Modelo de Datos Firebase/Firestore v1.0) y su extensión para el generador de preguntas (v1.1, julio de 2026). Lo que ninguno define queda como supuesto (ADR-65) o como propuesta (ADR-66 a ADR-69). La tabla con el origen de cada colección y campo está en la sección 1 de `docs/diccionario_de_datos.md`.
+* **Qué cambia:**
+  * `users` usa IDs `usr_` más el UID (ADR-58), con la forma de la administración y los campos del módulo del modelo de junio.
+  * `medalTransactions` reemplaza a `users/{uid}/medalLedger` (ADR-59).
+  * `answers` pasa a subcolección de `users` (ADR-60).
+  * `corrections` toma la forma que lee la cola de la administración (ADR-61).
+  * `questions` usa IDs `qst_` y los campos del generador (ADR-62).
+  * El percentil sale de un histograma en la pregunta (ADR-63).
+  * La cuota base y las medallas por acierto salen de `plans` (ADR-64), que el seed crea.
+  * `tests` agrega `axes`, `order`, `active`, `countryId`, `examId`, `nameLower` y `approvedStock`. `skills` cambia `domain` por `axis` y `prerequisiteIds` por `prerequisites`. `users/{uid}/skillMastery` entra al seed.
+  * `firestore.indexes.json` queda con 10 índices compuestos, que reemplazan a los 4 de ADR-07.
+* **Fuera de este cambio:** la especificación declara en su `firestore.indexes.json` los índices del listado de usuarios de la consola (sección 7), como `state` o `plan` con `nameLower`. No están en el nuestro, porque el módulo no hace esas consultas. Si la consola corre contra este proyecto hay que sumarlos.
+* **Alternativa descartada:** mantener el modelo propio del módulo y adaptar en el backend lo que la administración necesita leer. Obligaba a sincronizar dos formas de los mismos datos, y la contraparte pidió lo contrario.
+* **Consecuencias:** ADR-01, ADR-07, ADR-10 y ADR-23 quedan sustituidas. El seed cambia de IDs y de forma, así que los datos cargados en `aprueba-app-modulo-preguntas` el 2026-09-23 se borran antes de cargar el nuevo, con confirmación del equipo.
+
+---
+
+### ADR-58: `users` con ID `usr_` más el UID de Firebase
+
+* **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25)**
+* **Contexto:** el modelo de junio usa el UID de Firebase como ID de `users`, y el encargo de esta entrega lo proponía como supuesto con la condición de revisar antes que ningún código de la administración dependiera del prefijo `usr_`. Sí depende. La sección 2.8 declara IDs `usr_*`, y su código de referencia los valida en `GET` y `PATCH /admin/users/{id}` con `^usr_[A-Za-z0-9_]{1,36}$` y en el filtro `userId` de `GET /admin/tickets` con `^usr_[A-Za-z0-9_]+$`. Con un UID solo, la consola respondería 400 antes de leer Firestore.
+* **Decisión:** el documento de cada alumno se llama `usr_` más su UID. El backend calcula ese ID desde el token con `user_doc_id()`, en `backend/app/db/firestore.py`. Un UID de 28 caracteres, como los que genera Firebase Authentication, queda en 32 y cabe en el patrón. Toda referencia a un alumno (`corrections.userId`, `medalTransactions.userId`) usa ese mismo ID, porque la administración suma medallas en `users/{corrections.userId}` al confirmar una recorrección.
+* **Alternativa descartada:** el UID solo, como dice el modelo de junio. Dependía de que la administración cambiara tres patrones de su código.
+* **Consecuencias:** las rutas de un alumno llevan el prefijo, por ejemplo `users/usr_<UID>/answers`. El seed recibe los UID de las cuentas de demostración por `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID`, y rechaza un UID que no dé un ID válido para la administración antes de abrir Firestore.
+
+---
+
+### ADR-59: `medalTransactions` en lugar de `users/{uid}/medalLedger`
+
+* **Estado:** **APLICADA EN `feature/alinear-modelo-admin` (2026-09-25), DERIVADA DE ADR-57. `daily_login` Y LOS `refId` SON PROPUESTA**
+* **Decisión:** los movimientos de medallas van en la colección raíz `medalTransactions`, con IDs `mtx_` más 10 hexadecimales y los campos `userId`, `tier`, `amount`, `reason`, `refId` y `at` (sección 2.8). Todo otorgamiento es una transacción que crea el movimiento e incrementa `users.medalWallet.<tier>` y `users.badgesTotal`, igual que la confirmación de recorrecciones de la administración. `medalWallet` y `badgesTotal` reemplazan al mapa `medals` del modelo de junio.
+* **Motivos del módulo,** con el estilo de `correction_confirmed`:
+  * `answer_correct`: respuesta correcta. `amount` sale de `plans/{plan}.badges.correct`, en bronce, y `refId` es el `qst_*` de la pregunta. Un alumno responde cada pregunta una sola vez (`ALREADY_ANSWERED`), así que `userId` y `refId` identifican la respuesta.
+  * `quota_bonus`: bono de cuota reclamado. `amount` es `UNLOCK_MEDALS`, 1 bronce de la configuración del backend (ADR-64), y `refId` es `bonusSchool` o `bonusAddress`.
+  * `daily_login`: primer ingreso del día. `amount` sale de `plans/{plan}.badges.login` y `refId` es la fecha `YYYY-MM-DD`. Quién lo otorga es propuesta (ADR-68).
+  * `correction_confirmed`: lo escribe la administración, 250 bronces, con `refId` igual al `cor_*`.
+* **Alternativa descartada:** mantener `users/{uid}/medalLedger`. La administración escribe en `medalTransactions` al confirmar recorrecciones, y su job de métricas cuenta ahí las medallas emitidas (sección 9.3). Un libro por alumno quedaba fuera de los dos.
+* **Diferencia con el código de la administración:** al confirmar una recorrección, su implementación de referencia crea el movimiento con un ID automático y le agrega el campo `by`, con el ID del administrador. La sección 2.8 declara `mtx_*` y no nombra `by`. El módulo sigue la sección 2.8, y la diferencia queda por consultar con Max.
+
+---
+
+### ADR-60: `answers` como subcolección de `users`
+
+* **Estado:** **APLICADA EN `feature/alinear-modelo-admin` (2026-09-25), DERIVADA DE ADR-57**
+* **Decisión:** las respuestas van en `users/usr_<UID>/answers`, con los campos del modelo de junio: `questionId`, `testId`, `axis`, `skillId`, `selected`, `correct`, `elapsedMs`, `cohortPercentile`, `sessionId`, `difficulty` y `answeredAt`. Se declaran los índices de grupo de colecciones `(questionId ASC, answeredAt DESC)` y `(skillId ASC, correct ASC)`. El historial del alumno ordena por `answeredAt DESC` dentro de su subcolección, y para eso basta el índice de campo simple que Firestore crea solo.
+* **Alternativa descartada:** la colección raíz con `userId` de ADR-01. Su motivo era calcular el percentil consultando todas las respuestas de una pregunta. Con el histograma de ADR-63 esa consulta deja de hacerse al responder.
+* **Consecuencias:** ADR-01 queda sustituida en lo que toca a `answers`. `users/usr_<UID>/state/practice` (ADR-09) sigue como extensión, para excluir las preguntas respondidas sin leer la subcolección.
+
+---
+
+### ADR-61: `corrections` con la forma que lee la cola de la administración
+
+* **Estado:** **APLICADA EN `feature/alinear-modelo-admin` (2026-09-25), DERIVADA DE ADR-57**
+* **Decisión:** IDs `cor_` más 10 hexadecimales. Campos de la sección 2.8: `userId`, `userName`, `questionId`, `testId`, `reason`, `state` (`pending | confirmed | rejected`), `resolvedBy`, `resolvedAt`, `note`, `rewardGranted` y `createdAt`. Se suman los que lee `GET /admin/corrections` (sección 7.2): `axis`, `difficulty`, `statementPreview` y `proposedAnswer`. La especificación indica que `statementPreview` lo desnormaliza la API del alumno al crear la solicitud; el módulo lo escribe como un renglón de hasta 120 caracteres. La cola lee sin valor por defecto `userId`, `questionId`, `state`, `reason` y `createdAt`, y llama a `.isoformat()` sobre `createdAt`, así que tiene que ser una fecha. `reason` guarda texto del alumno y no un código (ADR-67).
+* **Índices:** la cola filtra por `state`, `testId` o `questionId` y ordena por `createdAt` en los dos sentidos. Se declaran `(state, createdAt)`, `(testId, createdAt)` y `(questionId, createdAt)`, cada uno ascendente y descendente. Cuando la consola combina filtros, Firestore une esos índices porque terminan en el mismo campo de orden. El historial del alumno usa `(userId ASC, createdAt DESC)`. La comprobación de `CORRECTION_ALREADY_OPEN` solo usa igualdades y no necesita índice compuesto. Los índices de la cola responden consultas de la consola y no del módulo. Van en este archivo porque la consola lee lo que escribe `POST /corrections`, y porque al desplegar índices la CLI de Firebase ofrece borrar los del proyecto que no están en el archivo.
+* **Alternativa descartada:** la forma del modelo de junio, con `status`, `questionTestId`, `questionStatement`, `potentialReward` y `reason` como código, y la del diccionario anterior, con `reviewedBy` y `reviewedAt`. La cola de la administración no lee esos nombres.
+* **Consecuencias:** `rewardGranted` pasa a `{userId, tier, amount}`, que es lo que escribe la administración, y `potentialReward` ya no se guarda. La recompensa de la administración es fija: 250 bronces. La app sigue recibiendo `{amount}` (ADR-05). `questions.flagCount` sube al crear la solicitud, porque el modelo de junio lo define como las solicitudes abiertas, pero la confirmación de la administración no lo baja. Queda por acordar con Max.
+
+---
+
+### ADR-62: `questions` con IDs `qst_` y los campos del generador
+
+* **Estado:** **APLICADA EN `feature/alinear-modelo-admin` (2026-09-25), DERIVADA DE ADR-57**
+* **Decisión:** IDs `qst_` más 10 hexadecimales. Del modelo de junio: `testId`, `axis`, `skillId`, `difficulty`, `statement`, `options`, `correctAnswer`, `explanation`, `requiredSkillText`, `status`, `flagCount`, `randomKey` en [0, 1), `stats {timesAnswered, timesCorrect, sumElapsedMs, elapsedBuckets}`, `source`, `createdAt` y `updatedAt`. Del generador: `countryId` `cl`, `examId` `cl_paes`, `origin` `manual`, `reviewStatus` `approved` y `version` 1. El módulo solo sirve preguntas `published`, y el generador exige que `published` implique `approved`. El índice de selección es `(testId ASC, status ASC, difficulty ASC, randomKey ASC)`.
+* **`explanation` como texto:** el modelo de junio la define como un mapa `{title, subject, steps[], verification, keyConcept}`, pero la administración la corrige como texto de 10 a 4000 caracteres (`QuestionPatch`, sección 7.2). Manda la administración. El banco de demostración ya la tenía como texto.
+* **Alternativa descartada:** conservar los IDs `q_*`. La cola de la administración filtra `questionId` con `^qst_[A-Za-z0-9_]+$`.
+* **Consecuencias:** los 20 IDs del seed cambian, y la equivalencia con los anteriores está en `seed/README.md`. `cohortSpeedThresholds` sale de la pregunta (ADR-63). Al confirmar una recorrección, la administración puede escribir en la pregunta `statement`, `options`, `correctAnswer`, `explanation` y `status`, más `updatedBy` y `lastCorrectionId`, dos campos que solo aparecen en su código.
+
+---
+
+### ADR-63: Percentil de cohorte con el histograma de `questions.stats`
+
+* **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25). LOS TRAMOS SON PROPUESTA. EL CÁLCULO SE IMPLEMENTA EN LA ITERACIÓN 4**
+* **Decisión:** el percentil sale de `questions.stats.elapsedBuckets`, el histograma de tiempos del modelo de junio. `stats` se actualiza dentro de la transacción de responder, la misma que descuenta la cuota y otorga las medallas (ADR-59). El proyecto está en el plan Spark, sin Cloud Functions, así que esa transacción corre en el backend.
+* **Tramos:** diez, en segundos: `lt10`, `lt20`, `lt30`, `lt45`, `lt60`, `lt90`, `lt120`, `lt180`, `lt300` y `gte300`. Cada tramo cuenta las respuestas con tiempo menor que su límite y mayor o igual que el límite anterior. Están en `ELAPSED_BUCKETS`, en `backend/app/services/questions.py`. Son más finos en el primer minuto y más gruesos después de dos. Sus nombres empiezan con letra para servir como ruta de campo en Firestore, por ejemplo `stats.elapsedBuckets.lt30`.
+* **Cálculo:** percentil = 100 × (respuestas en tramos más lentos + la mitad de las del mismo tramo) / total, redondeado, con el histograma de antes de sumar la respuesta nueva. Sin respuestas previas vale 50.
+* **Alternativa descartada:** los umbrales `cohortSpeedThresholds` de ADR-10, recalculados por un cron diario (ADR-23). Necesitaban un proceso aparte y quedaban desfasados hasta el recálculo siguiente.
+* **Consecuencias:** ADR-10 y ADR-23 quedan sustituidas. `calculate_cohort_percentile`, que usa los umbrales (ADR-37), sigue en el código hasta la iteración 4.
+
+---
+
+### ADR-64: `plans` como fuente de la cuota base y de las medallas por acierto
+
+* **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25). EL `qDay` DE `free` CHOCA CON LA REGLA DE NEGOCIO 1 Y FALTA CONFIRMARLO CON MAX**
+* **Decisión:** la cuota base diaria sale de `plans/{plan}.limits.qDay`, donde 0 es ilimitado, y las medallas por respuesta correcta de `plans/{plan}.badges.correct`. Ninguna de las dos queda fija en el código: se quitó `BASE_QUOTA` de `backend/app/core/config.py`. El seed crea `free`, `uni` y `all` con la forma de la administración (`name {es, en}`, `price`, `currency`, `color`, `features`, `limits {qDay, groups, tests}`, `badges {login, purchase, correct}`, `stripeProductId`, `stripePriceId` y `system`), porque sin esos documentos el backend no tiene de dónde leer la base.
+* **Valores:** los de los ejemplos de `GET /admin/plans` (sección 8). `free` con `qDay` 20 y `badges.correct` 1, `uni` con `qDay` 0 y `badges.correct` 1, `all` con `qDay` 0 y `badges.correct` 2. Los IDs de Stripe quedan en `null`.
+* **Conflicto:** la regla de negocio 1 dice cuota base de 10, más 5 por colegio y 5 por región, con tope de 20. Con `qDay` 20 los bonos no suman nada. Se tomó el valor del ejemplo, como pide el encargo cuando el documento trae ejemplos, y falta confirmar con Max si `qDay` es la base o el tope. Cambiarlo es editar `plans/free` desde la consola, sin tocar código.
+* **Configuración del backend:** ningún documento define el monto de cada bono, el tope ni la medalla por desbloqueo. Quedan como constantes en `backend/app/core/config.py`: `SCHOOL_BONUS` 5, `ADDRESS_BONUS` 5, `QUOTA_CAP` 20 y `UNLOCK_MEDALS` 1. No se leen del entorno, para que una variable mal escrita no cambie la cuota sin pasar por una revisión.
+* **Alternativa descartada:** la base de 10 fija en el código, como hasta ahora. La administración edita los límites desde su constructor de planes y el módulo no se enteraría.
+* **Consecuencias:** `quota.max` vale `min(qDay + bonos, QUOTA_CAP)`, o 0 con `quota.unlimited` en `true` cuando `qDay` es 0. ADR-27 deja de usar la base de 10.
+
+---
+
+### ADR-65: Supuestos del modelo alineado
+
+* **Estado:** **SUPUESTOS Y UNA PROPUESTA, PENDIENTES DE CONFIRMAR CON LA EMPRESA (2026-09-25)**
+* **Alumno suspendido:** un usuario con `state` `suspended` recibe `AUTH_FORBIDDEN` 403 en los endpoints del módulo. Al suspender, la administración escribe también `users/{id}.sessionsRevokedAt`, que según su especificación comprueba "el API del alumno" (sección 7). Revisar el estado cierra la ventana de una hora que dejó ADR-43. Se implementa con los endpoints. Alternativa descartada: aceptar al suspendido hasta que venza su token.
+* **Sesiones revocadas (propuesta):** la API responde 401 `AUTH_REQUIRED` cuando el `auth_time` del token, la hora en que el alumno inició sesión, es anterior a `sessionsRevokedAt`. Un token renovado conserva su `auth_time`, así que el reintento de la app recibe otro 401 y la app cierra la sesión (ADR-40). Ningún documento dice cómo se comprueba el campo.
+* **Bonos de cuota:** el monto de cada bono, el tope de 20 y la medalla por desbloqueo son configuración del backend (ADR-64).
+* **Estado de práctica:** `users/usr_<UID>/state/practice` con `answeredQuestionIds` se mantiene como extensión (ADR-09). Ningún documento lo define. Alternativa descartada: leer la subcolección `answers` en cada `GET /practice/next`.
+* **Reglas de Firestore:** niegan todo acceso al cliente (ADR-21). Es más estricto que el modelo de junio, que deja a cada alumno leer y escribir sus documentos, y alcanza porque el módulo solo habla con la API.
+* **ID de `users`:** el encargo lo daba como supuesto con el UID solo. Quedó decidido con el prefijo `usr_` en ADR-58.
+
+---
+
+### ADR-66: Alta de `users` en la primera petición autenticada y `GET /me`
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-25). SE IMPLEMENTA EN LA ITERACIÓN 3**
+* **Propuesta:** en la primera petición autenticada de un UID sin documento, el backend crea `users/usr_<UID>` de forma idempotente, con una transacción que no pisa un documento existente. Lleva la forma de la administración: `state` `active`, `plan` `free`, `medalWallet` en cero, `badgesTotal` 0, `country` `CL`, `createdAt` y `lastActivityAt`. `email` sale del token, `authProvider` de `firebase.sign_in_provider` y `locale` de `Accept-Language`. `name` sale del token cuando la cuenta tiene nombre y, si no, de la parte del correo antes de la arroba. Los campos del módulo parten en sus valores iniciales: `quota` con la base del plan y 0 usadas, `selectedTests` vacío, `practiceFormat` `random` y `difficulty` `d1`. `nameLower`, `lastActivityAt`, `badgesTotal` y `createdAt` van siempre, porque la consola ordena por ellos y Firestore deja fuera de una consulta ordenada los documentos que no tienen el campo.
+* **`GET /me`:** la app lo pide después de iniciar sesión, y como la ruta no existe hoy muestra "sin conexión". Su respuesta sale de `users` según la sección 3 del diccionario.
+* **Motivo:** ADR-27 dejaba pendiente qué hacer al descontar cuota sin documento. Con el alta, el documento existe desde la primera petición.
+* **Alternativa descartada:** que lo cree el registro de la app, que está fuera del alcance y hoy no crea cuentas (ADR-41).
+* **Pregunta abierta:** si el alta escribe también los campos obligatorios del modelo de junio que usan otros módulos (`avatarColor`, `theme`, `planStatus` y `dailyReminder`).
+
+---
+
+### ADR-67: `reason` de la recorrección a partir del código y el comentario de la app
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-25)**
+* **Contexto:** la app envía a `POST /corrections` un código (`wrong_answer`, `ambiguous`, `typo`, `bad_explanation` u `other`) y un comentario opcional. La cola de la administración muestra `reason` como el texto del alumno y lee `proposedAnswer`, que la app no envía.
+* **Propuesta:** `reason` guarda el comentario, o la etiqueta del código en español si el comentario viene vacío. El código va aparte en `reasonCode`, y el comentario tal cual en `comment`, el campo del modelo de junio. La administración no lee ninguno de los dos. La API los devuelve a la app como `reason` y `comment`, que es lo que espera `Correction.fromJson`. `proposedAnswer` queda en `null` mientras la app no lo pida.
+* **Alternativa descartada:** guardar el código en `reason`. La cola lo mostraría como si fuera el texto del alumno.
+
+---
+
+### ADR-68: Actividad del alumno y medalla por ingreso diario
+
+* **Estado:** **PROPUESTA, PENDIENTE DE CONFIRMAR CON EL EQUIPO (2026-09-25)**
+* **Contexto:** la consola lee `users.lastActivityAt` y `users.streak`, y su ficha de usuario lee la subcolección `users/{id}/activity` (`at`, `type`, `detail`). Su job de métricas calcula los usuarios activos con `activity` y `users` (sección 9.3). Ningún documento dice quién escribe esos datos, y el modelo de junio no define `activity`. La regla de negocio 3 da una medalla por ingreso diario, y `plans.badges.login` dice cuántas.
+* **Propuesta:** en la primera petición autenticada de cada día, junto con el alta de ADR-66, el backend actualiza `lastActivityAt`. Suma 1 a `streak` si la actividad anterior fue el día anterior y si no la deja en 1, y otorga la medalla `daily_login` (ADR-59). Cada respuesta agrega a `activity` un evento `answer`, con un detalle como "M1 · Álgebra · correcta".
+* **Alternativa descartada:** dejarlo a otros módulos. La consola mostraría como inactivos a los alumnos que solo practican.
+
+---
+
+### ADR-69: Decisiones menores del modelo alineado
+
+* **Estado:** **PROPUESTAS, PENDIENTES DE CONFIRMAR CON EL EQUIPO (2026-09-25)**
+* **Contexto:** al aplicar ADR-57 aparecieron detalles que no cubren la especificación de la administración, el modelo de junio ni el encargo. En cada uno se tomó la opción más simple.
+* **Decisiones tomadas al implementar:**
+  * `hasQuestions` no se guarda en `tests`: la API lo deriva de `approvedStock > 0`, un campo del generador. Ningún modelo define `hasQuestions`.
+  * En `questions`, la marca `isDemo` de ADR-22 pasa a `source: "seed_demo"`, el campo del modelo de junio para el lote de origen. `skills` no tiene un campo así en el modelo de junio y pierde `isDemo`. Las habilidades de demostración son las de `backend/app/seed/data/skills.json`.
+  * Los `refId` de `answer_correct`, `quota_bonus` y `daily_login` de ADR-59.
+  * Los nombres en inglés de los planes (`Free`, `1 unlimited test` y `All tests`). La sección 8 solo trae los nombres en español.
+  * En el seed, `skillMastery.level` es el número de aciertos con tope en `maxLevel`, y `status` pasa a `mastered` al llegar al tope. La regla definitiva se decide al implementar la iteración 4.
+  * Los documentos de las cuentas de demostración llevan también los campos obligatorios del modelo de junio que usan otros módulos (`avatarColor`, `theme`, `planStatus` y `dailyReminder`), para que queden completos.
+  * El seed usa IDs fijos para las respuestas (`ans_` más los 10 hexadecimales de la pregunta) y para los movimientos de medallas, para que otra corrida reescriba los mismos documentos. La API usará IDs automáticos en `answers`, como pide el modelo de junio.
+* **Alternativa descartada:** detener la entrega hasta resolver cada detalle. Ninguno cambia la forma que lee la administración.
