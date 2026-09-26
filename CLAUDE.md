@@ -122,12 +122,13 @@ uv pip install --python .venv -r requirements-dev.txt
 .venv/bin/python -m app          # API en /api/v1
 .venv/bin/python -m pytest       # 38 pruebas; sin emulador, 36 y 2 omitidas
 
-# Verificadores sin SDK
+# Verificador sin SDK de Flutter
 python3 tool/check_static.py .
-python3 tool/check_models.py
 ```
 
 `build_runner` es obligatorio: `database.g.dart` no está versionado y sin él el proyecto no compila.
+
+`tool/check_static.py` revisa el código Dart sin el SDK: entradas de l10n, `Endpoints`, imports relativos, símbolos retirados, delimitadores y providers. `tool/check_models.py` no se corre. Compara `models.dart` con un volcado que genera `dump_payloads.js`, un script del backend Node del cliente (`aprueba_student_web`) que no está en este repositorio, y la mayoría de sus casos son de tutores, chat y onboarding, fuera del alcance.
 
 ---
 
