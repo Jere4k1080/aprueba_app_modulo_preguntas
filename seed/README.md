@@ -30,7 +30,7 @@ En total son 68 documentos.
 
 `aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 8 preguntas de esas dos pruebas.
 
-Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. Como no tienen nombre visible en Firebase Authentication, el alta toma el nombre del correo: `aprueba` y `aprueba2`.
+Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. El seed arma para cada una el mismo token que entrega Firebase Authentication, con correo, nombre visible y proveedor, así que se llaman `Estudiante Demo` y `Estudiante Nuevo`. Si se cambia el nombre visible de una cuenta, hay que cambiarlo también en `users.json`.
 
 Las dos cuentas están en el plan `free`, con `state` `active` y un límite de 10, la base de la regla de negocio 1. El ejemplo de la administración trae 20 para `free`, y eso va en la consulta a Max (ADR-64).
 
@@ -200,8 +200,8 @@ El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, as
 ```jsonc
 // users/usr_<UID> de aprueba@demo.cl
 {
-  "name": "aprueba",
-  "nameLower": "aprueba",
+  "name": "Estudiante Demo",
+  "nameLower": "estudiante demo",
   "email": "aprueba@demo.cl",
   "emailLower": "aprueba@demo.cl",
   "plan": "free",
@@ -233,7 +233,7 @@ El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, as
 }
 ```
 
-`quota.date` es el día en que corre el seed, en el huso de `QUOTA_RESET_TIMEZONE`. El documento de `aprueba2@demo.cl` es exactamente lo que crea el alta más `selectedTests` `["lectora", "m1"]`: `name` `aprueba2`, la billetera en cero y `quota.used` 0.
+`quota.date` es el día en que corre el seed, en el huso de `QUOTA_RESET_TIMEZONE`. El documento de `aprueba2@demo.cl` es exactamente lo que crea el alta más `selectedTests` `["lectora", "m1"]`: `name` `Estudiante Nuevo`, la billetera en cero y `quota.used` 0.
 
 ---
 
@@ -323,7 +323,7 @@ El de `aprueba2@demo.cl` solo tiene `answeredQuestionIds` vacío.
 // corrections/cor_21ef180d4a
 {
   "userId": "usr_<UID>",
-  "userName": "aprueba",
+  "userName": "Estudiante Demo",
   "questionId": "qst_4574d5002b",
   "testId": "m2",
   "axis": "Álgebra y funciones",

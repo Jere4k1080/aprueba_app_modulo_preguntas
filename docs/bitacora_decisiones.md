@@ -355,6 +355,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** dejar `.firebaserc` sin proyecto y exigir `--project` en cada despliegue, como establecía ADR-17. Esa regla existía porque el ID todavía no estaba creado. No hubo que evaluar un cambio de región para la API: la base ya estaba en la ubicación de ADR-24, que no se puede cambiar después de creada.
 * **Verificación:** el MCP de Firebase confirmó la ubicación de la base y la facturación deshabilitada. Las reglas activas coinciden con `firestore.rules`, y una lectura anónima por la API REST de Firestore sobre `questions`, `answers`, `corrections`, `tests`, `skills` y `users/{uid}/state/practice` devuelve 403 `PERMISSION_DENIED`. Los cuatro índices compuestos de `firestore.indexes.json` quedaron en estado `READY`. El proyecto también tiene una instancia de Realtime Database que el módulo no usa; sus reglas niegan lectura y escritura.
 
+* **Actualización (2026-09-26):** con ADR-57 el proyecto tiene los 5 índices del archivo nuevo, todos `READY`. Los tres del modelo anterior que ya no estaban en el archivo se borraron al desplegar con `--force`.
 ---
 
 ### ADR-26: Preset Express y despliegues de Git solo desde main
@@ -797,6 +798,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** mantener el modelo propio del módulo y adaptar en el backend lo que la administración necesita leer. Obligaba a sincronizar dos formas de los mismos datos, y la contraparte pidió lo contrario.
 * **Consecuencias:** ADR-01, ADR-07, ADR-10 y ADR-23 quedan sustituidas. El seed cambia de IDs y de forma, así que los datos cargados en `aprueba-app-modulo-preguntas` el 2026-09-23 se borran antes de cargar el nuevo, con confirmación del equipo.
 
+* **Aplicación en el proyecto (2026-09-26):** después de fusionar el PR #18 se desplegaron los índices y, con el inventario del seed anterior revisado, se borraron sus 27 documentos: las 20 preguntas `q_*`, `answers/ans_001`, `corrections/cor_001` y los usuarios `usr_demo` y `usr_demo_nuevo` con sus subcolecciones. Después se cargó el seed nuevo, con 68 documentos. El MCP de Firebase no conectó, así que la verificación se hizo con el Admin SDK: los conteos, los planes, `features/f2` y los campos y nombres de los dos usuarios dieron lo esperado, y la lectura anónima sigue dando 403.
 ---
 
 ### ADR-58: `users` con ID `usr_` más el UID de Firebase
@@ -898,6 +900,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** que lo cree el registro de la app, que está fuera del alcance y hoy no crea cuentas (ADR-41).
 * **Respuestas del equipo (2026-09-26):** el alta escribe solo los campos que usa la administración y los del módulo. `avatarColor`, `theme`, `planStatus` y `dailyReminder` son de módulos fuera del alcance y no los escribe. `GET /me` entrega también `quota.unlimited`, y la app tiene que revisarlo antes que `quota.max`, que vale 0 en un plan ilimitado. En la iteración 3 se agrega una prueba de la app para ese caso.
 * **Seed (decisión del equipo, 2026-09-26):** el seed crea las cuentas de demostración con la misma función del alta, `new_user()` en `backend/app/services/users.py`, y agrega encima solo lo propio de la demo: las preguntas respondidas, que traen sus medallas y la cuota usada, y las pruebas elegidas. Así el seed prueba el alta y queda una sola forma de crear un alumno. Las dos cuentas no tienen nombre visible en Firebase Authentication, así que su `name` sale del correo, igual que en el alta: `aprueba` y `aprueba2`. La función escribe también, con valores vacíos, los campos de la ficha de usuario de la consola (`subscriptionId`, `school`, `region`, `age` y `streak`), y `updatedAt`, que la consola actualiza al editar un alumno (sección 7). La creación en la primera petición autenticada, con la transacción que no pisa un documento existente, llega con los endpoints y llama a la misma función.
+* **Actualización (2026-09-26):** el equipo puso nombre visible a las dos cuentas en Firebase Authentication: `Estudiante Demo` y `Estudiante Nuevo`. El seed no lee Firebase Authentication, así que `backend/app/seed/data/users.json` guarda ese nombre y el seed lo pasa al alta dentro del token simulado. Los documentos lo toman en vez del correo, igual que el alta con el token real de cada cuenta.
 
 ---
 

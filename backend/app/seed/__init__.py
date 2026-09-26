@@ -78,9 +78,9 @@ def build_documents(uids: dict[str, str], today: str) -> list[tuple[str, dict]]:
     for u in users:
         role = u["role"]
         doc_id = user_doc_id(uids[role])
-        # El alumno lo crea la misma función del alta, como con el token de la cuenta, que no trae nombre.
-        # Encima va solo lo propio de la demo: pruebas elegidas, preguntas respondidas y cuota usada.
-        user = new_user({"email": u["email"], "firebase": {"sign_in_provider": u["signInProvider"]}},
+        # El alumno lo crea la misma función del alta, con los datos que trae el token de la cuenta: correo,
+        # nombre visible y proveedor. Encima va solo lo propio de la demo: pruebas elegidas y respuestas.
+        user = new_user({"email": u["email"], "name": u["name"], "firebase": {"sign_in_provider": u["signInProvider"]}},
                         u["locale"], plan_by_id["free"], today)
         user["selectedTests"] = u["selectedTests"]
         names[role] = user["name"]
