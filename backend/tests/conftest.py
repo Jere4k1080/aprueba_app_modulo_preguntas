@@ -15,7 +15,7 @@ os.environ.update({
     "ALLOWED_ORIGIN_PATTERN": r"^https://aprueba-pr-[a-z0-9-]+\.vercel\.app$",
 })
 for name in ("FIREBASE_AUTH_EMULATOR_HOST", "FIREBASE_SERVICE_ACCOUNT_BASE64", "FIREBASE_PROJECT_ID",
-             "FIRESTORE_EMULATOR_PROJECT_ID", "SEED_ALLOW_REMOTE"):
+             "FIRESTORE_EMULATOR_PROJECT_ID", "SEED_ALLOW_REMOTE", "SEED_DEMO_UID", "SEED_DEMO_NEW_UID"):
     os.environ.pop(name, None)
 
 

@@ -4,10 +4,12 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Regla de negocio 1. Fijas en el código como en Node: no se leen del entorno.
-BASE_QUOTA = 10
-SCHOOL_BONUS = 5
-ADDRESS_BONUS = 5
+# Reglas de negocio 1 y 3. La cuota base y las medallas por acierto salen de plans (ADR-64); ningún
+# documento define estos valores, así que son configuración del backend y no se leen del entorno.
+SCHOOL_BONUS = 5    # preguntas extra al declarar colegio
+ADDRESS_BONUS = 5   # preguntas extra al declarar región
+QUOTA_CAP = 20      # tope diario con los bonos sumados
+UNLOCK_MEDALS = 1   # medallas de bronce por cada bono de cuota reclamado
 
 
 class Settings(BaseSettings):
@@ -32,6 +34,9 @@ class Settings(BaseSettings):
     allowed_origin_pattern: str | None = None
 
     seed_allow_remote: bool = False
+    # UID de Firebase de las cuentas de demostración; el seed crea users/usr_<UID> (ADR-58).
+    seed_demo_uid: str | None = None       # aprueba@demo.cl, con preguntas respondidas
+    seed_demo_new_uid: str | None = None   # aprueba2@demo.cl, parte de cero
 
     def __init__(self, **values):
         # Fuera de un validador de pydantic: su ValidationError vuelca los valores de

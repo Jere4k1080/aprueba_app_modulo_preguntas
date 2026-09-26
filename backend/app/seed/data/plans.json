@@ -1,0 +1,89 @@
+[
+  {
+    "id": "free",
+    "name": {
+      "es": "Gratis",
+      "en": "Free"
+    },
+    "price": 0,
+    "currency": "USD",
+    "color": "#64748B",
+    "features": [
+      "f3"
+    ],
+    "limits": {
+      "qDay": 20,
+      "groups": 1,
+      "tests": 1
+    },
+    "badges": {
+      "login": 1,
+      "purchase": 0,
+      "correct": 1
+    },
+    "stripeProductId": null,
+    "stripePriceId": null,
+    "system": true
+  },
+  {
+    "id": "uni",
+    "name": {
+      "es": "1 prueba ilimitada",
+      "en": "1 unlimited test"
+    },
+    "price": 1,
+    "currency": "USD",
+    "color": "#1A365D",
+    "features": [
+      "f1",
+      "f3",
+      "f4"
+    ],
+    "limits": {
+      "qDay": 0,
+      "groups": 3,
+      "tests": 1
+    },
+    "badges": {
+      "login": 1,
+      "purchase": 5,
+      "correct": 1
+    },
+    "stripeProductId": null,
+    "stripePriceId": null,
+    "system": true
+  },
+  {
+    "id": "all",
+    "name": {
+      "es": "Todas las pruebas",
+      "en": "All tests"
+    },
+    "price": 5,
+    "currency": "USD",
+    "color": "#F5B041",
+    "features": [
+      "f1",
+      "f2",
+      "f3",
+      "f4",
+      "f5",
+      "f6",
+      "f7",
+      "f8"
+    ],
+    "limits": {
+      "qDay": 0,
+      "groups": 0,
+      "tests": 99
+    },
+    "badges": {
+      "login": 2,
+      "purchase": 10,
+      "correct": 2
+    },
+    "stripeProductId": null,
+    "stripePriceId": null,
+    "system": true
+  }
+]

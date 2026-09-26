@@ -2,31 +2,80 @@
   {
     "id": "lectora",
     "label": "Comp. Lectora",
+    "nameLower": "comp. lectora",
     "color": "#1A365D",
-    "hasQuestions": true
+    "axes": [
+      "Localizar",
+      "Comprensión lectora",
+      "Interpretar",
+      "Evaluar"
+    ],
+    "order": 1,
+    "active": true,
+    "countryId": "cl",
+    "examId": "cl_paes"
   },
   {
     "id": "m1",
     "label": "Matemática M1",
+    "nameLower": "matemática m1",
     "color": "#10B981",
-    "hasQuestions": true
+    "axes": [
+      "Números",
+      "Geometría",
+      "Álgebra y funciones",
+      "Probabilidad y estadística"
+    ],
+    "order": 2,
+    "active": true,
+    "countryId": "cl",
+    "examId": "cl_paes"
   },
   {
     "id": "m2",
     "label": "Matemática M2",
+    "nameLower": "matemática m2",
     "color": "#6366F1",
-    "hasQuestions": true
+    "axes": [
+      "Números",
+      "Álgebra y funciones",
+      "Geometría",
+      "Probabilidad y estadística"
+    ],
+    "order": 3,
+    "active": true,
+    "countryId": "cl",
+    "examId": "cl_paes"
   },
   {
     "id": "cien",
     "label": "Ciencias",
+    "nameLower": "ciencias",
     "color": "#F5B041",
-    "hasQuestions": true
+    "axes": [
+      "Biología",
+      "Física",
+      "Química"
+    ],
+    "order": 4,
+    "active": true,
+    "countryId": "cl",
+    "examId": "cl_paes"
   },
   {
     "id": "hist",
     "label": "Historia y C. Soc.",
+    "nameLower": "historia y c. soc.",
     "color": "#EF4444",
-    "hasQuestions": true
+    "axes": [
+      "Historia",
+      "Sistema económico",
+      "Formación ciudadana",
+      "Geografía"
+    ],
+    "order": 5,
+    "active": true,
+    "countryId": "cl",
+    "examId": "cl_paes"
   }
 ]
