@@ -82,7 +82,7 @@ Ni en `pubspec.yaml` ni en `backend/requirements.txt` o `backend/requirements-de
 **5. Toda decisión tomada sin información suficiente va a `docs/bitacora_decisiones.md`**, con la alternativa descartada y el motivo. La bitácora es la mitigación declarada de la práctica XP de cliente en sitio, que el equipo no puede cumplir. No es opcional.
 
 **6. No crees modelos de Firestore en el cliente Flutter.**
-Decidido en ADR-03. La app habla con la API, no con la base de datos. Los esquemas de las colecciones viven en `seed/README.md` y en `docs/diccionario_de_datos.md`.
+Decidido en ADR-03. La app habla con la API, no con la base de datos. Los esquemas de las colecciones viven en `docs/diccionario_de_datos.md`, y `seed/README.md` muestra lo que carga el seed.
 
 **7. Ningún agente configura identidad de git en `.git/config`.**
 Los commits llevan la identidad global de quien opera el agente, la de `git config --global user.name` y `user.email`. Antes del primer commit, `git var GIT_AUTHOR_IDENT` tiene que mostrar a esa persona. Si `.git/config` trae una sección `[user]`, se reporta y se quita. Una identidad local dejó 35 commits de `main` a nombre de "Audit Sim" (ADR-56), y Vercel, en plan Hobby, bloquea los despliegues de commits cuyo autor no es el dueño del equipo.
@@ -118,9 +118,9 @@ npx --yes firebase-tools emulators:start --only firestore --project demo-aprueba
 cd backend
 uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements-dev.txt
-.venv/bin/python -m app.seed     # datos de prueba
+.venv/bin/python -m app.seed     # datos de prueba; pide SEED_DEMO_UID y SEED_DEMO_NEW_UID en .env
 .venv/bin/python -m app          # API en /api/v1
-.venv/bin/python -m pytest       # 31 pruebas; sin emulador, 30 y 1 omitida
+.venv/bin/python -m pytest       # 36 pruebas; sin emulador, 34 y 2 omitidas
 
 # Verificadores sin SDK
 python3 tool/check_static.py .
@@ -194,7 +194,7 @@ backend/          Python 3.12 + FastAPI
 docs/
   bitacora_decisiones.md    ADR del proyecto
   diccionario_de_datos.md   entregable EDT 1.3.2.1
-seed/README.md              esquemas de las colecciones
+seed/README.md              lo que carga el seed, con ejemplos
 ```
 
 **Flujo de datos:** UI → provider → repositorio → `ApiClient` (Dio). La interfaz nunca habla directo con la red. Cada lectura se escribe en Drift y, ante error de red, el repositorio sirve la última copia.
@@ -205,10 +205,10 @@ seed/README.md              esquemas de las colecciones
 
 ## Reglas de negocio
 
-1. Cuota diaria de 10 preguntas. Declarar colegio suma 5, declarar región suma 5, tope de 20. Los planes de pago la dejan ilimitada. Cada bonificación se reclama una sola vez. Reinicio diario.
+1. La cuota diaria base sale de `plans/{plan}.limits.qDay`, y 0 es ilimitado (ADR-64). Declarar colegio suma 5 y declarar región suma 5, con tope de 20; esos tres valores son constantes de `backend/app/core/config.py`. Cada bonificación se reclama una sola vez. Reinicio diario. Hasta la Entrega A la base era 10 fija. El ejemplo de la administración que carga el seed da `qDay` 20 al plan `free`, y falta confirmarlo con Max.
 2. La respuesta correcta no viaja al cliente antes de que el estudiante responda.
-3. Medallas: 1 bronce por respuesta correcta, 1 por desbloqueo de cuota, 1 por ingreso diario, 250 por recorrección confirmada. Los 250 los otorga administración al aprobar, no el estudiante al enviar.
-4. `cohortPercentile` compara la velocidad del estudiante contra su cohorte y llega precalculado desde el backend. Firestore no hace agregaciones económicas en consulta.
+3. Medallas de bronce: las de cada respuesta correcta salen de `plans/{plan}.badges.correct` y las del ingreso diario de `badges.login`. Cada desbloqueo de cuota da 1, fijado en `UNLOCK_MEDALS`. Una recorrección confirmada da 250, y los otorga la administración al aprobar, no el estudiante al enviar. Cada movimiento va a `medalTransactions` y suma en `users.medalWallet` y `badgesTotal` en la misma transacción (ADR-59).
+4. `cohortPercentile` compara la velocidad del estudiante contra su cohorte. Lo calcula el backend al responder con el histograma de `questions.stats` (ADR-63). Firestore no hace agregaciones económicas en consulta.
 5. El modo facsímil requiere plan de pago; `random` es el modo libre.
 6. Las materias que no son PAES llegan con `hasQuestions: false`.
 7. Dificultad de `d1` a `d4`. El estudiante solo recibe preguntas de las pruebas que seleccionó.
@@ -222,14 +222,13 @@ seed/README.md              esquemas de las colecciones
 
 Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que encuentres evidencia nueva; si la encuentras, dilo antes de cambiar nada.
 
-- **ADR-01** `answers` y `corrections` son colecciones raíz con `userId`; `medalLedger` es subcolección de `users/{uid}`
+- **ADR-01** `corrections` es colección raíz con `userId`. Lo que decía de `answers` y `medalLedger` quedó sustituido por ADR-60 y ADR-59
 - **ADR-02** `answers` y `corrections` son inmutables para el cliente: solo create, sin update ni delete
 - **ADR-03** Sin modelos de Firestore en el cliente Flutter
 - **ADR-04** `Question.correctAnswer` es nullable
-- **ADR-05** `potentialReward` exige la estructura `{amount}`; nada de parseo tolerante que oculte defectos del backend
+- **ADR-05** `potentialReward` exige la estructura `{amount}` en el contrato de la API; nada de parseo tolerante que oculte defectos del backend. En Firestore ya no se guarda (ADR-61)
 - **ADR-08** Se resuelven las advertencias del analizador; los avisos de deprecación heredados no se tocan
-- **ADR-09** Exclusión de preguntas respondidas mediante `users/{uid}/state/practice` con `answeredQuestionIds`
-- **ADR-10** Percentil de cohorte con umbrales precalculados en el documento de la pregunta
+- **ADR-09** Exclusión de preguntas respondidas mediante `users/usr_<UID>/state/practice` con `answeredQuestionIds`
 - **ADR-11** Reinicio de cuota configurable por variables de entorno
 - **ADR-12** Sanitización centralizada de `correctAnswer` en la capa de servicios
 - **ADR-30** Backend en Python 3.12 con FastAPI, por decisión de la contraparte. Sus convenciones vienen del backend de administración de Max (ADR-31)
@@ -237,8 +236,16 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-43** `verify_id_token` sin revisar revocación. El retraso de hasta una hora en rechazar un token revocado queda cubierto cuando se implemente el rechazo de usuarios suspendidos
 - **ADR-49**, en la parte del proyecto local, con el ajuste del 2026-09-25: en local Firestore usa el emulador con el proyecto `demo-aprueba` (`FIRESTORE_EMULATOR_PROJECT_ID`), y `FIREBASE_PROJECT_ID` lleva el ID real, `aprueba-app-modulo-preguntas`, solo para validar tokens de Firebase Auth
 - **ADR-56** Los 35 commits de "Audit Sim" en `main` no se reescriben. Los agentes commitean con la identidad global de quien los opera (regla 7)
+- **ADR-57** El modelo sigue a la administración donde ella define una colección o un campo, y al modelo de datos de junio y su extensión del generador donde no. Decidido por la contraparte
+- **ADR-58** El ID de `users` es `usr_` más el UID de Firebase, porque la consola valida ese prefijo
+- **ADR-59** Las medallas se mueven en `medalTransactions`, con IDs `mtx_*`, en la misma transacción que actualiza `users.medalWallet` y `badgesTotal`. Reemplaza a `users/{uid}/medalLedger`
+- **ADR-60** `answers` es subcolección de `users`: `users/usr_<UID>/answers`
+- **ADR-61** `corrections` tiene la forma que lee la cola de la consola, con IDs `cor_*`
+- **ADR-62** `questions` usa IDs `qst_*` y los campos del generador. Solo se sirven preguntas `published`, y `published` implica `approved`
+- **ADR-63** Percentil de cohorte con el histograma de `questions.stats`, actualizado en la transacción de responder. Sustituye a ADR-10 y ADR-23
+- **ADR-64** La cuota base sale de `plans/{plan}.limits.qDay` y las medallas por acierto de `badges.correct`. Los bonos, el tope y la medalla por desbloqueo son constantes del backend
 
-Las ADR-09 a ADR-12 son propuestas pendientes de ratificación por el equipo.
+Las ADR-09 a ADR-12 son propuestas pendientes de ratificación por el equipo. De ADR-63 los tramos son propuesta, y de ADR-64 falta confirmar el `qDay` de `free`.
 
 ---
 
@@ -265,6 +272,10 @@ Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-25:
 - El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
 - Los trece servicios del módulo no están implementados. La API está desplegada en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1`, pero solo responde `/health`
 - Al desplegar el backend FastAPI hay que borrar `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV` del proyecto de Vercel de la API, porque ya nadie las lee (ADR-40)
-- Las dos cuentas de demostración de Firebase Authentication todavía no tienen documento `users/{uid}` en Firestore, porque la forma de `users` está en pausa
+- Las dos cuentas de demostración todavía no tienen documento en `users` en el proyecto real. El seed de la Entrega A lo crea como `users/usr_<UID>`
+- Después de fusionar `feature/alinear-modelo-admin`, y con confirmación del equipo: desplegar `firestore.indexes.json` y esperar que los índices queden `READY`, borrar los datos del seed del 2026-09-23 que el nuevo no reescribe (la lista está en `seed/README.md`) y cargar el seed nuevo con `SEED_ALLOW_REMOTE=true`
+- ADR-65 a ADR-69 son supuestos y propuestas de la Entrega A, con preguntas abiertas al equipo
+- Falta confirmar con Max el `qDay` 20 del plan `free` frente a la base de 10 (ADR-64)
+- También con Max: su confirmación de recorrecciones no baja `questions.flagCount` (ADR-61), y su código crea `correction_confirmed` con un ID automático y el campo `by` (ADR-59)
 - Con `PHONE_VERIFICATION_ENABLED` apagada el registro no tiene salida, y el login social y el restablecimiento de contraseña llaman a rutas `/auth/*` que el backend no tiene. Falta que Alloxentric defina ese camino (ADR-41)
 Ya no son pendientes: la rotación de la llave de la cuenta de servicio está cerrada. La cuenta anterior `firebase-adminsdk-fbsvc` no se pudo restaurar; la actual, con el mismo nombre, tiene una sola llave creada por el equipo, `34b4db8b`, que desde el 2026-09-25 va en `FIREBASE_SERVICE_ACCOUNT_BASE64` de production y preview de la API, y que la API toma con el despliegue automático al fusionar el #15. Las llaves `b0014dfe` y `af27835c` ya no autentican y sus JSON se borraron. El proveedor de correo y contraseña de Firebase Authentication está habilitado y hay dos cuentas de demostración, creadas desde la consola el 2026-09-24. `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed de demostración está cargado en ese proyecto desde el 2026-09-23, con IDs fijos, y un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
