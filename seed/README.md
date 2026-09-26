@@ -2,7 +2,7 @@
 
 El seed carga en Firestore un banco de demostración y los documentos de las dos cuentas de prueba. Se corre desde `backend/` con `.venv/bin/python -m app.seed` (en Windows, `.venv/Scripts/python.exe -m app.seed`), con el emulador de Firestore activo o con `SEED_ALLOW_REMOTE=true` (ADR-22). Necesita además `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID`, los UID de Firebase Authentication de `aprueba@demo.cl` y `aprueba2@demo.cl`. Si falta uno, o si no da un ID `usr_` que acepte la administración, el seed termina con código 1 antes de abrir Firestore (ADR-58).
 
-Los datos están en `backend/app/seed/data/`: `tests.json`, `skills.json`, `questions.json`, `plans.json`, `users.json`, `answers.json` y `corrections.json`. `build_documents()`, en `backend/app/seed/__init__.py`, calcula lo que depende de otros documentos: `nameLower`, `emailLower`, `medalWallet`, `badgesTotal`, `quota`, `stats`, `flagCount`, `approvedStock`, `statementPreview`, `skillMastery` y `state/practice`. Todo se escribe en un solo lote, así que se carga completo o no se carga nada. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). Los IDs son fijos y otra corrida reescribe los mismos documentos.
+Los datos están en `backend/app/seed/data/`: `tests.json`, `skills.json`, `questions.json`, `plans.json`, `features.json`, `users.json`, `answers.json` y `corrections.json`. `build_documents()`, en `backend/app/seed/__init__.py`, calcula lo que depende de otros documentos: `nameLower`, `emailLower`, `medalWallet`, `badgesTotal`, `quota`, `stats`, `flagCount`, `approvedStock`, `statementPreview`, `skillMastery` y `state/practice`. Todo se escribe en un solo lote, así que se carga completo o no se carga nada. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). Los IDs son fijos y otra corrida reescribe los mismos documentos.
 
 Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md`](../docs/diccionario_de_datos.md). Este archivo muestra lo que carga el seed, con ejemplos sacados de `build_documents()`. En las rutas, `<UID>` es el UID de la cuenta y `<hora del servidor>` es el valor de `SERVER_TIMESTAMP`.
 
@@ -12,7 +12,8 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 
 | Ruta | Documentos | Contenido |
 |---|---:|---|
-| `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración (ADR-64) |
+| `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración salvo el `qDay` de `free` (ADR-64) |
+| `features` | 1 | `f2`, la funcionalidad `mock_mode` que decide el modo facsímil (ADR-70) |
 | `tests` | 5 | Las pruebas PAES, con 4 preguntas aprobadas cada una |
 | `skills` | 20 | Cuatro habilidades por prueba |
 | `questions` | 20 | Una por cada combinación de prueba y dificultad |
@@ -23,13 +24,13 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 | `medalTransactions` | 4 | Una por cada respuesta correcta |
 | `corrections` | 1 | Solicitud pendiente de `aprueba@demo.cl` |
 
-En total son 67 documentos.
+En total son 68 documentos.
 
-`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 20 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 15 preguntas.
+`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 10 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 15 preguntas.
 
-`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 20. Le quedan las 8 preguntas de esas dos pruebas.
+`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 8 preguntas de esas dos pruebas.
 
-Las dos cuentas están en el plan `free`, con `state` `active`. Su límite es 20 porque ese es el `qDay` del ejemplo de la administración, que choca con la base de 10 de la regla de negocio 1 (ADR-64).
+Las dos cuentas están en el plan `free`, con `state` `active` y un límite de 10, la base de la regla de negocio 1. El ejemplo de la administración trae 20 para `free`, y eso va en la consulta a Max (ADR-64).
 
 ---
 
@@ -44,7 +45,7 @@ Las dos cuentas están en el plan `free`, con `state` `active`. Su límite es 20
   "currency": "USD",
   "color": "#64748B",
   "features": ["f3"],
-  "limits": { "qDay": 20, "groups": 1, "tests": 1 },
+  "limits": { "qDay": 10, "groups": 1, "tests": 1 },
   "badges": { "login": 1, "purchase": 0, "correct": 1 },
   "stripeProductId": null,
   "stripePriceId": null,
@@ -54,7 +55,23 @@ Las dos cuentas están en el plan `free`, con `state` `active`. Su límite es 20
 }
 ```
 
-`uni` tiene `qDay` 0 y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69).
+`uni` tiene `qDay` 0 y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69). Solo `all` incluye `f2`, así que es el único plan con modo facsímil (ADR-70).
+
+---
+
+## `features`
+
+```jsonc
+// features/f2
+{
+  "key": "mock_mode",
+  "icon": "📝",
+  "name": { "es": "Modo facsímil (ensayos)", "en": "Mock exam mode" },
+  "order": 2
+}
+```
+
+Es la única funcionalidad del catálogo de la consola que lee el módulo (ADR-70). El resto del catálogo lo administra la consola en el proyecto de la empresa. El nombre en inglés es supuesto.
 
 ---
 
@@ -202,7 +219,7 @@ El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, as
   "difficulty": "d1",
   "quota": {
     "used": 5,
-    "max": 20,
+    "max": 10,
     "date": "2026-09-25",
     "bonusSchool": false,
     "bonusAddress": false,

@@ -45,7 +45,8 @@ En la columna de origen, "administración" es la especificación de la consola, 
 | `users` | `school`, `region`, `locale` | Administración (7) y junio | Sin cambios. |
 | `users` | `sessionsRevokedAt` | Administración (7) | Nuevo. Lo escribe la consola al suspender. |
 | `users` | `quota`, `selectedTests`, `practiceFormat`, `difficulty` | Junio | Sin cambios de forma. `quota.max` sale ahora de `plans` (ADR-64). |
-| `users` | `updatedAt`, `avatarColor`, `theme`, `planStatus`, `dailyReminder` | Junio | Nuevos en el diccionario. El módulo no los usa, pero el seed los escribe (ADR-69). |
+| `users` | `updatedAt` | Junio | Nuevo en el diccionario. |
+| `users` | `avatarColor`, `theme`, `planStatus`, `dailyReminder` | Junio | Nuevos en el diccionario. Son de módulos fuera del alcance: el alta no los escribe (ADR-66), y el seed sí, mientras se ratifica ADR-69. |
 | `users` | `gradeId` | Supuesto (ADR-28) | Sin cambios. |
 | `users` | `medals`, `lastActiveDate` | | Salen, reemplazados por campos de la administración. |
 | `users/{id}/answers` | `questionId`, `selected`, `correct`, `elapsedMs`, `cohortPercentile`, `answeredAt` | Junio | Pasan de la colección raíz `answers` a la subcolección (ADR-60). |
@@ -57,7 +58,7 @@ En la columna de origen, "administración" es la especificación de la consola, 
 | `corrections` | ID `cor_`, `userId`, `userName`, `questionId`, `testId`, `reason`, `state`, `resolvedBy`, `resolvedAt`, `note`, `rewardGranted`, `createdAt` | Administración (2.8) | `status` pasa a `state`, `reviewedAt` a `resolvedAt` y `reviewedBy` a `resolvedBy`. `reason` pasa de código a texto. `rewardGranted` pasa a `{userId, tier, amount}` (ADR-61). |
 | `corrections` | `axis`, `difficulty`, `statementPreview`, `proposedAnswer` | Administración (7.2) | Nuevos. |
 | `corrections` | `comment` | Junio | Sin cambios. |
-| `corrections` | `reasonCode` | Propuesta (ADR-67) | Nuevo. Guarda el código que antes iba en `reason`. |
+| `corrections` | `reasonCode` | Decisión del equipo (ADR-67) | Nuevo. Guarda el código que antes iba en `reason`. |
 | `corrections` | `potentialReward` | | Sale: la recompensa de la administración es fija (ADR-61). |
 | `questions` | ID `qst_` | Administración (2.8) | Antes era `q_*` (ADR-62). |
 | `questions` | `statement`, `options`, `correctAnswer`, `status` | Administración (2.8 y 7.2) y junio | `status` pasa de `active`, `draft` y `disabled` a los cuatro estados de la consola. |
@@ -76,6 +77,7 @@ En la columna de origen, "administración" es la especificación de la consola, 
 | `skills` | `createdAt`, `updatedAt` | Junio | Nuevos. |
 | `skills` | `status`, `isDemo` | | Salen. `status` era el avance del alumno, que ahora está en `skillMastery`. |
 | `plans` | `name`, `nameLower`, `price`, `currency`, `color`, `features`, `limits`, `badges`, `stripeProductId`, `stripePriceId`, `system`, `createdAt`, `updatedAt` | Administración (2.8 y 8) | Colección nueva en el diccionario (ADR-64). Junio definía otra forma, con `price {monthly, yearly}`, `popular`, `published`, `order` y `stripePriceIds`. |
+| `features` | ID `f1` a `f10`, `key`, `name`, `icon`, `order` | Administración (2.8 y 8) | Colección nueva en el diccionario. El seed carga solo `f2`, `mock_mode` (ADR-70). |
 
 ---
 
@@ -83,7 +85,7 @@ En la columna de origen, "administración" es la especificación de la consola, 
 
 ### 2.1 `users`
 
-Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (ADR-58). La consola cambia el plan y el estado. El módulo escribe la cuota y las preferencias, y suma medallas con cada movimiento de `medalTransactions`. Si el alumno no tiene documento, la propuesta de ADR-66 lo crea en su primera petición autenticada. `nameLower`, `lastActivityAt`, `badgesTotal` y `createdAt` tienen que existir en todos los documentos: la consola ordena por ellos, y Firestore deja fuera de una consulta ordenada a los documentos que no tienen el campo.
+Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (ADR-58). La consola cambia el plan y el estado. El módulo escribe la cuota y las preferencias, y suma medallas con cada movimiento de `medalTransactions`. Si el alumno no tiene documento, el backend lo crea en su primera petición autenticada, solo con los campos de la administración y los del módulo (ADR-66). En esa misma lectura revisa si el alumno está suspendido o si sus sesiones fueron revocadas (sección 4), y actualiza `lastActivityAt` una vez al día (ADR-68). `nameLower`, `lastActivityAt`, `badgesTotal` y `createdAt` tienen que existir en todos los documentos: la consola ordena por ellos, y Firestore deja fuera de una consulta ordenada a los documentos que no tienen el campo.
 
 | Campo | Tipo | Req. | Origen | Descripción |
 |---|---|:---:|---|---|
@@ -94,7 +96,7 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 | `plan` | string | Sí | Administración | `free`, `uni`, `all` o un `pl_*` creado en la consola. Es el ID de un documento de `plans`. |
 | `state` | string | Sí | Administración | `active`, `suspended` o `churned`. Con `suspended` el módulo responde 403 (sección 4). |
 | `country` | string | No | Administración | ISO-3166 alfa-2 en mayúsculas, como `CL`. La consola filtra con `^[A-Z]{2}$`. |
-| `lastActivityAt` | timestamp | Sí | Administración | Última actividad. Quién lo actualiza es propuesta (ADR-68). |
+| `lastActivityAt` | timestamp | Sí | Administración | Última actividad. El backend la actualiza en la primera petición autenticada de cada día (ADR-68). |
 | `medalWallet` | map | Sí | Administración | `{bronze, silver, gold, diamond, platinum}`, enteros. Solo cambia en la transacción que crea el movimiento en `medalTransactions` (ADR-59). |
 | `badgesTotal` | number | Sí | Administración | Suma de `medalWallet`. Sube junto con cada movimiento. |
 | `createdAt` | timestamp | Sí | Administración | Alta. La consola lo lee sin valor por defecto. |
@@ -103,7 +105,7 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 | `school` | string | No | Administración y junio | Colegio declarado. Habilita el bono de colegio. |
 | `region` | string | No | Administración y junio | Región declarada. Habilita el bono de región. |
 | `age` | number | No | Administración y junio | Edad declarada. |
-| `streak` | number | Sí | Administración y junio | Días seguidos con actividad. Quién la actualiza es propuesta (ADR-68). |
+| `streak` | number | Sí | Administración y junio | Días seguidos con actividad. La lleva un módulo fuera del alcance (ADR-68). |
 | `locale` | string | Sí | Administración y junio | `es` o `en`. En la API se llama `language`. |
 | `sessionsRevokedAt` | timestamp | No | Administración | Lo escribe la consola al suspender. Ver sección 4. |
 | `quota` | map | Sí | Junio | Cuota diaria. Ver 2.1.1. |
@@ -112,10 +114,10 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 | `difficulty` | string | Sí | Junio | `d1`, `d2`, `d3` o `d4`. |
 | `gradeId` | string | No | Supuesto (ADR-28) | Grado del estudiante, que guarda `PUT /me/preferences`. |
 | `updatedAt` | timestamp | Sí | Junio | Última escritura. |
-| `avatarColor` | string | Sí | Junio | Color de las iniciales. Lo usan otros módulos. |
-| `theme` | string | Sí | Junio | `light` o `dark`. Lo usan otros módulos. |
-| `planStatus` | string | Sí | Junio | `none`, `active`, `past_due` o `canceled`. Lo usan otros módulos. |
-| `dailyReminder` | boolean | Sí | Junio | Recordatorio diario activo. Lo usan otros módulos. |
+| `avatarColor` | string | Sí | Junio | Color de las iniciales. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
+| `theme` | string | Sí | Junio | `light` o `dark`. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
+| `planStatus` | string | Sí | Junio | `none`, `active`, `past_due` o `canceled`. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
+| `dailyReminder` | boolean | Sí | Junio | Recordatorio diario activo. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
 
 #### 2.1.1 Sub-esquema `quota`
 
@@ -181,16 +183,17 @@ Libro de movimientos de medallas, compartido con la consola (ADR-59). ID `mtx_` 
 |---|---|---|---|
 | `answer_correct` | Módulo, al responder bien | `plans/{plan}.badges.correct`, en bronce | `qst_*` de la pregunta |
 | `quota_bonus` | Módulo, al reclamar un bono | `UNLOCK_MEDALS`, 1 bronce | `bonusSchool` o `bonusAddress` |
-| `daily_login` | Módulo, propuesta de ADR-68 | `plans/{plan}.badges.login`, en bronce | Fecha `YYYY-MM-DD` |
 | `correction_confirmed` | Consola, al confirmar una recorrección | 250 bronces | `cor_*` de la solicitud |
 
-La implementación de referencia de la consola crea `correction_confirmed` con un ID automático y le agrega el campo `by`, con el `adm_*` que confirmó. La sección 2.8 no lo nombra. Está por consultar con Max (ADR-59).
+La medalla por ingreso diario, que fija `plans/{plan}.badges.login`, la otorga un módulo fuera del alcance (ADR-68).
+
+La implementación de referencia de la consola crea `correction_confirmed` con un ID automático y le agrega el campo `by`, con el `adm_*` que confirmó. La sección 2.8 no lo nombra. Es una inconsistencia del código de la administración: el módulo sigue la sección 2.8, y la diferencia se reporta a Max (ADR-59).
 
 ---
 
 ### 2.6 `corrections`
 
-Solicitudes de recorrección (ADR-61). ID `cor_` más 10 hexadecimales. La API crea el documento con `state` `pending` y la consola lo resuelve. Al crearlo, la API suma 1 a `questions.flagCount` en la misma transacción. La consola no lo resta al resolver, y eso está por acordar con Max.
+Solicitudes de recorrección (ADR-61). ID `cor_` más 10 hexadecimales. La API crea el documento con `state` `pending` y la consola lo resuelve. Al crearlo, la API suma 1 a `questions.flagCount` en la misma transacción. La consola no lo resta al resolver, una inconsistencia de su código que se reporta a Max (ADR-61).
 
 | Campo | Tipo | Req. | Origen | Descripción |
 |---|---|:---:|---|---|
@@ -201,7 +204,7 @@ Solicitudes de recorrección (ADR-61). ID `cor_` más 10 hexadecimales. La API c
 | `axis` | string | Sí | Administración (7.2) | Eje de la pregunta, copiado al crear. |
 | `difficulty` | string | Sí | Administración (7.2) | Dificultad de la pregunta, copiada al crear. |
 | `statementPreview` | string | Sí | Administración (7.2) | Enunciado en un renglón, de hasta 120 caracteres, con `…` si se corta. |
-| `reason` | string | Sí | Administración | Texto que la cola muestra como motivo del alumno (ADR-67). |
+| `reason` | string | Sí | Administración | Texto que la cola muestra como motivo del alumno: el comentario, o la etiqueta del código si no hay comentario (ADR-67). |
 | `proposedAnswer` | string | No | Administración (7.2) | Letra que el alumno cree correcta. `null` mientras la app no la pida. |
 | `state` | string | Sí | Administración | `pending`, `confirmed` o `rejected`. |
 | `createdAt` | timestamp | Sí | Administración | Hora del servidor al crear. La cola la lee sin valor por defecto y llama a `.isoformat()`. |
@@ -210,9 +213,19 @@ Solicitudes de recorrección (ADR-61). ID `cor_` más 10 hexadecimales. La API c
 | `note` | string | No | Administración | Nota de la consola, de hasta 1000 caracteres. |
 | `rewardGranted` | map | No | Administración | `{userId, tier, amount}` al confirmar. `null` si se rechaza o si el alumno ya no existe. |
 | `comment` | string | No | Junio | Comentario del alumno tal como llegó, de hasta 500 caracteres. |
-| `reasonCode` | string | Sí | Propuesta (ADR-67) | `wrong_answer`, `ambiguous`, `typo`, `bad_explanation` u `other`. |
+| `reasonCode` | string | Sí | Decisión del equipo (ADR-67) | `wrong_answer`, `ambiguous`, `typo`, `bad_explanation` u `other`. |
 
 `CORRECTION_ALREADY_OPEN` se comprueba buscando una solicitud `pending` del mismo alumno sobre la misma pregunta. Esa consulta solo usa igualdades y no necesita índice compuesto.
+
+Cuando el alumno no deja comentario, `reason` guarda la etiqueta de su código. Son las mismas que muestra la app, de `exp_rc_r1` a `exp_rc_r5` en `lib/core/l10n/app_strings.dart`:
+
+| `reasonCode` | `reason` sin comentario |
+|---|---|
+| `wrong_answer` | La respuesta marcada como correcta es incorrecta |
+| `ambiguous` | El enunciado de la pregunta es ambiguo o confuso |
+| `typo` | Hay un error tipográfico o de redacción |
+| `bad_explanation` | La explicación es incorrecta o incompleta |
+| `other` | Otro motivo |
 
 ---
 
@@ -293,7 +306,7 @@ Habilidades por prueba, con ID `sk_` más un nombre corto. Todos los campos son 
 
 ### 2.10 `plans`
 
-Planes de la consola (ADR-64). Los de sistema tienen ID `free`, `uni` y `all`, y los que crea la consola `pl_*`. El módulo solo los lee: de aquí salen la base de la cuota y las medallas por acierto. El seed crea los tres de sistema.
+Planes de la consola (ADR-64). Los de sistema tienen ID `free`, `uni` y `all`, y los que crea la consola `pl_*`. El módulo solo los lee: de aquí salen la base de la cuota, las medallas por acierto y, con `features`, el modo facsímil. El seed crea los tres de sistema.
 
 | Campo | Tipo | Req. | Descripción |
 |---|---|:---:|---|
@@ -304,22 +317,35 @@ Planes de la consola (ADR-64). Los de sistema tienen ID `free`, `uni` y `all`, y
 | `color` | string | Sí | Color del plan. |
 | `features` | `array<string>` | Sí | IDs del catálogo `features` de la consola, de `f1` a `f10`. |
 | `limits` | map | Sí | `{qDay, groups, tests}`. `qDay` es la base diaria de preguntas, y 0 es ilimitado. |
-| `badges` | map | Sí | `{login, purchase, correct}`. `correct` son los bronces por respuesta correcta y `login` los del primer ingreso del día. |
+| `badges` | map | Sí | `{login, purchase, correct}`. `correct` son los bronces por respuesta correcta. `login`, los del primer ingreso del día, los otorga un módulo fuera del alcance (ADR-68). |
 | `stripeProductId` | string | No | Producto en Stripe. |
 | `stripePriceId` | string | No | Precio en Stripe. |
 | `system` | boolean | Sí | `true` en los planes de sistema, que no se pueden borrar. |
 | `createdAt` | timestamp | Sí | Alta. |
 | `updatedAt` | timestamp | Sí | Última edición. La consola lo compara con `If-Unmodified-Since` al editar. |
 
-Valores que carga el seed, tomados de los ejemplos de la sección 8:
+Valores que carga el seed. Salen de los ejemplos de la sección 8, salvo el `qDay` de `free`:
 
-| Plan | `limits.qDay` | `badges.login` | `badges.purchase` | `badges.correct` |
-|---|---:|---:|---:|---:|
-| `free` | 20 | 1 | 0 | 1 |
-| `uni` | 0 | 1 | 5 | 1 |
-| `all` | 0 | 2 | 10 | 2 |
+| Plan | `limits.qDay` | `badges.login` | `badges.purchase` | `badges.correct` | `features` |
+|---|---:|---:|---:|---:|---|
+| `free` | 10 | 1 | 0 | 1 | `f3` |
+| `uni` | 0 | 1 | 5 | 1 | `f1`, `f3`, `f4` |
+| `all` | 0 | 2 | 10 | 2 | `f1` a `f8` |
 
-`qDay` 20 en `free` choca con la regla de negocio 1, que da una base de 10 y un tope de 20. Está por confirmar con Max (ADR-64).
+`free` lleva `qDay` 10, como dice la regla de negocio 1. El ejemplo de la administración trae 20, y la pregunta va en la consulta a Max (ADR-64). Solo `all` incluye `f2`, la funcionalidad `mock_mode` que habilita el modo facsímil (ADR-70).
+
+---
+
+### 2.11 `features`
+
+Catálogo de funcionalidades de la consola (secciones 2.8 y 8), con IDs fijos `f1` a `f10`. Los planes guardan esos IDs en `features`. El módulo solo lee la que tiene `key` `mock_mode`, para la regla de negocio 5 (ADR-70), y el seed carga solo esa: `f2`, con los datos del ejemplo de la sección 8.
+
+| Campo | Tipo | Req. | Descripción |
+|---|---|:---:|---|
+| `key` | string | Sí | Nombre estable que conocen los servicios, como `mock_mode` o `unlimited_questions`. |
+| `name` | map | Sí | `{es, en}`. En `f2`, "Modo facsímil (ensayos)" y "Mock exam mode", que es supuesto. |
+| `icon` | string | Sí | Ícono del constructor de planes. |
+| `order` | number | Sí | Orden de despliegue. |
 
 ---
 
@@ -336,7 +362,8 @@ Responde el modelo `User` a partir de `users/usr_<UID>` (ADR-66).
 | `id` | ID del documento | `usr_<UID>`, el mismo que usan `corrections` y `medalTransactions`. La app no lo compara con nada. |
 | `name`, `email`, `plan`, `streak` | Campos del mismo nombre | |
 | `quota.used` | `quota.used` | Después de reiniciar la cuota si `quota.date` no es hoy. |
-| `quota.max` | `quota.max` | 0 en un plan ilimitado. `User` no trae `unlimited`, y la app reconoce los planes de pago por `plan` distinto de `free`. |
+| `quota.max` | `quota.max` | 0 en un plan ilimitado. |
+| `quota.unlimited` | `quota.unlimited` | La app tiene que revisarlo antes que `quota.max`. `User` todavía no lo lee: se agrega en la iteración 3, con una prueba de la app para un plan ilimitado (ADR-66). |
 | `medals` | `medalWallet` | Mismo mapa de cinco niveles. |
 | `school`, `region`, `age`, `authProvider` | Campos del mismo nombre | |
 | `phone` | No se guarda | `null`. La verificación por SMS está apagada (ADR-40). |
@@ -358,9 +385,9 @@ Responden `Correction`. `status` sale de `state`, `reviewedAt` de `resolvedAt` y
 
 ## 4. Alumno suspendido
 
-Con `state` `suspended`, los endpoints del módulo responden `AUTH_FORBIDDEN` 403 aunque el token de Firebase siga vigente (ADR-65). Se implementa con los endpoints.
+Con `state` `suspended`, los endpoints del módulo responden `AUTH_FORBIDDEN` 403 aunque el token de Firebase siga vigente (ADR-65).
 
-La consola escribe además `sessionsRevokedAt` al suspender, y su especificación dice que la API del alumno lo comprueba. La propuesta de ADR-65 es responder 401 `AUTH_REQUIRED` cuando el `auth_time` del token, la hora en que el alumno inició sesión, es anterior a ese campo. Un token renovado conserva su `auth_time`, así que el reintento de la app recibe otro 401 y la app cierra la sesión (ADR-40).
+La consola escribe además `sessionsRevokedAt` al suspender, y su especificación dice que la API del alumno lo comprueba. El módulo responde 401 `AUTH_REQUIRED` cuando el `auth_time` del token, la hora en que el alumno inició sesión, es anterior a ese campo (ADR-65). Un token renovado conserva su `auth_time`, así que el reintento de la app recibe otro 401 y la app cierra la sesión (ADR-40). Las dos comprobaciones usan la misma lectura de `users` que el alta, así que no suman lecturas, y cierran la ventana de una hora de ADR-43. Se implementan con los endpoints.
 
 ---
 
@@ -387,19 +414,27 @@ El percentil de una respuesta nueva se calcula con el histograma de antes de sum
 
 ## 6. Índices compuestos
 
-Están en [`firestore.indexes.json`](../firestore.indexes.json). Los índices de campo simple los crea Firestore solo. Con ellos alcanza para el historial del alumno, que ordena por `answeredAt DESC` dentro de su subcolección, y para el conteo de solicitudes pendientes de la consola. Las consultas que solo usan igualdades tampoco necesitan índice compuesto.
+Están en [`firestore.indexes.json`](../firestore.indexes.json). Cada uno respalda una consulta del módulo o lo declara el modelo de datos de junio, como pide el checklist de `CLAUDE.md`. Los índices de campo simple los crea Firestore solo. Con ellos alcanza para el historial del alumno, que ordena por `answeredAt DESC` dentro de su subcolección, y para el conteo de solicitudes pendientes de la consola. Las consultas que solo usan igualdades tampoco necesitan índice compuesto.
 
 | Colección | Alcance | Campos | Consulta |
 |---|---|---|---|
 | `questions` | Colección | `testId ASC`, `status ASC`, `difficulty ASC`, `randomKey ASC` | `GET /practice/next`: prueba, `published`, dificultad y `randomKey` desde un número al azar, con límite 1 (ADR-62). |
-| `answers` | Grupo de colecciones | `questionId ASC`, `answeredAt DESC` | Respuestas de una pregunta entre todos los alumnos (modelo de junio). Ninguna ruta del módulo la usa todavía: el percentil sale del histograma. |
-| `answers` | Grupo de colecciones | `skillId ASC`, `correct ASC` | Dominio por habilidad entre todos los alumnos (modelo de junio). Ninguna ruta del módulo la usa todavía. |
+| `answers` | Grupo de colecciones | `questionId ASC`, `answeredAt DESC` | Respuestas de una pregunta entre todos los alumnos. Lo declara el modelo de junio. Ninguna ruta del módulo lo usa todavía, porque el percentil sale del histograma (ADR-60). |
+| `answers` | Grupo de colecciones | `skillId ASC`, `correct ASC` | Dominio por habilidad entre todos los alumnos. Lo declara el modelo de junio. Ninguna ruta del módulo lo usa todavía (ADR-60). |
 | `corrections` | Colección | `userId ASC`, `createdAt DESC` | Historial de solicitudes del alumno. |
-| `corrections` | Colección | `state ASC`, `createdAt` ASC y DESC | Cola de la consola filtrada por estado (ADR-61). |
-| `corrections` | Colección | `testId ASC`, `createdAt` ASC y DESC | Cola filtrada por prueba. |
-| `corrections` | Colección | `questionId ASC`, `createdAt` ASC y DESC | Solicitudes sobre una pregunta. |
+| `corrections` | Colección | `state ASC`, `createdAt DESC` | Cola de moderación. Lo declara el modelo de junio, con el nombre `status` (ADR-61). |
 
-Cuando la consola combina filtros, Firestore une los índices de `corrections` porque terminan en el mismo campo de orden. El listado de usuarios de la consola necesita otros índices, que su especificación declara en su propio `firestore.indexes.json` y que este archivo no incluye (ADR-57).
+La consola corre en el proyecto de la empresa, así que sus índices no están en este archivo (ADR-57). Si en la integración se comparte proyecto, se combinan ahí. La cola de recorrecciones necesita estos cinco, además de `(state ASC, createdAt DESC)`:
+
+| Campos | Filtro de la cola |
+|---|---|
+| `state ASC`, `createdAt ASC` | Estado, de la más antigua a la más nueva, que es el orden por defecto |
+| `testId ASC`, `createdAt ASC` | Prueba |
+| `testId ASC`, `createdAt DESC` | Prueba, de la más nueva a la más antigua |
+| `questionId ASC`, `createdAt ASC` | Pregunta |
+| `questionId ASC`, `createdAt DESC` | Pregunta, de la más nueva a la más antigua |
+
+Cuando la consola combina filtros, Firestore une estos índices porque terminan en el mismo campo de orden. El listado de usuarios de la consola necesita otros, que su especificación declara en su propio `firestore.indexes.json`.
 
 ---
 
