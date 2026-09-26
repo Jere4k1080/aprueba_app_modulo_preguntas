@@ -1,6 +1,6 @@
 [
   {
-    "id": "q_demo_lectora_d1",
+    "id": "qst_da7712782b",
     "testId": "lectora",
     "axis": "Localizar",
     "skillId": "sk_demo_lectora_localizar",
@@ -14,17 +14,36 @@
     ],
     "correctAnswer": "C",
     "explanation": "1. La pregunta pide un dato que el texto dice de forma explícita: el requisito para pedir libros a domicilio.\n2. El texto dice: \"Para pedir libros a domicilio basta presentar la cédula de identidad\".\n3. La alternativa A contradice el texto, que aclara que no se cobra inscripción. B y D no aparecen como requisitos.\nVerificación: C es la única alternativa que repite lo que el texto afirma.",
-    "cohortSpeedThresholds": {
-      "p25": 20000,
-      "p50": 35000,
-      "p75": 55000,
-      "p90": 80000
+    "requiredSkillText": "Localizar información explícita",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.906408,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_lectora_001",
+    "id": "qst_080b7064ec",
     "testId": "lectora",
     "axis": "Comprensión lectora",
     "skillId": "sk_lectora_comp_lit",
@@ -38,17 +57,36 @@
     ],
     "correctAnswer": "B",
     "explanation": "1. El fragmento parte con la llegada de la fábrica y lo que trajo: trabajo y luz eléctrica.\n2. Veinte años después muestra las consecuencias: el río contaminado, los sauces desaparecidos y el humo sobre los cerros.\n3. Lo que une ambas partes es que ese progreso tuvo un costo para el ambiente.\nVerificación: A y D describen solo la primera parte del texto, y C es parte del escenario, no lo que el texto quiere mostrar.",
-    "cohortSpeedThresholds": {
-      "p25": 15000,
-      "p50": 25000,
-      "p75": 45000,
-      "p90": 60000
+    "requiredSkillText": "Comprensión de textos literarios",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.257537,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_lectora_d3",
+    "id": "qst_ffc9d70c58",
     "testId": "lectora",
     "axis": "Interpretar",
     "skillId": "sk_demo_lectora_interpretar",
@@ -62,17 +100,36 @@
     ],
     "correctAnswer": "D",
     "explanation": "1. El texto no dice que va a llover: hay que deducirlo de lo que hace Camila.\n2. Guarda el paraguas, se pone botas de goma y pide entrar la ropa colgada. Todas son precauciones ante la lluvia.\n3. La alternativa A contradice esas precauciones, y B y C no tienen apoyo en el texto.\nVerificación: si el pronóstico anunciara sol, ninguna de esas acciones tendría sentido.",
-    "cohortSpeedThresholds": {
-      "p25": 30000,
-      "p50": 50000,
-      "p75": 75000,
-      "p90": 105000
+    "requiredSkillText": "Inferir información implícita",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.247267,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_lectora_d4",
+    "id": "qst_b55f58c63f",
     "testId": "lectora",
     "axis": "Evaluar",
     "skillId": "sk_demo_lectora_evaluar",
@@ -86,17 +143,36 @@
     ],
     "correctAnswer": "A",
     "explanation": "1. El texto presenta un problema: se botan alimentos que todavía se pueden comer.\n2. Lo contrasta con las familias que no cubren su canasta básica.\n3. Cierra con una propuesta introducida por \"deberían\", que busca que el lector la acepte.\nVerificación: un texto que plantea un problema y defiende una solución busca convencer, no informar, describir ni narrar.",
-    "cohortSpeedThresholds": {
-      "p25": 35000,
-      "p50": 60000,
-      "p75": 90000,
-      "p90": 120000
+    "requiredSkillText": "Evaluar el propósito de un texto",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.368158,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m1_d1",
+    "id": "qst_9873643c47",
     "testId": "m1",
     "axis": "Números",
     "skillId": "sk_demo_m1_operatoria",
@@ -110,17 +186,36 @@
     ],
     "correctAnswer": "B",
     "explanation": "1. Primero se resuelven la multiplicación y la división: 4 · 2 = 8 y 6 ÷ 3 = 2.\n2. La expresión queda 3 + 8 − 2.\n3. Luego se suma y se resta de izquierda a derecha: 3 + 8 = 11 y 11 − 2 = 9.\nVerificación: sumar antes de multiplicar da (3 + 4) · 2 − 2 = 12, que es el error de la alternativa C.",
-    "cohortSpeedThresholds": {
-      "p25": 10000,
-      "p50": 20000,
-      "p75": 35000,
-      "p90": 50000
+    "requiredSkillText": "Operatoria con números enteros",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.273425,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m1_d2",
+    "id": "qst_84a0b1e1d1",
     "testId": "m1",
     "axis": "Geometría",
     "skillId": "sk_demo_m1_pitagoras",
@@ -134,17 +229,36 @@
     ],
     "correctAnswer": "A",
     "explanation": "1. En un triángulo rectángulo se cumple hipotenusa² = cateto² + cateto².\n2. 6² + 8² = 36 + 64 = 100.\n3. La hipotenusa mide √100 = 10 cm.\nVerificación: 10² = 100 = 36 + 64, y la hipotenusa resulta mayor que cada cateto, como debe ser.",
-    "cohortSpeedThresholds": {
-      "p25": 15000,
-      "p50": 30000,
-      "p75": 50000,
-      "p90": 70000
+    "requiredSkillText": "Teorema de Pitágoras",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.1732,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m1_d3",
+    "id": "qst_d627ef81f3",
     "testId": "m1",
     "axis": "Álgebra y funciones",
     "skillId": "sk_demo_m1_ecuaciones",
@@ -158,17 +272,36 @@
     ],
     "correctAnswer": "C",
     "explanation": "1. Se suma 5 a ambos lados: 3x = 16 + 5 = 21.\n2. Se dividen ambos lados por 3: x = 21 ÷ 3 = 7.\nVerificación: 3 · 7 − 5 = 21 − 5 = 16.",
-    "cohortSpeedThresholds": {
-      "p25": 25000,
-      "p50": 45000,
-      "p75": 70000,
-      "p90": 100000
+    "requiredSkillText": "Ecuaciones de primer grado",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.403656,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m1_d4",
+    "id": "qst_b72993bcce",
     "testId": "m1",
     "axis": "Probabilidad y estadística",
     "skillId": "sk_demo_m1_probabilidad",
@@ -182,17 +315,36 @@
     ],
     "correctAnswer": "D",
     "explanation": "1. Cada dado tiene 6 resultados, así que hay 6 · 6 = 36 resultados posibles, todos igual de probables.\n2. Los pares que suman 7 son (1, 6), (2, 5), (3, 4), (4, 3), (5, 2) y (6, 1): 6 casos favorables.\n3. La probabilidad es 6/36 = 1/6.\nVerificación: contar solo 3 pares, sin distinguir qué dado da cada número, lleva a 3/36 = 1/12, el error de la alternativa A.",
-    "cohortSpeedThresholds": {
-      "p25": 35000,
-      "p50": 60000,
-      "p75": 90000,
-      "p90": 130000
+    "requiredSkillText": "Probabilidad con la regla de Laplace",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.392111,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m2_d1",
+    "id": "qst_17392f3fb1",
     "testId": "m2",
     "axis": "Números",
     "skillId": "sk_demo_m2_logaritmos",
@@ -206,17 +358,36 @@
     ],
     "correctAnswer": "C",
     "explanation": "1. log₂ 32 es el exponente al que hay que elevar 2 para obtener 32.\n2. 2¹ = 2, 2² = 4, 2³ = 8, 2⁴ = 16 y 2⁵ = 32.\n3. Por lo tanto, log₂ 32 = 5.\nVerificación: 2⁵ = 32. La alternativa A (16) resulta de dividir 32 por 2, que no es lo que pide el logaritmo.",
-    "cohortSpeedThresholds": {
-      "p25": 10000,
-      "p50": 20000,
-      "p75": 35000,
-      "p90": 50000
+    "requiredSkillText": "Logaritmos",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.595239,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m2_d2",
+    "id": "qst_4574d5002b",
     "testId": "m2",
     "axis": "Álgebra y funciones",
     "skillId": "sk_demo_m2_cuadratica",
@@ -230,17 +401,36 @@
     ],
     "correctAnswer": "A",
     "explanation": "1. Se buscan dos números cuyo producto sea 6 y cuya suma sea 5: son 2 y 3.\n2. La ecuación se factoriza como (x − 2)(x − 3) = 0.\n3. Un producto vale cero cuando uno de sus factores vale cero: x = 2 o x = 3.\nVerificación: 2² − 5 · 2 + 6 = 4 − 10 + 6 = 0 y 3² − 5 · 3 + 6 = 9 − 15 + 6 = 0.",
-    "cohortSpeedThresholds": {
-      "p25": 15000,
-      "p50": 30000,
-      "p75": 50000,
-      "p90": 70000
+    "requiredSkillText": "Ecuación de segundo grado",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.865969,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m2_d3",
+    "id": "qst_89abee2144",
     "testId": "m2",
     "axis": "Geometría",
     "skillId": "sk_demo_m2_trigonometria",
@@ -254,17 +444,36 @@
     ],
     "correctAnswer": "D",
     "explanation": "1. El seno de un ángulo agudo es el cateto opuesto dividido por la hipotenusa: sen 30° = cateto opuesto / 10.\n2. Como sen 30° = 1/2, el cateto opuesto mide 10 · 1/2 = 5 cm.\nVerificación: el otro cateto mide 10 · cos 30° = 5√3 cm, y 5² + (5√3)² = 25 + 75 = 100 = 10².",
-    "cohortSpeedThresholds": {
-      "p25": 25000,
-      "p50": 45000,
-      "p75": 70000,
-      "p90": 100000
+    "requiredSkillText": "Razones trigonométricas en el triángulo rectángulo",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.744893,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_m2_d4",
+    "id": "qst_5b6a511857",
     "testId": "m2",
     "axis": "Probabilidad y estadística",
     "skillId": "sk_demo_m2_prob_dependientes",
@@ -278,17 +487,36 @@
     ],
     "correctAnswer": "B",
     "explanation": "1. En la primera extracción hay 3 rojas entre 5 bolitas: la probabilidad es 3/5.\n2. Sin devolver la primera, quedan 2 rojas entre 4 bolitas: la probabilidad es 2/4.\n3. Se multiplican: 3/5 · 2/4 = 6/20 = 3/10.\nVerificación: hay 10 pares posibles de bolitas y 3 de ellos son de dos rojas, así que la probabilidad es 3/10. Si se devolviera la primera bolita se obtendría 3/5 · 3/5 = 9/25, el error de la alternativa A.",
-    "cohortSpeedThresholds": {
-      "p25": 35000,
-      "p50": 60000,
-      "p75": 90000,
-      "p90": 130000
+    "requiredSkillText": "Probabilidad de eventos dependientes",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.45647,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_cien_d1",
+    "id": "qst_89ec0bd93e",
     "testId": "cien",
     "axis": "Biología",
     "skillId": "sk_demo_cien_celula",
@@ -302,17 +530,36 @@
     ],
     "correctAnswer": "B",
     "explanation": "1. La fotosíntesis transforma energía luminosa en energía química y necesita clorofila.\n2. La clorofila se encuentra en los cloroplastos, organelos de las células vegetales y de las algas.\n3. La mitocondria realiza la respiración celular, el ribosoma sintetiza proteínas y la vacuola almacena agua y otras sustancias.\nVerificación: el único organelo de la lista que contiene clorofila es el cloroplasto.",
-    "cohortSpeedThresholds": {
-      "p25": 10000,
-      "p50": 20000,
-      "p75": 35000,
-      "p90": 50000
+    "requiredSkillText": "Estructura y función de la célula",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.819821,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_cien_d2",
+    "id": "qst_50a86416a9",
     "testId": "cien",
     "axis": "Física",
     "skillId": "sk_demo_cien_rapidez",
@@ -326,17 +573,36 @@
     ],
     "correctAnswer": "C",
     "explanation": "1. La rapidez media es la distancia recorrida dividida por el tiempo empleado.\n2. v = 150 km ÷ 2 h = 75 km/h.\nVerificación: a 75 km/h, en 2 horas se recorren 75 · 2 = 150 km.",
-    "cohortSpeedThresholds": {
-      "p25": 15000,
-      "p50": 30000,
-      "p75": 50000,
-      "p90": 70000
+    "requiredSkillText": "Rapidez media",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.723356,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_cien_d3",
+    "id": "qst_1101a72d7c",
     "testId": "cien",
     "axis": "Química",
     "skillId": "sk_demo_cien_masa_molar",
@@ -350,17 +616,36 @@
     ],
     "correctAnswer": "D",
     "explanation": "1. La fórmula CO₂ indica 1 átomo de carbono y 2 de oxígeno.\n2. Masa molar = 1 · 12 + 2 · 16 = 12 + 32 = 44 g/mol.\nVerificación: 28 g/mol correspondería al CO, con un solo oxígeno, y 32 g/mol al O₂.",
-    "cohortSpeedThresholds": {
-      "p25": 25000,
-      "p50": 45000,
-      "p75": 70000,
-      "p90": 100000
+    "requiredSkillText": "Masa molar de compuestos",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.42554,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_cien_d4",
+    "id": "qst_6fa24d8150",
     "testId": "cien",
     "axis": "Física",
     "skillId": "sk_demo_cien_mrua",
@@ -374,17 +659,36 @@
     ],
     "correctAnswer": "A",
     "explanation": "1. En un movimiento uniformemente acelerado que parte del reposo, v = v₀ + a · t, con v₀ = 0.\n2. v = 0 + 3 m/s² · 4 s = 12 m/s.\n3. La masa del carro no interviene: haría falta para calcular la fuerza, no la rapidez.\nVerificación: la aceleración suma 3 m/s de rapidez cada segundo: 3, 6, 9 y 12 m/s al cabo de 4 s.",
-    "cohortSpeedThresholds": {
-      "p25": 35000,
-      "p50": 60000,
-      "p75": 90000,
-      "p90": 130000
+    "requiredSkillText": "Movimiento rectilíneo uniformemente acelerado",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.867334,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_hist_d1",
+    "id": "qst_8995758927",
     "testId": "hist",
     "axis": "Historia",
     "skillId": "sk_demo_hist_independencia",
@@ -398,17 +702,36 @@
     ],
     "correctAnswer": "B",
     "explanation": "1. El 18 de septiembre de 1810 se formó la Primera Junta Nacional de Gobierno, que todavía gobernaba en nombre del rey Fernando VII.\n2. La independencia se proclamó con el Acta de Independencia, que se juró el 12 de febrero de 1818.\n3. 1833 es el año de la Constitución de 1833, y 1879, el del inicio de la Guerra del Pacífico.\nVerificación: lo que se celebra cada 18 de septiembre es la Junta de 1810, no la independencia; por eso 1810 es el error más frecuente.",
-    "cohortSpeedThresholds": {
-      "p25": 10000,
-      "p50": 20000,
-      "p75": 35000,
-      "p90": 50000
+    "requiredSkillText": "Proceso de independencia de Chile",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.889563,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_hist_d2",
+    "id": "qst_f2babea270",
     "testId": "hist",
     "axis": "Sistema económico",
     "skillId": "sk_demo_hist_oferta_demanda",
@@ -422,17 +745,36 @@
     ],
     "correctAnswer": "A",
     "explanation": "1. La ley de la demanda establece una relación inversa entre el precio de un bien y la cantidad que los consumidores quieren comprar.\n2. Si el precio sube y nada más cambia, los consumidores compran menos de ese bien.\nVerificación: en un gráfico, la curva de demanda baja de izquierda a derecha: a mayor precio, menor cantidad demandada.",
-    "cohortSpeedThresholds": {
-      "p25": 15000,
-      "p50": 30000,
-      "p75": 50000,
-      "p90": 70000
+    "requiredSkillText": "Oferta, demanda y precios",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.184226,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_hist_d3",
+    "id": "qst_a61c41a428",
     "testId": "hist",
     "axis": "Formación ciudadana",
     "skillId": "sk_demo_hist_estado",
@@ -446,17 +788,36 @@
     ],
     "correctAnswer": "D",
     "explanation": "1. El artículo 52 de la Constitución entrega a la Cámara de Diputadas y Diputados la atribución exclusiva de fiscalizar los actos del Gobierno.\n2. Para eso puede adoptar acuerdos, citar a ministros y crear comisiones especiales investigadoras.\n3. El artículo 53 prohíbe expresamente al Senado fiscalizar los actos del Gobierno.\nVerificación: el Tribunal Constitucional controla que las leyes se ajusten a la Constitución y la Corte Suprema encabeza el Poder Judicial; ninguno fiscaliza al Gobierno en el sentido del artículo 52.",
-    "cohortSpeedThresholds": {
-      "p25": 25000,
-      "p50": 45000,
-      "p75": 70000,
-      "p90": 100000
+    "requiredSkillText": "Organización del Estado de Chile",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.552721,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   },
   {
-    "id": "q_demo_hist_d4",
+    "id": "qst_989222c2fc",
     "testId": "hist",
     "axis": "Geografía",
     "skillId": "sk_demo_hist_poblacion",
@@ -470,13 +831,32 @@
     ],
     "correctAnswer": "C",
     "explanation": "1. La tasa bruta de natalidad es el número de nacimientos de un año por cada 1.000 habitantes.\n2. Tasa = (150.000 ÷ 10.000.000) · 1.000.\n3. 150.000 ÷ 10.000.000 = 0,015, y 0,015 · 1.000 = 15.\nVerificación: 15 nacimientos por cada 1.000 habitantes, en 10.000 grupos de 1.000, dan 15 · 10.000 = 150.000 nacimientos. Olvidar multiplicar por 1.000 deja 0,015, el error de la alternativa B.",
-    "cohortSpeedThresholds": {
-      "p25": 35000,
-      "p50": 60000,
-      "p75": 90000,
-      "p90": 130000
+    "requiredSkillText": "Dinámica de la población",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.771726,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
     },
-    "status": "active",
-    "isDemo": true
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
   }
 ]

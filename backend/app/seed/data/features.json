@@ -1,0 +1,12 @@
+[
+  {
+    "id": "f2",
+    "key": "mock_mode",
+    "icon": "📝",
+    "name": {
+      "es": "Modo facsímil (ensayos)",
+      "en": "Mock exam mode"
+    },
+    "order": 2
+  }
+]

@@ -249,7 +249,7 @@ cp .env.example .env
 .venv/bin/python -m app        # API en http://127.0.0.1:4000/api/v1
 ```
 
-En Windows el intérprete es `.venv/Scripts/python.exe`. [`backend/README.md`](backend/README.md) trae la instalación con pip, las variables de entorno, las pruebas y la imagen de Docker.
+El seed necesita en `.env` los UID de las dos cuentas de demostración, `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID` (ADR-58). En Windows el intérprete es `.venv/Scripts/python.exe`. [`backend/README.md`](backend/README.md) trae la instalación con pip, las variables de entorno, las pruebas y la imagen de Docker.
 
 ### Configuración
 
@@ -335,7 +335,7 @@ Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión e
 
 ### Datos de prueba
 
-`SEED_ALLOW_REMOTE` no se define en Vercel. Para cargar el seed en el proyecto real se ejecuta `.venv/bin/python -m app.seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque pydantic-settings carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
+`SEED_ALLOW_REMOTE` no se define en Vercel. Para cargar el seed en el proyecto real se ejecuta `.venv/bin/python -m app.seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true`, `SEED_DEMO_UID`, `SEED_DEMO_NEW_UID` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque pydantic-settings carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo.
 
 ---
 

@@ -87,9 +87,9 @@ Queda en `127.0.0.1:8080`, que es el valor de `FIRESTORE_EMULATOR_HOST` en `.env
 .venv/bin/python -m app.seed
 ```
 
-El seed lee los JSON de `app/seed/data/` y escribe `tests`, `skills`, `questions`, `users`, `answers` y `corrections`, más `users/usr_demo/medalLedger` y `users/{uid}/state/practice`. Usa IDs fijos con `set()`, así que otra corrida reescribe los mismos documentos. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). `quota.date` y `lastActiveDate` toman la fecha del día en `QUOTA_RESET_TIMEZONE`. Los esquemas están en [`seed/README.md`](../seed/README.md).
+El seed lee los JSON de `app/seed/data/` y escribe `plans`, `features`, `tests`, `skills`, `questions`, `users`, `medalTransactions` y `corrections`, más las subcolecciones `answers`, `skillMastery` y `state/practice` de cada alumno. Necesita `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID`, los UID de Firebase de `aprueba@demo.cl` y `aprueba2@demo.cl`, que están en la consola de Firebase, en Authentication. Con ellos crea `users/usr_<UID>` con `new_user()`, la misma función del alta (ADR-58 y ADR-66). Escribe todo en un solo lote y con IDs fijos, así que otra corrida reescribe los mismos documentos. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14), y `quota.date` toma la fecha del día en `QUOTA_RESET_TIMEZONE`. Lo que carga, con ejemplos, está en [`seed/README.md`](../seed/README.md).
 
-Sin `FIRESTORE_EMULATOR_HOST` el seed exige `SEED_ALLOW_REMOTE=true`. Si falta, termina con código 1 antes de abrir Firestore (ADR-22). Para el proyecto real se corre desde `backend/`, porque pydantic-settings lee el `.env` del directorio actual. `FIREBASE_SERVICE_ACCOUNT_BASE64` se define solo para esa ejecución, con la cuenta de servicio leída desde un JSON fuera del repositorio.
+Sin `FIRESTORE_EMULATOR_HOST` el seed exige `SEED_ALLOW_REMOTE=true`. Si falta, termina con código 1 antes de abrir Firestore (ADR-22). Lo mismo pasa si falta un UID o si con el prefijo `usr_` no cabe en el patrón de la administración. Para el proyecto real se corre desde `backend/`, porque pydantic-settings lee el `.env` del directorio actual. `FIREBASE_SERVICE_ACCOUNT_BASE64` se define solo para esa ejecución, con la cuenta de servicio leída desde un JSON fuera del repositorio.
 
 ## Servidor
 
@@ -124,6 +124,8 @@ Fuera de producción, Swagger queda en `/api/v1/docs` y el esquema en `/api/v1/o
 | `ALLOWED_ORIGINS` | vacío | Orígenes exactos separados por comas (ADR-19) |
 | `ALLOWED_ORIGIN_PATTERN` | sin valor | Expresión regular para las vistas previas de la app web |
 | `SEED_ALLOW_REMOTE` | `false` | Habilita el seed fuera del emulador (ADR-22) |
+| `SEED_DEMO_UID` | sin valor | UID de Firebase de `aprueba@demo.cl`. Lo exige el seed (ADR-58) |
+| `SEED_DEMO_NEW_UID` | sin valor | UID de Firebase de `aprueba2@demo.cl`. Lo exige el seed (ADR-58) |
 
 Una variable definida pero vacía cuenta como no definida.
 

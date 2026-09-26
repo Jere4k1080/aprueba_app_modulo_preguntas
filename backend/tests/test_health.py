@@ -19,7 +19,7 @@ import app.seed as seed
 from app.core.config import get_settings
 from app.core.errors import ERROR_STATUS, MESSAGES, ApiError
 from app.main import app, create_app
-from app.services.questions import calculate_cohort_percentile, sanitize_question
+from app.services.questions import ELAPSED_BUCKETS, calculate_cohort_percentile, sanitize_question
 
 client = TestClient(app)
 
@@ -238,48 +238,66 @@ def test_09_seed_remoto_exige_seed_allow_remote(monkeypatch):
 
 
 def test_10_banco_de_demostracion_consistente():
-    tests, skills, questions = seed.load("tests"), seed.load("skills"), seed.load("questions")
-    users, practice_states = seed.load("users"), seed.load("practice_states")
+    tests, skills, questions, plans = seed.load("tests"), seed.load("skills"), seed.load("questions"), seed.load("plans")
+    users, answers, corrections = seed.load("users"), seed.load("answers"), seed.load("corrections")
 
-    test_ids = {t["id"] for t in tests}
+    test_by_id = {t["id"]: t for t in tests}
     skill_by_id = {s["id"]: s for s in skills}
-    question_ids = {q["id"] for q in questions}
-    assert len(skill_by_id) == len(skills), "Hay IDs de habilidades repetidos"
-    assert len(question_ids) == len(questions), "Hay IDs de preguntas repetidos"
+    q_by_id = {q["id"]: q for q in questions}
+    assert (len(test_by_id), len(skill_by_id), len(q_by_id)) == (len(tests), len(skills), len(questions)), "IDs repetidos"
+    for t in tests:
+        assert t["axes"] and t["active"] and (t["countryId"], t["examId"]) == ("cl", "cl_paes"), f"{t['id']}: prueba incompleta"
+        assert t["nameLower"] == t["label"].lower(), f"{t['id']}: nameLower no sale de label"
+    assert sorted(t["order"] for t in tests) == list(range(1, len(tests) + 1)), "order repetido o con saltos"
     for s in skills:
-        assert s["isDemo"] and s["testId"] in test_ids, f"{s['id']}: marca de demostración o prueba inválida"
-        for p in s["prerequisiteIds"]:
+        assert s["testId"] in test_by_id and s["axis"] in test_by_id[s["testId"]]["axes"], f"{s['id']}: prueba o eje inválido"
+        assert 1 <= s["level"] <= s["maxLevel"], f"{s['id']}: nivel fuera de rango"
+        for p in s["prerequisites"]:
             assert p in skill_by_id and p != s["id"], f"{s['id']}: prerrequisito inválido {p}"
 
+    vacias = {"timesAnswered": 0, "timesCorrect": 0, "sumElapsedMs": 0,
+              "elapsedBuckets": dict.fromkeys((tramo for tramo, _ in ELAPSED_BUCKETS), 0)}
     celdas = set()
     for q in questions:
-        assert q["isDemo"] and q["testId"] in test_ids and q["difficulty"] in ("d1", "d2", "d3", "d4"), \
-            f"{q['id']}: marca, prueba o dificultad inválida"
-        assert 4 <= len(q["options"]) <= 5, f"{q['id']}: debe tener 4 o 5 alternativas"
-        assert len(set(q["options"])) == len(q["options"]), f"{q['id']}: alternativas repetidas"
+        assert re.fullmatch(r"qst_[0-9a-f]{10}", q["id"]), f"{q['id']}: ID fuera del formato qst_ de la administración"
+        assert q["testId"] in test_by_id and q["axis"] in test_by_id[q["testId"]]["axes"], f"{q['id']}: prueba o eje inválido"
+        assert q["difficulty"] in ("d1", "d2", "d3", "d4"), f"{q['id']}: dificultad inválida"
+        assert 4 <= len(q["options"]) <= 5 and len(set(q["options"])) == len(q["options"]), f"{q['id']}: alternativas inválidas"
         assert q["correctAnswer"] in "ABCDE"[:len(q["options"])], f"{q['id']}: correctAnswer fuera de las alternativas"
-        assert skill_by_id.get(q["skillId"], {}).get("testId") == q["testId"], \
-            f"{q['id']}: skillId inexistente o de otra prueba"
-        t = q["cohortSpeedThresholds"]
-        assert t["p25"] < t["p50"] < t["p75"] < t["p90"], f"{q['id']}: umbrales de rapidez no crecientes"
-        assert q["explanation"], f"{q['id']}: falta la explicación"
+        assert skill_by_id.get(q["skillId"], {}).get("testId") == q["testId"], f"{q['id']}: skillId inexistente o de otra prueba"
+        assert q["requiredSkillText"] == skill_by_id[q["skillId"]]["name"], f"{q['id']}: requiredSkillText distinto de la habilidad"
+        # La administración corrige explanation como texto de 10 a 4000 caracteres.
+        assert isinstance(q["explanation"], str) and 10 <= len(q["explanation"]) <= 4000, f"{q['id']}: explicación inválida"
+        # El generador exige que published implique approved.
+        assert (q["status"], q["reviewStatus"]) == ("published", "approved"), f"{q['id']}: publicada sin aprobar"
+        assert (q["countryId"], q["examId"], q["origin"], q["version"], q["source"]) == ("cl", "cl_paes", "manual", 1, "seed_demo")
+        assert 0 <= q["randomKey"] < 1 and q["flagCount"] == 0 and q["stats"] == vacias, f"{q['id']}: estado inicial inválido"
         celdas.add(f"{q['testId']}/{q['difficulty']}")
     assert len(celdas) == 20, "Faltan preguntas en alguna combinación de prueba y dificultad"
+    assert len({q["randomKey"] for q in questions}) == len(questions), "randomKey repetido"
 
-    user_ids = {u["id"] for u in users}
-    assert set(practice_states) <= user_ids, "Estado de práctica sin usuario"
+    assert [p["id"] for p in plans] == ["free", "uni", "all"], "faltan los planes de sistema de la administración"
+    for p in plans:
+        assert set(p["name"]) == {"es", "en"} and p["system"] is True and p["currency"] in ("USD", "CLP"), f"{p['id']}: forma inválida"
+        assert isinstance(p["limits"]["qDay"], int) and p["limits"]["qDay"] >= 0, f"{p['id']}: qDay inválido"
+        assert all(isinstance(p["badges"][k], int) for k in ("login", "purchase", "correct")), f"{p['id']}: badges inválidos"
+    assert plans[0]["limits"]["qDay"] > 0, "el plan gratuito necesita una base de cuota"
+
+    assert sorted(u["role"] for u in users) == ["demo", "nuevo"]
     for u in users:
-        quota = u["quota"]
-        assert all(t in test_ids for t in u["selectedTests"]), f"{u['id']}: prueba seleccionada inexistente"
-        assert u["practiceFormat"] in ("random", "facsim") and u["difficulty"] in ("d1", "d2", "d3", "d4"), \
-            f"{u['id']}: preferencias inválidas"
-        assert quota["used"] <= quota["max"] and all(
-            isinstance(quota[b], bool) for b in ("bonusSchool", "bonusAddress", "unlimited")), f"{u['id']}: cuota inválida"
-        respondidas = practice_states.get(u["id"], {}).get("answeredQuestionIds", [])
-        assert all(i in question_ids for i in respondidas), f"{u['id']}: responde preguntas inexistentes"
-        pendientes = [q for q in questions if q["testId"] in u["selectedTests"] and q["id"] not in respondidas]
-        assert pendientes, f"{u['id']}: no le quedan preguntas por responder en sus pruebas"
-
-    nuevo = next(u for u in users if u["id"] == "usr_demo_nuevo")
-    assert nuevo["quota"] == {"used": 0, "max": 10, "bonusSchool": False, "bonusAddress": False, "unlimited": False}
-    assert practice_states["usr_demo_nuevo"]["answeredQuestionIds"] == []
+        # El resto del documento lo pone el alta (ADR-66); aquí va solo la cuenta y lo propio de la demo.
+        assert set(u) == {"role", "email", "signInProvider", "locale", "selectedTests"}, f"{u['role']}: campos de más"
+        assert u["signInProvider"] == "password" and u["locale"] in ("es", "en"), f"{u['role']}: cuenta inválida"
+        assert all(t in test_by_id for t in u["selectedTests"]), f"{u['role']}: prueba seleccionada inexistente"
+    assert set(answers) == {"demo"}, "solo aprueba@demo.cl tiene respuestas; aprueba2@demo.cl parte de cero"
+    demo = next(u for u in users if u["role"] == "demo")
+    respondidas = {a["questionId"] for a in answers["demo"]}
+    assert len(respondidas) == len(answers["demo"]), "una pregunta respondida dos veces"
+    for a in answers["demo"]:
+        q = q_by_id[a["questionId"]]
+        assert q["testId"] in demo["selectedTests"] and a["selected"] in "ABCDE"[:len(q["options"])] and a["elapsedMs"] > 0
+    assert any(q["testId"] in demo["selectedTests"] and q["id"] not in respondidas for q in questions), \
+        "a aprueba@demo.cl no le quedan preguntas por responder"
+    for c in corrections:
+        assert re.fullmatch(r"cor_[0-9a-f]{10}", c["id"]) and c["role"] == "demo", f"{c['id']}: ID o cuenta inválida"
+        assert c["questionId"] in respondidas and c["proposedAnswer"] in "ABCDE" and c["reason"], f"{c['id']}: solicitud inválida"

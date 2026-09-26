@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 
 import firebase_admin
 from firebase_admin import credentials as firebase_credentials
@@ -16,12 +17,24 @@ class COL:
     tests = "tests"
     skills = "skills"
     questions = "questions"
-    answers = "answers"
     corrections = "corrections"
     users = "users"
-    # Subcolecciones de users/{uid}
-    medal_ledger = "medalLedger"
+    plans = "plans"
+    features = "features"
+    medal_transactions = "medalTransactions"
+    # Subcolecciones de users/{usr_<UID>}
+    answers = "answers"
+    skill_mastery = "skillMastery"
     state = "state"
+
+
+# La administración valida los IDs de users con este patrón (GET y PATCH /admin/users/{id}).
+USER_ID_PATTERN = re.compile(r"^usr_[A-Za-z0-9_]{1,36}$")
+
+
+def user_doc_id(uid: str) -> str:
+    """ID del documento de users para un UID de Firebase: el formato usr_* de la administración (ADR-58)."""
+    return f"usr_{uid}"
 
 
 _client: AsyncClient | None = None

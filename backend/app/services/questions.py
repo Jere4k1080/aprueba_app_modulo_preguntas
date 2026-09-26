@@ -1,4 +1,19 @@
-"""Capa de servicios de preguntas: regla de integridad (ADR-12) y percentil precalculado (ADR-10)."""
+"""Capa de servicios de preguntas: regla de integridad (ADR-12) y percentil de cohorte.
+
+calculate_cohort_percentile usa los umbrales de ADR-10, que ADR-63 reemplaza por el histograma de
+questions.stats.elapsedBuckets; el cálculo con el histograma llega en la iteración 4."""
+
+# Tramos de questions.stats.elapsedBuckets (ADR-63). Cada tramo cuenta las respuestas con tiempo menor
+# que su límite en segundos y mayor o igual que el límite anterior; gte300 no tiene límite superior.
+ELAPSED_BUCKETS = (("lt10", 10), ("lt20", 20), ("lt30", 30), ("lt45", 45), ("lt60", 60),
+                   ("lt90", 90), ("lt120", 120), ("lt180", 180), ("lt300", 300), ("gte300", None))
+
+
+def elapsed_bucket(elapsed_ms: int) -> str:
+    """Nombre del tramo del histograma que corresponde a un tiempo de respuesta."""
+    for tramo, limite in ELAPSED_BUCKETS:
+        if limite is None or elapsed_ms < limite * 1000:
+            return tramo
 
 
 def sanitize_question(question: dict | None) -> dict | None:

@@ -1,13 +1,12 @@
 [
   {
     "id": "sk_demo_lectora_localizar",
-    "name": "Localizar información explícita",
     "testId": "lectora",
-    "domain": "Localizar",
+    "name": "Localizar información explícita",
+    "axis": "Localizar",
     "level": 1,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "pdf",
@@ -15,20 +14,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_lectora_comp_lit",
-    "name": "Comprensión de textos literarios",
     "testId": "lectora",
-    "domain": "Comprensión lectora",
+    "name": "Comprensión de textos literarios",
+    "axis": "Comprensión lectora",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_lectora_localizar"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "pdf",
@@ -36,20 +33,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_lectora_interpretar",
-    "name": "Inferir información implícita",
     "testId": "lectora",
-    "domain": "Interpretar",
+    "name": "Inferir información implícita",
+    "axis": "Interpretar",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_lectora_localizar"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "pdf",
@@ -57,20 +52,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_lectora_evaluar",
-    "name": "Evaluar el propósito de un texto",
     "testId": "lectora",
-    "domain": "Evaluar",
+    "name": "Evaluar el propósito de un texto",
+    "axis": "Evaluar",
     "level": 3,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_lectora_interpretar"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "pdf",
@@ -78,18 +71,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m1_operatoria",
-    "name": "Operatoria con números enteros",
     "testId": "m1",
-    "domain": "Números",
+    "name": "Operatoria con números enteros",
+    "axis": "Números",
     "level": 1,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "video",
@@ -103,20 +94,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m1_pitagoras",
-    "name": "Teorema de Pitágoras",
     "testId": "m1",
-    "domain": "Geometría",
+    "name": "Teorema de Pitágoras",
+    "axis": "Geometría",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_operatoria"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -130,20 +119,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m1_ecuaciones",
-    "name": "Ecuaciones de primer grado",
     "testId": "m1",
-    "domain": "Álgebra y funciones",
+    "name": "Ecuaciones de primer grado",
+    "axis": "Álgebra y funciones",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_operatoria"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -157,20 +144,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m1_probabilidad",
-    "name": "Probabilidad con la regla de Laplace",
     "testId": "m1",
-    "domain": "Probabilidad y estadística",
+    "name": "Probabilidad con la regla de Laplace",
+    "axis": "Probabilidad y estadística",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_operatoria"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -184,20 +169,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m2_logaritmos",
-    "name": "Logaritmos",
     "testId": "m2",
-    "domain": "Números",
+    "name": "Logaritmos",
+    "axis": "Números",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_operatoria"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -211,20 +194,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m2_cuadratica",
-    "name": "Ecuación de segundo grado",
     "testId": "m2",
-    "domain": "Álgebra y funciones",
+    "name": "Ecuación de segundo grado",
+    "axis": "Álgebra y funciones",
     "level": 3,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_ecuaciones"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -238,20 +219,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m2_trigonometria",
-    "name": "Razones trigonométricas en el triángulo rectángulo",
     "testId": "m2",
-    "domain": "Geometría",
+    "name": "Razones trigonométricas en el triángulo rectángulo",
+    "axis": "Geometría",
     "level": 3,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_pitagoras"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -265,20 +244,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_m2_prob_dependientes",
-    "name": "Probabilidad de eventos dependientes",
     "testId": "m2",
-    "domain": "Probabilidad y estadística",
+    "name": "Probabilidad de eventos dependientes",
+    "axis": "Probabilidad y estadística",
     "level": 3,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_m1_probabilidad"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -292,18 +269,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_cien_celula",
-    "name": "Estructura y función de la célula",
     "testId": "cien",
-    "domain": "Biología",
+    "name": "Estructura y función de la célula",
+    "axis": "Biología",
     "level": 1,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "video",
@@ -317,18 +292,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_cien_rapidez",
-    "name": "Rapidez media",
     "testId": "cien",
-    "domain": "Física",
+    "name": "Rapidez media",
+    "axis": "Física",
     "level": 1,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "video",
@@ -342,20 +315,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_cien_mrua",
-    "name": "Movimiento rectilíneo uniformemente acelerado",
     "testId": "cien",
-    "domain": "Física",
+    "name": "Movimiento rectilíneo uniformemente acelerado",
+    "axis": "Física",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_cien_rapidez"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "video",
@@ -369,18 +340,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_cien_masa_molar",
-    "name": "Masa molar de compuestos",
     "testId": "cien",
-    "domain": "Química",
+    "name": "Masa molar de compuestos",
+    "axis": "Química",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "video",
@@ -394,18 +363,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_hist_independencia",
-    "name": "Proceso de independencia de Chile",
     "testId": "hist",
-    "domain": "Historia",
+    "name": "Proceso de independencia de Chile",
+    "axis": "Historia",
     "level": 1,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "pdf",
@@ -419,18 +386,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_hist_oferta_demanda",
-    "name": "Oferta, demanda y precios",
     "testId": "hist",
-    "domain": "Sistema económico",
+    "name": "Oferta, demanda y precios",
+    "axis": "Sistema económico",
     "level": 1,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "video",
@@ -444,20 +409,18 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_hist_estado",
-    "name": "Organización del Estado de Chile",
     "testId": "hist",
-    "domain": "Formación ciudadana",
+    "name": "Organización del Estado de Chile",
+    "axis": "Formación ciudadana",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [
+    "prerequisites": [
       "sk_demo_hist_independencia"
     ],
-    "status": "active",
     "resources": [
       {
         "type": "pdf",
@@ -471,18 +434,16 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   },
   {
     "id": "sk_demo_hist_poblacion",
-    "name": "Dinámica de la población",
     "testId": "hist",
-    "domain": "Geografía",
+    "name": "Dinámica de la población",
+    "axis": "Geografía",
     "level": 2,
     "maxLevel": 4,
-    "prerequisiteIds": [],
-    "status": "active",
+    "prerequisites": [],
     "resources": [
       {
         "type": "pdf",
@@ -496,7 +457,6 @@
         "url": "https://demre.cl/",
         "source": "DEMRE"
       }
-    ],
-    "isDemo": true
+    ]
   }
 ]
