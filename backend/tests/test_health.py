@@ -286,7 +286,7 @@ def test_10_banco_de_demostracion_consistente():
     assert sorted(u["role"] for u in users) == ["demo", "nuevo"]
     for u in users:
         # El resto del documento lo pone el alta (ADR-66); aquí va solo la cuenta y lo propio de la demo.
-        assert set(u) == {"role", "email", "signInProvider", "locale", "selectedTests"}, f"{u['role']}: campos de más"
+        assert set(u) == {"role", "email", "name", "signInProvider", "locale", "selectedTests"}, f"{u['role']}: campos de más"
         assert u["signInProvider"] == "password" and u["locale"] in ("es", "en"), f"{u['role']}: cuenta inválida"
         assert all(t in test_by_id for t in u["selectedTests"]), f"{u['role']}: prueba seleccionada inexistente"
     assert set(answers) == {"demo"}, "solo aprueba@demo.cl tiene respuestas; aprueba2@demo.cl parte de cero"
