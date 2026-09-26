@@ -22,7 +22,8 @@ for base, _dirs, files in os.walk(ROOT):
         continue
     for f in files:
         if f.endswith('.dart'):
-            dart_files.append(os.path.join(base, f))
+            # normpath: en Windows os.walk entrega '\' y las rutas armadas abajo mezclaban '/'.
+            dart_files.append(os.path.normpath(os.path.join(base, f)))
 
 sources = {p: open(p, encoding='utf8').read() for p in dart_files}
 problems = []
@@ -33,7 +34,7 @@ def rel(p):
     return os.path.relpath(p, ROOT).replace('\\', '/')
 
 # ── 1. Claves de l10n ────────────────────────────────────────────────────────
-strings_path = os.path.join(LIB, 'core/l10n/app_strings.dart')
+strings_path = os.path.normpath(os.path.join(LIB, 'core', 'l10n', 'app_strings.dart'))
 strings_src = sources[strings_path]
 es_part, en_part = strings_src.split("    'en': {", 1)
 KEY_RE = r'''\'([a-z0-9_]+)\':\s*['"]'''
@@ -58,7 +59,7 @@ for k in only_en:
     fail(f"l10n: '{k}' existe en en pero no en es")
 
 # ── 2. Endpoints ─────────────────────────────────────────────────────────────
-endpoints_src = sources[os.path.join(LIB, 'core/network/endpoints.dart')]
+endpoints_src = sources[os.path.normpath(os.path.join(LIB, 'core', 'network', 'endpoints.dart'))]
 declared_endpoints = set(re.findall(r"static (?:const|String)\s+(\w+)", endpoints_src))
 for p, src in sources.items():
     if p.endswith('endpoints.dart'):
