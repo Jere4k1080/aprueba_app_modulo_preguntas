@@ -285,10 +285,10 @@ def test_10_banco_de_demostracion_consistente():
 
     assert sorted(u["role"] for u in users) == ["demo", "nuevo"]
     for u in users:
-        assert u["plan"] in {p["id"] for p in plans} and u["state"] == "active", f"{u['role']}: plan o estado inválido"
-        assert re.fullmatch(r"[A-Z]{2}", u["country"]) and u["locale"] in ("es", "en"), f"{u['role']}: país o idioma inválido"
+        # El resto del documento lo pone el alta (ADR-66); aquí va solo la cuenta y lo propio de la demo.
+        assert set(u) == {"role", "email", "signInProvider", "locale", "selectedTests"}, f"{u['role']}: campos de más"
+        assert u["signInProvider"] == "password" and u["locale"] in ("es", "en"), f"{u['role']}: cuenta inválida"
         assert all(t in test_by_id for t in u["selectedTests"]), f"{u['role']}: prueba seleccionada inexistente"
-        assert u["practiceFormat"] in ("random", "facsim") and u["difficulty"] in ("d1", "d2", "d3", "d4")
     assert set(answers) == {"demo"}, "solo aprueba@demo.cl tiene respuestas; aprueba2@demo.cl parte de cero"
     demo = next(u for u in users if u["role"] == "demo")
     respondidas = {a["questionId"] for a in answers["demo"]}

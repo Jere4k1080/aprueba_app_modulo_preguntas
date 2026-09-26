@@ -14,6 +14,7 @@ import app.seed as seed
 from app.core.config import get_settings
 from app.db.firestore import USER_ID_PATTERN, user_doc_id
 from app.services.questions import ELAPSED_BUCKETS, elapsed_bucket
+from app.services.users import TIERS, new_user, quota_max
 
 # UID ficticios con el largo de un UID de Firebase (28 caracteres).
 UIDS = {"demo": "demoUid000000000000000000001", "nuevo": "demoUid000000000000000000002"}
@@ -42,6 +43,22 @@ def test_tramos_del_histograma():
              299_999: "lt300", 300_000: "gte300", 3_600_000: "gte300"}
     for ms, tramo in casos.items():
         assert elapsed_bucket(ms) == tramo, f"{ms} ms"
+
+
+def test_alta_de_un_alumno():
+    free = {"limits": {"qDay": 10}}
+    u = new_user({"email": "Ana.Perez@Correo.cl", "firebase": {"sign_in_provider": "google.com"}}, "en", free, "2026-09-26")
+    # Sin nombre en el token, el nombre sale del correo (ADR-66).
+    assert (u["name"], u["nameLower"], u["emailLower"]) == ("Ana.Perez", "ana.perez", "ana.perez@correo.cl")
+    assert (u["authProvider"], u["locale"], u["plan"], u["state"], u["country"]) == ("google", "en", "free", "active", "CL")
+    assert u["quota"] == {"used": 0, "max": 10, "date": "2026-09-26", "bonusSchool": False, "bonusAddress": False,
+                          "unlimited": False}
+    assert u["medalWallet"] == dict.fromkeys(TIERS, 0) and u["badgesTotal"] == 0 and u["selectedTests"] == []
+    assert not {"avatarColor", "theme", "planStatus", "dailyReminder"} & set(u), "campos de módulos fuera del alcance"
+    assert new_user({"email": "a@b.cl", "name": "Ana"}, "es", free, "x")["name"] == "Ana"
+    ilimitado = new_user({"email": "a@b.cl"}, "es", {"limits": {"qDay": 0}}, "x")["quota"]
+    assert (ilimitado["max"], ilimitado["unlimited"]) == (0, True)
+    assert quota_max(free, True, True) == 20 and quota_max({"limits": {"qDay": 15}}, True, True) == 20, "tope de 20"
 
 
 def test_seed_exige_los_uid_de_demostracion(monkeypatch):
@@ -81,6 +98,13 @@ def test_documentos_del_seed_para_la_administracion():
         assert set(u["medalWallet"]) == {"bronze", "silver", "gold", "diamond", "platinum"}
         assert u["badgesTotal"] == sum(u["medalWallet"].values())
         assert u["quota"]["max"] == plans[u["plan"]]["limits"]["qDay"] and u["quota"]["date"] == "2026-09-25"
+
+    # El seed crea a los alumnos con la función del alta y agrega solo lo propio de la demo (ADR-66):
+    # aprueba2@demo.cl, que no respondió nada, es el alta más sus pruebas elegidas.
+    cuenta = next(u for u in seed.load("users") if u["role"] == "nuevo")
+    alta = new_user({"email": cuenta["email"], "firebase": {"sign_in_provider": cuenta["signInProvider"]}},
+                    cuenta["locale"], plans["free"], "2026-09-25")
+    assert por_ruta[f"users/{nuevo}"] == {**alta, "selectedTests": cuenta["selectedTests"]}
 
     respuestas = {r: d for r, d in docs if r.startswith(f"users/{demo}/answers/")}
     assert len(respuestas) == por_ruta[f"users/{demo}"]["quota"]["used"] == 5

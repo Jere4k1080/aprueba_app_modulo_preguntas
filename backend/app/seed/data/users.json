@@ -1,28 +1,9 @@
 [
   {
     "role": "demo",
-    "name": "Estudiante Demo",
     "email": "aprueba@demo.cl",
-    "authProvider": "password",
+    "signInProvider": "password",
     "locale": "es",
-    "country": "CL",
-    "plan": "free",
-    "state": "active",
-    "subscriptionId": null,
-    "school": null,
-    "region": null,
-    "age": null,
-    "practiceFormat": "random",
-    "difficulty": "d1",
-    "avatarColor": "#1A365D",
-    "theme": "light",
-    "planStatus": "none",
-    "dailyReminder": false,
-    "quota": {
-      "bonusSchool": false,
-      "bonusAddress": false
-    },
-    "streak": 1,
     "selectedTests": [
       "lectora",
       "m1",
@@ -33,28 +14,9 @@
   },
   {
     "role": "nuevo",
-    "name": "Estudiante Nuevo",
     "email": "aprueba2@demo.cl",
-    "authProvider": "password",
+    "signInProvider": "password",
     "locale": "es",
-    "country": "CL",
-    "plan": "free",
-    "state": "active",
-    "subscriptionId": null,
-    "school": null,
-    "region": null,
-    "age": null,
-    "practiceFormat": "random",
-    "difficulty": "d1",
-    "avatarColor": "#1A365D",
-    "theme": "light",
-    "planStatus": "none",
-    "dailyReminder": false,
-    "quota": {
-      "bonusSchool": false,
-      "bonusAddress": false
-    },
-    "streak": 0,
     "selectedTests": [
       "lectora",
       "m1"

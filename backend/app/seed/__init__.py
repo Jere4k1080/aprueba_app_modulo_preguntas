@@ -2,7 +2,8 @@
 
 Los esquemas están en docs/diccionario_de_datos.md y seed/README.md. Las fechas usan la hora del
 servidor de Firestore, no el reloj local (ADR-14). Los UID de las dos cuentas de demostración llegan
-por SEED_DEMO_UID y SEED_DEMO_NEW_UID, y sus documentos se llaman usr_ más el UID (ADR-58).
+por SEED_DEMO_UID y SEED_DEMO_NEW_UID, y sus documentos se llaman usr_ más el UID (ADR-58). Esos
+documentos salen de new_user(), la misma función del alta (ADR-66).
 """
 import copy
 import hashlib
@@ -15,12 +16,12 @@ from zoneinfo import ZoneInfo
 
 from google.cloud.firestore import SERVER_TIMESTAMP
 
-from app.core.config import ADDRESS_BONUS, QUOTA_CAP, SCHOOL_BONUS, get_settings
+from app.core.config import get_settings
 from app.db.firestore import COL, USER_ID_PATTERN, get_db, user_doc_id
 from app.services.questions import elapsed_bucket
+from app.services.users import new_user
 
 DATA = Path(__file__).parent / "data"
-TIERS = ("bronze", "silver", "gold", "diamond", "platinum")
 # Cuenta de demostración -> variable de entorno con su UID
 ROLES = {"demo": "SEED_DEMO_UID", "nuevo": "SEED_DEMO_NEW_UID"}
 # Percentil que recibe una respuesta sin cohorte previa en el histograma (ADR-63)
@@ -77,9 +78,14 @@ def build_documents(uids: dict[str, str], today: str) -> list[tuple[str, dict]]:
     for u in users:
         role = u["role"]
         doc_id = user_doc_id(uids[role])
-        names[role] = u["name"]
-        plan = plan_by_id[u["plan"]]
-        wallet = dict.fromkeys(TIERS, 0)
+        # El alumno lo crea la misma función del alta, como con el token de la cuenta, que no trae nombre.
+        # Encima va solo lo propio de la demo: pruebas elegidas, preguntas respondidas y cuota usada.
+        user = new_user({"email": u["email"], "firebase": {"sign_in_provider": u["signInProvider"]}},
+                        u["locale"], plan_by_id["free"], today)
+        user["selectedTests"] = u["selectedTests"]
+        names[role] = user["name"]
+        plan = plan_by_id[user["plan"]]
+        wallet = user["medalWallet"]
         mastery: dict[str, Counter] = {}
         answered = []
 
@@ -121,19 +127,9 @@ def build_documents(uids: dict[str, str], today: str) -> list[tuple[str, dict]]:
             practice.update(lastQuestionId=answered[-1], lastAnsweredAt=SERVER_TIMESTAMP)
         docs.append((f"{COL.users}/{doc_id}/{COL.state}/practice", practice))
 
-        q_day = plan["limits"]["qDay"]
-        bonus = SCHOOL_BONUS * u["quota"]["bonusSchool"] + ADDRESS_BONUS * u["quota"]["bonusAddress"]
-        profile = {k: v for k, v in u.items() if k not in ("role", "quota")}
-        docs.append((f"{COL.users}/{doc_id}", {
-            **profile,
-            "nameLower": u["name"].lower(), "emailLower": u["email"].lower(),
-            "medalWallet": wallet, "badgesTotal": sum(wallet.values()),
-            "quota": {"used": len(answered), "max": 0 if q_day == 0 else min(q_day + bonus, QUOTA_CAP), "date": today,
-                      **u["quota"], "unlimited": q_day == 0},
-            # lastActivityAt, badgesTotal y nameLower existen siempre: la consola ordena por ellos y
-            # Firestore deja fuera de una consulta ordenada los documentos que no tienen el campo.
-            "createdAt": SERVER_TIMESTAMP, "updatedAt": SERVER_TIMESTAMP, "lastActivityAt": SERVER_TIMESTAMP,
-        }))
+        user["badgesTotal"] = sum(wallet.values())
+        user["quota"]["used"] = len(answered)
+        docs.append((f"{COL.users}/{doc_id}", user))
 
     for c in corrections:
         q = questions[c["questionId"]]
