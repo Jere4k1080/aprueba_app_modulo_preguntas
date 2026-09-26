@@ -39,46 +39,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "state", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "corrections",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "state", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "corrections",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "testId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "corrections",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "testId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "corrections",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "questionId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "corrections",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "questionId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     }
