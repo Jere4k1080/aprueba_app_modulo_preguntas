@@ -102,9 +102,10 @@ def test_documentos_del_seed_para_la_administracion():
     # El seed crea a los alumnos con la función del alta y agrega solo lo propio de la demo (ADR-66):
     # aprueba2@demo.cl, que no respondió nada, es el alta más sus pruebas elegidas.
     cuenta = next(u for u in seed.load("users") if u["role"] == "nuevo")
-    alta = new_user({"email": cuenta["email"], "firebase": {"sign_in_provider": cuenta["signInProvider"]}},
+    alta = new_user({"email": cuenta["email"], "name": cuenta["name"], "firebase": {"sign_in_provider": cuenta["signInProvider"]}},
                     cuenta["locale"], plans["free"], "2026-09-25")
     assert por_ruta[f"users/{nuevo}"] == {**alta, "selectedTests": cuenta["selectedTests"]}
+    assert por_ruta[f"users/{nuevo}"]["name"] == "Estudiante Nuevo", "el nombre visible de la cuenta manda sobre el correo"
 
     respuestas = {r: d for r, d in docs if r.startswith(f"users/{demo}/answers/")}
     assert len(respuestas) == por_ruta[f"users/{demo}"]["quota"]["used"] == 5

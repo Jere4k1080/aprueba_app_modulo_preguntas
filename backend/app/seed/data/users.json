@@ -2,6 +2,7 @@
   {
     "role": "demo",
     "email": "aprueba@demo.cl",
+    "name": "Estudiante Demo",
     "signInProvider": "password",
     "locale": "es",
     "selectedTests": [
@@ -15,6 +16,7 @@
   {
     "role": "nuevo",
     "email": "aprueba2@demo.cl",
+    "name": "Estudiante Nuevo",
     "signInProvider": "password",
     "locale": "es",
     "selectedTests": [
