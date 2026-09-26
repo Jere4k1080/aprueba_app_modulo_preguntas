@@ -2,7 +2,7 @@
 
 El seed carga en Firestore un banco de demostración y los documentos de las dos cuentas de prueba. Se corre desde `backend/` con `.venv/bin/python -m app.seed` (en Windows, `.venv/Scripts/python.exe -m app.seed`), con el emulador de Firestore activo o con `SEED_ALLOW_REMOTE=true` (ADR-22). Necesita además `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID`, los UID de Firebase Authentication de `aprueba@demo.cl` y `aprueba2@demo.cl`. Si falta uno, o si no da un ID `usr_` que acepte la administración, el seed termina con código 1 antes de abrir Firestore (ADR-58).
 
-Los datos están en `backend/app/seed/data/`: `tests.json`, `skills.json`, `questions.json`, `plans.json`, `features.json`, `users.json`, `answers.json` y `corrections.json`. `build_documents()`, en `backend/app/seed/__init__.py`, calcula lo que depende de otros documentos: `nameLower`, `emailLower`, `medalWallet`, `badgesTotal`, `quota`, `stats`, `flagCount`, `approvedStock`, `statementPreview`, `skillMastery` y `state/practice`. Todo se escribe en un solo lote, así que se carga completo o no se carga nada. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). Los IDs son fijos y otra corrida reescribe los mismos documentos.
+Los datos están en `backend/app/seed/data/`: `tests.json`, `skills.json`, `questions.json`, `plans.json`, `features.json`, `users.json`, `answers.json` y `corrections.json`. Los documentos de `users` salen de `new_user()`, la función del alta en `backend/app/services/users.py`, y el seed agrega encima solo lo propio de la demo (ADR-66). `build_documents()`, en `backend/app/seed/__init__.py`, calcula lo que depende de otros documentos: `medalWallet`, `badgesTotal`, `quota.used`, `stats`, `flagCount`, `approvedStock`, `statementPreview`, `skillMastery` y `state/practice`. Todo se escribe en un solo lote, así que se carga completo o no se carga nada. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). Los IDs son fijos y otra corrida reescribe los mismos documentos.
 
 Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md`](../docs/diccionario_de_datos.md). Este archivo muestra lo que carga el seed, con ejemplos sacados de `build_documents()`. En las rutas, `<UID>` es el UID de la cuenta y `<hora del servidor>` es el valor de `SERVER_TIMESTAMP`.
 
@@ -29,6 +29,8 @@ En total son 68 documentos.
 `aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 10 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 15 preguntas.
 
 `aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 8 preguntas de esas dos pruebas.
+
+Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. Como no tienen nombre visible en Firebase Authentication, el alta toma el nombre del correo: `aprueba` y `aprueba2`.
 
 Las dos cuentas están en el plan `free`, con `state` `active` y un límite de 10, la base de la regla de negocio 1. El ejemplo de la administración trae 20 para `free`, y eso va en la consulta a Max (ADR-64).
 
@@ -198,44 +200,40 @@ El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, as
 ```jsonc
 // users/usr_<UID> de aprueba@demo.cl
 {
-  "name": "Estudiante Demo",
-  "nameLower": "estudiante demo",
+  "name": "aprueba",
+  "nameLower": "aprueba",
   "email": "aprueba@demo.cl",
   "emailLower": "aprueba@demo.cl",
-  "authProvider": "password",
-  "locale": "es",
-  "country": "CL",
   "plan": "free",
   "state": "active",
+  "country": "CL",
   "subscriptionId": null,
+  "medalWallet": { "bronze": 4, "silver": 0, "gold": 0, "diamond": 0, "platinum": 0 },
+  "badgesTotal": 4,
+  "authProvider": "password",
   "school": null,
   "region": null,
   "age": null,
-  "streak": 1,
-  "medalWallet": { "bronze": 4, "silver": 0, "gold": 0, "diamond": 0, "platinum": 0 },
-  "badgesTotal": 4,
-  "selectedTests": ["lectora", "m1", "m2", "cien", "hist"],
-  "practiceFormat": "random",
-  "difficulty": "d1",
+  "streak": 0,
+  "locale": "es",
+  "createdAt": "<hora del servidor>",
+  "updatedAt": "<hora del servidor>",
+  "lastActivityAt": "<hora del servidor>",
   "quota": {
     "used": 5,
     "max": 10,
-    "date": "2026-09-25",
+    "date": "2026-09-26",
     "bonusSchool": false,
     "bonusAddress": false,
     "unlimited": false
   },
-  "avatarColor": "#1A365D",
-  "theme": "light",
-  "planStatus": "none",
-  "dailyReminder": false,
-  "createdAt": "<hora del servidor>",
-  "updatedAt": "<hora del servidor>",
-  "lastActivityAt": "<hora del servidor>"
+  "selectedTests": ["lectora", "m1", "m2", "cien", "hist"],
+  "practiceFormat": "random",
+  "difficulty": "d1"
 }
 ```
 
-`quota.date` es el día en que corre el seed, en el huso de `QUOTA_RESET_TIMEZONE`. `aprueba2@demo.cl` tiene la misma forma, con `name` "Estudiante Nuevo", `streak` 0, `selectedTests` `["lectora", "m1"]`, la billetera en cero y `quota.used` 0.
+`quota.date` es el día en que corre el seed, en el huso de `QUOTA_RESET_TIMEZONE`. El documento de `aprueba2@demo.cl` es exactamente lo que crea el alta más `selectedTests` `["lectora", "m1"]`: `name` `aprueba2`, la billetera en cero y `quota.used` 0.
 
 ---
 
@@ -325,7 +323,7 @@ El de `aprueba2@demo.cl` solo tiene `answeredQuestionIds` vacío.
 // corrections/cor_21ef180d4a
 {
   "userId": "usr_<UID>",
-  "userName": "Estudiante Demo",
+  "userName": "aprueba",
   "questionId": "qst_4574d5002b",
   "testId": "m2",
   "axis": "Álgebra y funciones",

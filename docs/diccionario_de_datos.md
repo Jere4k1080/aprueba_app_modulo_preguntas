@@ -45,8 +45,8 @@ En la columna de origen, "administración" es la especificación de la consola, 
 | `users` | `school`, `region`, `locale` | Administración (7) y junio | Sin cambios. |
 | `users` | `sessionsRevokedAt` | Administración (7) | Nuevo. Lo escribe la consola al suspender. |
 | `users` | `quota`, `selectedTests`, `practiceFormat`, `difficulty` | Junio | Sin cambios de forma. `quota.max` sale ahora de `plans` (ADR-64). |
-| `users` | `updatedAt` | Junio | Nuevo en el diccionario. |
-| `users` | `avatarColor`, `theme`, `planStatus`, `dailyReminder` | Junio | Nuevos en el diccionario. Son de módulos fuera del alcance: el alta no los escribe (ADR-66), y el seed sí, mientras se ratifica ADR-69. |
+| `users` | `updatedAt` | Administración (código de 7) y junio | Nuevo en el diccionario. La consola lo actualiza al editar un alumno. |
+| `users` | `avatarColor`, `theme`, `planStatus`, `dailyReminder` | Junio | Nuevos en el diccionario. Son de módulos fuera del alcance: ni el alta ni el seed los escriben (ADR-66). |
 | `users` | `gradeId` | Supuesto (ADR-28) | Sin cambios. |
 | `users` | `medals`, `lastActiveDate` | | Salen, reemplazados por campos de la administración. |
 | `users/{id}/answers` | `questionId`, `selected`, `correct`, `elapsedMs`, `cohortPercentile`, `answeredAt` | Junio | Pasan de la colección raíz `answers` a la subcolección (ADR-60). |
@@ -85,7 +85,7 @@ En la columna de origen, "administración" es la especificación de la consola, 
 
 ### 2.1 `users`
 
-Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (ADR-58). La consola cambia el plan y el estado. El módulo escribe la cuota y las preferencias, y suma medallas con cada movimiento de `medalTransactions`. Si el alumno no tiene documento, el backend lo crea en su primera petición autenticada, solo con los campos de la administración y los del módulo (ADR-66). En esa misma lectura revisa si el alumno está suspendido o si sus sesiones fueron revocadas (sección 4), y actualiza `lastActivityAt` una vez al día (ADR-68). `nameLower`, `lastActivityAt`, `badgesTotal` y `createdAt` tienen que existir en todos los documentos: la consola ordena por ellos, y Firestore deja fuera de una consulta ordenada a los documentos que no tienen el campo.
+Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (ADR-58). La consola cambia el plan y el estado. El módulo escribe la cuota y las preferencias, y suma medallas con cada movimiento de `medalTransactions`. Si el alumno no tiene documento, el backend lo crea en su primera petición autenticada, solo con los campos de la administración y los del módulo (ADR-66). El documento sale de `new_user()`, en `backend/app/services/users.py`, la misma función con que el seed crea las cuentas de demostración. En esa misma lectura revisa si el alumno está suspendido o si sus sesiones fueron revocadas (sección 4), y actualiza `lastActivityAt` una vez al día (ADR-68). `nameLower`, `lastActivityAt`, `badgesTotal` y `createdAt` tienen que existir en todos los documentos: la consola ordena por ellos, y Firestore deja fuera de una consulta ordenada a los documentos que no tienen el campo.
 
 | Campo | Tipo | Req. | Origen | Descripción |
 |---|---|:---:|---|---|
@@ -113,15 +113,15 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 | `practiceFormat` | string | Sí | Junio | `random` o `facsim`. `facsim` requiere plan de pago. En la API se llama `format`. |
 | `difficulty` | string | Sí | Junio | `d1`, `d2`, `d3` o `d4`. |
 | `gradeId` | string | No | Supuesto (ADR-28) | Grado del estudiante, que guarda `PUT /me/preferences`. |
-| `updatedAt` | timestamp | Sí | Junio | Última escritura. |
-| `avatarColor` | string | Sí | Junio | Color de las iniciales. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
-| `theme` | string | Sí | Junio | `light` o `dark`. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
-| `planStatus` | string | Sí | Junio | `none`, `active`, `past_due` o `canceled`. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
-| `dailyReminder` | boolean | Sí | Junio | Recordatorio diario activo. Lo usan otros módulos. El alta no lo escribe (ADR-66). |
+| `updatedAt` | timestamp | Sí | Administración y junio | Última escritura. La consola lo actualiza al editar un alumno. |
+| `avatarColor` | string | Sí | Junio | Color de las iniciales. Lo usan otros módulos. El módulo no lo escribe (ADR-66). |
+| `theme` | string | Sí | Junio | `light` o `dark`. Lo usan otros módulos. El módulo no lo escribe (ADR-66). |
+| `planStatus` | string | Sí | Junio | `none`, `active`, `past_due` o `canceled`. Lo usan otros módulos. El módulo no lo escribe (ADR-66). |
+| `dailyReminder` | boolean | Sí | Junio | Recordatorio diario activo. Lo usan otros módulos. El módulo no lo escribe (ADR-66). |
 
 #### 2.1.1 Sub-esquema `quota`
 
-`used` (number) cuenta las preguntas usadas en el día. `max` (number) es el límite del día: `min(qDay + bonos, QUOTA_CAP)`, con `qDay` de `plans/{plan}.limits`, o 0 cuando el plan es ilimitado (ADR-64). `date` (string) es el día de la cuota en formato `YYYY-MM-DD`, en el huso de reinicio de ADR-11; el formato es un supuesto (ADR-28). Si `date` no es el día de hoy, la cuota se reinicia: `used` vuelve a 0 y `date` pasa a hoy. `bonusSchool` y `bonusAddress` (boolean) marcan los bonos ya reclamados, que se reclaman una sola vez. `unlimited` (boolean) vale `true` cuando `qDay` es 0.
+`used` (number) cuenta las preguntas usadas en el día. `max` (number) es el límite del día: `min(qDay + bonos, QUOTA_CAP)`, con `qDay` de `plans/{plan}.limits`, o 0 cuando el plan es ilimitado (ADR-64). Lo calcula `quota_max()`, en `backend/app/services/users.py`. `date` (string) es el día de la cuota en formato `YYYY-MM-DD`, en el huso de reinicio de ADR-11; el formato es un supuesto (ADR-28). Si `date` no es el día de hoy, la cuota se reinicia: `used` vuelve a 0 y `date` pasa a hoy. `bonusSchool` y `bonusAddress` (boolean) marcan los bonos ya reclamados, que se reclaman una sola vez. `unlimited` (boolean) vale `true` cuando `qDay` es 0.
 
 Los montos de los bonos no están en ningún documento y son constantes de `backend/app/core/config.py`: `SCHOOL_BONUS` 5, `ADDRESS_BONUS` 5, `QUOTA_CAP` 20 y `UNLOCK_MEDALS` 1, el bronce que da cada bono reclamado.
 
