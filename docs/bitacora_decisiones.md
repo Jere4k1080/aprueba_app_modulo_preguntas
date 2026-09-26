@@ -355,6 +355,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** dejar `.firebaserc` sin proyecto y exigir `--project` en cada despliegue, como establecía ADR-17. Esa regla existía porque el ID todavía no estaba creado. No hubo que evaluar un cambio de región para la API: la base ya estaba en la ubicación de ADR-24, que no se puede cambiar después de creada.
 * **Verificación:** el MCP de Firebase confirmó la ubicación de la base y la facturación deshabilitada. Las reglas activas coinciden con `firestore.rules`, y una lectura anónima por la API REST de Firestore sobre `questions`, `answers`, `corrections`, `tests`, `skills` y `users/{uid}/state/practice` devuelve 403 `PERMISSION_DENIED`. Los cuatro índices compuestos de `firestore.indexes.json` quedaron en estado `READY`. El proyecto también tiene una instancia de Realtime Database que el módulo no usa; sus reglas niegan lectura y escritura.
 
+* **Actualización (2026-09-26):** con ADR-57 el proyecto tiene los 5 índices del archivo nuevo, todos `READY`. Los tres del modelo anterior que ya no estaban en el archivo se borraron al desplegar con `--force`.
 ---
 
 ### ADR-26: Preset Express y despliegues de Git solo desde main
@@ -797,6 +798,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** mantener el modelo propio del módulo y adaptar en el backend lo que la administración necesita leer. Obligaba a sincronizar dos formas de los mismos datos, y la contraparte pidió lo contrario.
 * **Consecuencias:** ADR-01, ADR-07, ADR-10 y ADR-23 quedan sustituidas. El seed cambia de IDs y de forma, así que los datos cargados en `aprueba-app-modulo-preguntas` el 2026-09-23 se borran antes de cargar el nuevo, con confirmación del equipo.
 
+* **Aplicación en el proyecto (2026-09-26):** después de fusionar el PR #18 se desplegaron los índices y, con el inventario del seed anterior revisado, se borraron sus 27 documentos: las 20 preguntas `q_*`, `answers/ans_001`, `corrections/cor_001` y los usuarios `usr_demo` y `usr_demo_nuevo` con sus subcolecciones. Después se cargó el seed nuevo, con 68 documentos. El MCP de Firebase no conectó, así que la verificación se hizo con el Admin SDK: los conteos, los planes, `features/f2` y los campos y nombres de los dos usuarios dieron lo esperado, y la lectura anónima sigue dando 403.
 ---
 
 ### ADR-58: `users` con ID `usr_` más el UID de Firebase
