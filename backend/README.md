@@ -2,7 +2,7 @@
 
 API REST del módulo de práctica de Aprueba, escrita en Python 3.12 con FastAPI sobre Firestore. Reemplazó al backend Node y Express por decisión de la contraparte (ADR-30) y sigue las convenciones del backend de administración que especificó Max (ADR-31).
 
-La API expone `GET /api/v1/health` y `GET /api/v1/me`. Los demás servicios del módulo llegan en las iteraciones siguientes. `sanitize_question()` y `calculate_cohort_percentile()` ya están en `app/services/questions.py`, con sus pruebas, aunque ninguna ruta las usa todavía.
+La API expone `GET /api/v1/health`, `GET /api/v1/me`, `GET /api/v1/tests`, `GET` y `PUT /api/v1/me/preferences` y `GET /api/v1/practice/next`. Los demás servicios del módulo llegan en las iteraciones siguientes. `GET /practice/next` pasa cada pregunta por `sanitize_question()`, de `app/services/questions.py`. `calculate_cohort_percentile()`, en el mismo archivo, tiene sus pruebas, pero ninguna ruta la usa todavía.
 
 ## Stack
 
@@ -37,9 +37,11 @@ backend/
 │   │   ├── deps.py          verify_token, get_current_user, get_optional_user y get_current_student, con los alias DB, CurrentUser, OptionalUser y Student
 │   │   └── pagination.py    encode_cursor(), decode_cursor(), PageParams y paginate()
 │   ├── db/firestore.py      AsyncClient único, get_firebase_app() y nombres de colecciones (COL)
-│   ├── routers/             health.py (GET y HEAD /api/v1/health) y me.py (GET /api/v1/me)
+│   ├── routers/             health.py (GET y HEAD /health), me.py (GET /me y GET y PUT /me/preferences),
+│   │                        catalog.py (GET /tests) y practice.py (GET /practice/next), todas bajo /api/v1
 │   ├── schemas/             CamelModel y modelos de cada respuesta
-│   ├── services/            questions.py (sanitize_question) y users.py (alta y alumno de cada petición)
+│   ├── services/            questions.py (sanitize_question), users.py (alta y alumno de cada petición)
+│   │                        y practice.py (catálogo, cuota y siguiente pregunta)
 │   └── seed/                python -m app.seed y el banco de demostración en data/*.json
 ├── tests/                   pytest
 ├── requirements.txt
@@ -176,13 +178,19 @@ Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Auth
 
 `get_firebase_app()`, en `app/db/firestore.py`, inicia Firebase Admin con la misma configuración que Firestore. Con `FIRESTORE_EMULATOR_HOST` usa una credencial anónima, porque verificar un token solo necesita los certificados públicos. Con `FIREBASE_SERVICE_ACCOUNT_BASE64` usa la cuenta de servicio (ADR-49). El proyecto que resulta es la audiencia que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`, así que en local `FIREBASE_PROJECT_ID` vale lo mismo, mientras Firestore usa el proyecto `demo-aprueba` del emulador. Lo decidió el equipo el 2026-09-24 y lo ajustó el 2026-09-25 (ADR-49). Con otro valor, la API local rechaza los tokens de la app con 401 `AUTH_REQUIRED`.
 
+## Práctica
+
+`GET /practice/next` reinicia la cuota si cambió el día y la revisa sin descontarla: la descuenta la respuesta, en la iteración 5 (ADR-72). Con la cuota llena responde 422 `QUOTA_BASE_REACHED` o `QUOTA_DAILY_LIMIT`. Si no, entrega la pregunta pendiente de `users/usr_<UID>/state/practice` o elige una nueva al azar entre las `published` de las pruebas elegidas y de la dificultad preferida, sin las respondidas, y la deja pendiente. Pedir dos veces sin responder devuelve la misma pregunta. La respuesta pasa por `sanitize_question()` y por una proyección a los campos de `QUESTION_FIELDS`. Los casos y los campos están en la sección 3 de `docs/diccionario_de_datos.md`, y los detalles de implementación en ADR-73.
+
 ## Pruebas
 
 ```bash
 .venv/bin/python -m pytest
 ```
 
-Son 45: 21 en `tests/test_core.py`, 10 en `tests/test_health.py`, 7 en `tests/test_modelo.py` y 7 en `tests/test_alumno.py`. Nueve necesitan el emulador en `127.0.0.1:8080`: la paginación, la carga del seed y las siete del alumno actual. Sin él, pytest informa 36 aprobadas y 9 omitidas. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. Starlette 1.7 deja un aviso de obsolescencia sobre `httpx`, que se fijó en 0.28.1 como pedía el encargo.
+Son 58: 21 en `tests/test_core.py`, 10 en `tests/test_health.py`, 7 en `tests/test_modelo.py`, 7 en `tests/test_alumno.py`, 12 en `tests/test_practica.py` y 1 en `tests/test_integridad.py`. 22 necesitan el emulador en `127.0.0.1:8080`: la paginación, la carga del seed, las siete del alumno actual, las doce de práctica y la de integridad. Sin él, pytest informa 36 aprobadas y 22 omitidas. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. Starlette 1.7 deja un aviso de obsolescencia sobre `httpx`, que se fijó en 0.28.1 como pedía el encargo.
+
+`tests/test_integridad.py` recorre todas las rutas registradas en la app y falla si alguna respuesta trae `correctAnswer` en cualquier nivel del JSON, que es la regla 1 de `CLAUDE.md`. Una ruta nueva entra sola en la prueba. Si lleva parámetros en la ruta, la prueba falla hasta que se le agregue un valor, y si pide cuerpo hay que agregarlo en `CUERPOS`.
 
 Las pruebas de autenticación están en `tests/test_core.py` y montan rutas de sonda (`/api/v1/_yo` y `/api/v1/_opcional`) solo dentro de la prueba. Casi todas reemplazan `verify_id_token` con `monkeypatch` y comprueban que corra fuera del event loop:
 

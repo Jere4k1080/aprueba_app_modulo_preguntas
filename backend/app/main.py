@@ -7,7 +7,7 @@ from .core.config import get_settings
 from .core.envelope import RequestIdMiddleware
 from .core.errors import JsonBodyMiddleware, UnhandledErrorMiddleware, install_error_handlers
 from .db.firestore import get_db, get_firebase_app
-from .routers import health, me
+from .routers import catalog, health, me, practice
 
 
 def create_app() -> FastAPI:
@@ -37,6 +37,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router, prefix="/api/v1")
     app.include_router(me.router, prefix="/api/v1")
+    app.include_router(catalog.router, prefix="/api/v1")
+    app.include_router(practice.router, prefix="/api/v1")
     return app
 
 

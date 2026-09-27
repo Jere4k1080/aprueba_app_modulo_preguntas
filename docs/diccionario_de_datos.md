@@ -110,7 +110,7 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 | `sessionsRevokedAt` | timestamp | No | Administración | Lo escribe la consola al suspender. Ver sección 4. |
 | `quota` | map | Sí | Junio | Cuota diaria. Ver 2.1.1. |
 | `selectedTests` | `array<string>` | Sí | Junio | Pruebas elegidas. `GET /practice/next` solo sirve preguntas de estas pruebas. |
-| `practiceFormat` | string | Sí | Junio | `random` o `facsim`. `facsim` requiere plan de pago. En la API se llama `format`. |
+| `practiceFormat` | string | Sí | Junio | `random` o `facsim`. `facsim` requiere que el plan incluya la funcionalidad `mock_mode` (ADR-70). En la API se llama `format`. |
 | `difficulty` | string | Sí | Junio | `d1`, `d2`, `d3` o `d4`. |
 | `gradeId` | string | No | Supuesto (ADR-28) | Grado del estudiante, que guarda `PUT /me/preferences`. |
 | `updatedAt` | timestamp | Sí | Administración y junio | Última escritura. La consola lo actualiza al editar un alumno. |
@@ -121,7 +121,7 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 
 #### 2.1.1 Sub-esquema `quota`
 
-`used` (number) cuenta las preguntas usadas en el día. `max` (number) es el límite del día: `min(qDay + bonos, QUOTA_CAP)`, con `qDay` de `plans/{plan}.limits`, o 0 cuando el plan es ilimitado (ADR-64). Lo calcula `quota_max()`, en `backend/app/services/users.py`. `date` (string) es el día de la cuota en formato `YYYY-MM-DD`, en el huso de reinicio de ADR-11; el formato es un supuesto (ADR-28). Si `date` no es el día de hoy, la cuota se reinicia: `used` vuelve a 0 y `date` pasa a hoy. `bonusSchool` y `bonusAddress` (boolean) marcan los bonos ya reclamados, que se reclaman una sola vez. `unlimited` (boolean) vale `true` cuando `qDay` es 0.
+`used` (number) cuenta las preguntas usadas en el día. `max` (number) es el límite del día: `min(qDay + bonos, QUOTA_CAP)`, con `qDay` de `plans/{plan}.limits`, o 0 cuando el plan es ilimitado (ADR-64). Lo calcula `quota_max()`, en `backend/app/services/users.py`. `date` (string) es el día de la cuota en formato `YYYY-MM-DD`, en el huso de reinicio de ADR-11; el formato es un supuesto (ADR-28). Si `date` no es el día de hoy, la cuota se reinicia: `used` vuelve a 0 y `date` pasa a hoy. El reinicio lo escribe `GET /practice/next`, que recalcula también `max` y `unlimited` desde el plan (ADR-73). `used` sube al responder, no al entregar la pregunta (ADR-72). `bonusSchool` y `bonusAddress` (boolean) marcan los bonos ya reclamados, que se reclaman una sola vez. `unlimited` (boolean) vale `true` cuando `qDay` es 0.
 
 Los montos de los bonos no están en ningún documento y son constantes de `backend/app/core/config.py`: `SCHOOL_BONUS` 5, `ADDRESS_BONUS` 5, `QUOTA_CAP` 20 y `UNLOCK_MEDALS` 1, el bronce que da cada bono reclamado.
 
@@ -160,7 +160,7 @@ Extensión del módulo que ningún documento define (ADR-09 y ADR-65). Permite e
 | Campo | Tipo | Req. | Descripción |
 |---|---|:---:|---|
 | `answeredQuestionIds` | `array<string>` | Sí | IDs `qst_*` ya respondidos. |
-| `lastQuestionId` | string | No | Última pregunta entregada. |
+| `lastQuestionId` | string | No | Pregunta pendiente: la última que entregó `GET /practice/next`. Está pendiente mientras no figure en `answeredQuestionIds`, y la API la vuelve a entregar hasta que el alumno la responda (ADR-72). |
 | `lastAnsweredAt` | timestamp | No | Hora de la última respuesta. |
 | `activeSessionId` | string | No | Sesión de estudio en curso. |
 
@@ -351,7 +351,7 @@ Catálogo de funcionalidades de la consola (secciones 2.8 y 8), con IDs fijos `f
 
 ## 3. Contrato de la API a partir de Firestore
 
-Los nombres de la API son los del contrato que usa la app, en `lib/data/models/models.dart`. Ninguna de estas rutas existe todavía. `GET /me` se implementa en la iteración 3, junto con el alta de ADR-66.
+Los nombres de la API son los del contrato que usa la app, en `lib/data/models/models.dart`. En la iteración 3 existen `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next`. Las demás llegan en las iteraciones siguientes.
 
 ### 3.1 `GET /me`
 
@@ -381,13 +381,34 @@ Responde `QuotaState`. `used` y `max` salen de `quota`. `base` es `plans/{plan}.
 
 Responden `Correction`. `status` sale de `state`, `reviewedAt` de `resolvedAt` y `reviewedBy` de `resolvedBy`. `reason` sale de `reasonCode` y `comment` de `comment` (ADR-67). `rewardGranted` se entrega como `{amount}` con el `amount` guardado. `potentialReward` no se guarda: mientras `state` es `pending`, la API entrega `{amount: 250}`, la recompensa fija de la administración (ADR-05).
 
+### 3.4 `GET /tests`
+
+Responde la lista de `TestInfo` con las pruebas de `tests` que tienen `active` en `true`, en su `order`. `id` es el ID del documento, y `label` y `color` salen de los campos del mismo nombre. `hasQuestions` se deriva: `true` si `approvedStock` es mayor que 0 (ADR-72).
+
+### 3.5 `GET` y `PUT /me/preferences`
+
+Responden `Preferences` desde `users/usr_<UID>`: `selectedTests`, `format` desde `practiceFormat`, `difficulty`, `country`, `language` desde `locale`, `gradeId` y `onboarded`, que se deriva igual que en `GET /me` (ADR-28). `PUT` recibe `selectedTests`, `format` y `difficulty`, obligatorios, y `country`, `language` y `gradeId`, opcionales, que se escriben solo si llegan. Quita las pruebas repetidas y solo acepta pruebas activas con preguntas. Con `selectedTests` vacío o con una prueba sin preguntas responde `VALIDATION_ERROR` 400 con `field` `selectedTests` (ADR-72 y ADR-73). `facsim` sin `mock_mode` en el plan responde `FORMAT_REQUIRES_PLAN` 422 (ADR-70). Actualiza también `updatedAt`.
+
+### 3.6 `GET /practice/next`
+
+Responde `Question` sin `correctAnswer` ni `explanation`, con `id`, `testId`, `axis`, `skillId`, `difficulty`, `statement`, `options` y `progress`. La pregunta sale de las pruebas de `selectedTests` y de la dificultad de `difficulty`, entre las `published` que no están en `state/practice.answeredQuestionIds`, y queda pendiente en `state/practice.lastQuestionId` hasta que el alumno la responda (ADR-72). La ruta no descuenta cuota: eso lo hace la transacción de responder.
+
+`progress.current` es `quota.used + 1` y `progress.total` es `quota.max`, o `null` en un plan ilimitado. `meta.quota` lleva `used`, `max` y `unlimited` (ADR-72 y ADR-73).
+
+| Caso | Respuesta |
+|---|---|
+| Cuota llena y un bono sin reclamar que todavía suma | 422 `QUOTA_BASE_REACHED` |
+| Cuota llena sin bonos que sumen | 422 `QUOTA_DAILY_LIMIT` |
+| `selectedTests` vacío | 404 `NO_QUESTIONS_AVAILABLE` con `field` `selectedTests` (ADR-29) |
+| Sin preguntas por responder en las pruebas y la dificultad elegidas | 404 `NO_QUESTIONS_AVAILABLE` sin `field` |
+
 ---
 
 ## 4. Alumno suspendido
 
 Con `state` `suspended`, los endpoints del módulo responden `AUTH_FORBIDDEN` 403 aunque el token de Firebase siga vigente (ADR-65).
 
-La consola escribe además `sessionsRevokedAt` al suspender, y su especificación dice que la API del alumno lo comprueba. El módulo responde 401 `AUTH_REQUIRED` cuando el `auth_time` del token, la hora en que el alumno inició sesión, es anterior a ese campo (ADR-65). Un token renovado conserva su `auth_time`, así que el reintento de la app recibe otro 401 y la app cierra la sesión (ADR-40). Las dos comprobaciones usan la misma lectura de `users` que el alta, así que no suman lecturas, y cierran la ventana de una hora de ADR-43. Se implementan con los endpoints.
+La consola escribe además `sessionsRevokedAt` al suspender, y su especificación dice que la API del alumno lo comprueba. El módulo responde 401 `AUTH_REQUIRED` cuando el `auth_time` del token, la hora en que el alumno inició sesión, es anterior a ese campo (ADR-65). Un token renovado conserva su `auth_time`, así que el reintento de la app recibe otro 401 y la app cierra la sesión (ADR-40). Las dos comprobaciones usan la misma lectura de `users` que el alta, así que no suman lecturas, y cierran la ventana de una hora de ADR-43. Las hace `get_current_student` (ADR-71).
 
 ---
 
