@@ -83,6 +83,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 71. [ADR-71: Alumno de cada petición en una sola lectura de `users` (Aprobada por Jeremías, pendiente de ratificación)](#adr-71-alumno-de-cada-petición-en-una-sola-lectura-de-users)
 72. [ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3 (Aprobada por Jeremías, pendiente de ratificación; el descuento de cuota en consulta a Max)](#adr-72-cuota-pregunta-pendiente-y-preferencias-en-la-iteración-3)
 73. [ADR-73: Detalles de implementación de la práctica en la iteración 3 (Propuesta)](#adr-73-detalles-de-implementación-de-la-práctica-en-la-iteración-3)
+74. [ADR-74: Estados de la pantalla Pregunta y errores de red en la app (Propuesta)](#adr-74-estados-de-la-pantalla-pregunta-y-errores-de-red-en-la-app)
 
 ---
 
@@ -178,6 +179,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Fundamento:** La regla de calidad del equipo estipula que `flutter analyze` debe correr sin advertencias. Reemplazar `.withOpacity()` por `.withValues()` a lo largo de decenas de archivos ensuciaría el diff del repositorio con cambios cosméticos sin aportar valor al módulo de práctica.
 * **Corrección (2026-09-22):** La versión anterior decía que los 38 avisos eran deprecaciones de `withOpacity` en código heredado del cliente, fuera del alcance de la HU-20. No es así. Medidos con Flutter 3.44.7 sobre `main`, 28 son `withOpacity`, 3 son `value` deprecado en favor de `initialValue`, 4 son `prefer_const_constructors` o `prefer_const_literals_to_create_immutables`, 2 son llaves innecesarias en interpolaciones y 1 es `use_build_context_synchronously` en `lib/features/subscription/manage_plan_screen.dart`. 14 de los 38 están en `lib/features/practice/`, que es nuestro módulo: 10 son `withOpacity` y 4 son `value` deprecado o `prefer_const_*`. Los 24 restantes están fuera del alcance. La decisión de no tocarlos se mantiene. Falta que el equipo decida si corrige los 14 del módulo.
 
+* **Actualización (27/09/2026):** el encargo de cierre de la iteración 3, de Jeremías, pidió corregir los 14 avisos de `lib/features/practice/`. Se corrigieron en la rama `feature/pantalla-pregunta`. Los 10 `withOpacity` pasan a `withValues(alpha: ...)`. El `value` de `DropdownButtonFormField` en `quota_unlock_screen.dart` pasa a `initialValue`, sin cambio de comportamiento, porque `_region` solo cambia desde el mismo menú. Los 3 `prefer_const_*` llevan `const`. `flutter analyze` queda en 24 avisos informativos, 18 de ellos `withOpacity`, todos fuera del módulo, y sin advertencias. Los de fuera del módulo siguen sin tocarse.
 ---
 
 ### ADR-09: Exclusión de preguntas respondidas mediante documento de estado
@@ -1011,3 +1013,21 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * `PUT /me/preferences` quita las pruebas repetidas y conserva el orden. Una prueba que no existe, está inactiva o no tiene preguntas da `VALIDATION_ERROR` 400 con un elemento de `details` por prueba (regla de negocio 6). `country`, `language` y `gradeId` son opcionales en la app y se escriben solo si llegan, `language` en `locale` (ADR-28). La ruta actualiza `updatedAt`.
 * **Alternativa descartada:** detener la parte 2 hasta resolver cada detalle. Ninguno cambia lo que lee la administración.
 * **Verificación:** doce pruebas en `backend/tests/test_practica.py` y una en `backend/tests/test_integridad.py`, contra el emulador. La de integridad recorre todas las rutas registradas y falla si alguna respuesta trae `correctAnswer` en cualquier nivel del JSON.
+
+---
+
+### ADR-74: Estados de la pantalla Pregunta y errores de red en la app
+
+* **Estado:** **PROPUESTA, PENDIENTE DE RESPUESTA DE JEREMÍAS Y DE RATIFICACIÓN DEL EQUIPO**
+* **Contexto:** el encargo de cierre de la iteración 3 pidió que `api_exception.dart` reconozca los códigos del módulo, que cada uno lleve a su estado de interfaz (regla de negocio 8) y que "sin conexión" aparezca solo cuando falla la red. Al conectar la pantalla Pregunta aparecieron detalles que no cubren la bitácora ni el encargo.
+* **Decisiones tomadas al implementar:**
+  * `PracticeSession.loadNext()` ya no relanza los errores de la API: los guarda en la sesión y la pantalla Pregunta los muestra. Así `home`, fuera del alcance, no se toca. Su botón de practicar abre siempre la pantalla Pregunta, y su rama que llevaba al muro de pago con `isQuotaExhausted` queda sin uso. La pantalla Resultado hace lo mismo al pedir la siguiente pregunta.
+  * `isQuotaExhausted` revisaba `QUOTA_EXHAUSTED` y `PRACTICE_QUOTA_EXHAUSTED`, que no están en el catálogo. Ahora es `QUOTA_DAILY_LIMIT`.
+  * `QUOTA_BASE_REACHED` muestra la pantalla de desbloqueo en el lugar de la pregunta, sin navegar a `/practice/quota`.
+  * `QUOTA_DAILY_LIMIT` muestra el estado de límite diario con los textos del muro de pago, un botón a `/paywall` y otro para volver al inicio.
+  * `NO_QUESTIONS_AVAILABLE` con `field` `selectedTests` invita a elegir pruebas con una hoja dentro del módulo, que usa `GET /tests` y `PUT /me/preferences` y vuelve a pedir la pregunta al guardar. La elección del onboarding, `/onboarding/tests`, sigue con la creación de la cuenta y no sirve a un alumno con sesión. Sin `field`, el estado vacío ofrece la misma hoja. La hoja solo muestra las pruebas con `hasQuestions`.
+  * "Sin conexión" aparece solo cuando no hay respuesta del servidor. `ApiClient` trata como falta de red toda `DioException` sin respuesta, y una respuesta sin envelope, como un 404 o un 401 de la plataforma, pasa a `HTTP_<estado>`. `AsyncValueView` muestra la nube tachada solo en ese caso. Los dos archivos están en `lib/core/` y los usan también módulos fuera del alcance, que dejan de mostrar la nube tachada ante un 404 o un 401.
+  * La pantalla Pregunta pide la pregunta si se abre sin una sesión de práctica, como al recargar la app web.
+  * Con un plan ilimitado el título es "Pregunta N", sin total ni barra de progreso, y la cuota muestra ∞. `User` lee `quota.unlimited` y lo guarda en la caché de `GET /me` (ADR-66).
+* **Alternativa descartada:** que `home` y la pantalla Resultado traduzcan cada código antes de navegar. `home` está fuera del alcance.
+* **Verificación:** once pruebas en `test/question_screen_test.dart`. Cubren los códigos del módulo, la clasificación de errores del cliente ante un 404 con envelope, un 404 sin envelope, un 401 sin envelope y una conexión caída, `progress.total` nulo y `quota.unlimited` en los modelos, la pantalla con plan limitado e ilimitado y cada estado de error, incluida la elección de pruebas.
