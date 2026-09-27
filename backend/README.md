@@ -180,7 +180,7 @@ Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Auth
 
 ## Práctica
 
-`GET /practice/next` reinicia la cuota si cambió el día y la revisa sin descontarla: la descuenta la respuesta, en la iteración 5 (ADR-72). Con la cuota llena responde 422 `QUOTA_BASE_REACHED` o `QUOTA_DAILY_LIMIT`. Si no, entrega la pregunta pendiente de `users/usr_<UID>/state/practice` o elige una nueva al azar entre las `published` de las pruebas elegidas y de la dificultad preferida, sin las respondidas, y la deja pendiente. Pedir dos veces sin responder devuelve la misma pregunta. La respuesta pasa por `sanitize_question()` y por una proyección a los campos de `QUESTION_FIELDS`. Los casos y los campos están en la sección 3 de `docs/diccionario_de_datos.md`, y los detalles de implementación en ADR-73.
+`GET /practice/next` reinicia la cuota si cambió el día y la revisa sin descontarla: la descuenta la respuesta, en la iteración 4 (ADR-72). Con la cuota llena responde 422 `QUOTA_BASE_REACHED` o `QUOTA_DAILY_LIMIT`. Si no, entrega la pregunta pendiente de `users/usr_<UID>/state/practice` o elige una nueva al azar entre las `published` de las pruebas elegidas y de la dificultad preferida, sin las respondidas, y la deja pendiente. Pedir dos veces sin responder devuelve la misma pregunta. La respuesta pasa por `sanitize_question()` y por una proyección a los campos de `QUESTION_FIELDS`. Los casos y los campos están en la sección 3 de `docs/diccionario_de_datos.md`, y los detalles de implementación en ADR-73.
 
 ## Pruebas
 

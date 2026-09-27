@@ -87,7 +87,7 @@ async def pick_question(db, tests: list[str], difficulty: str, answered: set[str
 async def pending_or_next(db, user: dict, tests: list[str]) -> dict | None:
     """La pregunta pendiente o una nueva (ADR-72). La entregada queda en state/practice.lastQuestionId y se
     vuelve a entregar mientras no esté en answeredQuestionIds, así pedir otra no recorre el banco sin gastar
-    cuota. Solo la transacción de responder, de la iteración 5, la saca de pendiente."""
+    cuota. Solo la transacción de responder, de la iteración 4, la saca de pendiente."""
     state_ref = db.collection(COL.users).document(user["id"]).collection(COL.state).document("practice")
     state = (await state_ref.get()).to_dict() or {}
     answered = set(state.get("answeredQuestionIds") or [])
@@ -100,7 +100,7 @@ async def pending_or_next(db, user: dict, tests: list[str]) -> dict | None:
     question = await pick_question(db, tests, user.get("difficulty") or "d1", answered)
     if question is not None:
         # ponytail: sin transacción, dos pedidos simultáneos pueden elegir preguntas distintas y queda la
-        # última como pendiente. La respuesta de la iteración 5 puede exigir que sea la pendiente.
+        # última como pendiente. La respuesta de la iteración 4 puede exigir que sea la pendiente.
         await state_ref.set({"lastQuestionId": question["id"]}, merge=True)
     return question
 

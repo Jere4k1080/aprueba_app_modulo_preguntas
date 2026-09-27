@@ -82,8 +82,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 70. [ADR-70: Modo facsímil según `plans.features` (Decidida)](#adr-70-modo-facsímil-según-plansfeatures)
 71. [ADR-71: Alumno de cada petición en una sola lectura de `users` (Aprobada por Jeremías, pendiente de ratificación)](#adr-71-alumno-de-cada-petición-en-una-sola-lectura-de-users)
 72. [ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3 (Aprobada por Jeremías, pendiente de ratificación; el descuento de cuota en consulta a Max)](#adr-72-cuota-pregunta-pendiente-y-preferencias-en-la-iteración-3)
-73. [ADR-73: Detalles de implementación de la práctica en la iteración 3 (Propuesta)](#adr-73-detalles-de-implementación-de-la-práctica-en-la-iteración-3)
-74. [ADR-74: Estados de la pantalla Pregunta y errores de red en la app (Propuesta)](#adr-74-estados-de-la-pantalla-pregunta-y-errores-de-red-en-la-app)
+73. [ADR-73: Detalles de implementación de la práctica en la iteración 3 (En parte ratificada)](#adr-73-detalles-de-implementación-de-la-práctica-en-la-iteración-3)
+74. [ADR-74: Estados de la pantalla Pregunta y errores de red en la app (Ratificada)](#adr-74-estados-de-la-pantalla-pregunta-y-errores-de-red-en-la-app)
 
 ---
 
@@ -268,6 +268,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** esperar a que el equipo esté disponible para revisar antes de fusionar nada. Se descartó porque no hay fecha cierta de retorno y las ramas seguían acumulando riesgo de choque entre sí cuanto más tiempo pasaran sin integrarse a `main`.
 * **Decisión final:** el código fusionado sin revisión cruzada queda marcado como pendiente de revisión en `docs/revision_pendiente.md`, con preguntas específicas que Sebastián y Martín deben poder responder antes de la Iteración 3. Esta ADR no reemplaza esa revisión: la declara pendiente y la hace visible.
 * **Cierre del PR #9 (2026-09-22):** el usuario confirmó su aprobación por WhatsApp. La identidad del revisor no consta en GitHub; se dejó registro de esa limitación en un comentario del PR. Tras corregir tres afirmaciones de la guía y pasar la verificación de Vercel, el PR se fusionó a `main`.
+* **Revisión cruzada en GitHub (27/09/2026):** desde la iteración 3 la revisión cruzada queda registrada en GitHub. Martin Espinoza, con la cuenta `Titin8`, aprobó los PR del #21 al #23 sobre su último commit antes de que se fusionaran, el 27/09. Jeremías confirmó ese día que `Titin8` es Martin.
 
 ---
 
@@ -982,8 +983,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Estado:** **APROBADA POR JEREMÍAS EL 27/09, PENDIENTE DE RATIFICACIÓN DEL EQUIPO EL 28/09. LA CONTRADICCIÓN DEL CONTRATO ESTÁ EN CONSULTA A MAX**
 * **Contexto:** el contrato de la API se contradice sobre cuándo se descuenta la cuota. En la sección 1.3, `GET /practice/next` entrega la siguiente pregunta "descontando de la cuota diaria", y en la misma sección `POST /questions/{id}/answer` también "descuenta de la cuota diaria". El modelo de datos de la empresa descuenta al responder: la transacción que crea la respuesta es la que sube `quota.used` (diccionario, sección 2.2).
 * **Decisión:**
-  * La cuota se descuenta al responder, en la transacción de `POST /questions/{id}/answer`, que llega en la iteración 5. `GET /practice/next` reinicia y revisa la cuota sin descontarla, y con la cuota llena responde 422 antes de elegir una pregunta.
-  * `GET /practice/next` guarda la pregunta entregada como pendiente en `users/usr_<UID>/state/practice`, en `lastQuestionId`, y la vuelve a entregar, pasada por `sanitize_question()`, mientras no se responda. La pendiente solo cambia al responder, cuando la transacción de la iteración 5 agrega la pregunta a `answeredQuestionIds`. Sin esto, pedir otra pregunta sin responder recorrería el banco sin gastar cuota.
+  * La cuota se descuenta al responder, en la transacción de `POST /questions/{id}/answer`, que llega en la iteración 4. `GET /practice/next` reinicia y revisa la cuota sin descontarla, y con la cuota llena responde 422 antes de elegir una pregunta.
+  * `GET /practice/next` guarda la pregunta entregada como pendiente en `users/usr_<UID>/state/practice`, en `lastQuestionId`, y la vuelve a entregar, pasada por `sanitize_question()`, mientras no se responda. La pendiente solo cambia al responder, cuando la transacción de la iteración 4 agrega la pregunta a `answeredQuestionIds`. Sin esto, pedir otra pregunta sin responder recorrería el banco sin gastar cuota.
   * `progress` sale de la cuota del día: `current` es `quota.used + 1`, la pregunta que el alumno va a responder, y `total` es `quota.max`.
   * `hasQuestions` de `GET /tests` es `approvedStock > 0`, como proponía ADR-69.
   * `PUT /me/preferences` con `selectedTests` vacío responde `VALIDATION_ERROR` 400 con `field` `selectedTests`. `NO_TESTS_SELECTED` no se agrega al catálogo. `GET /practice/next` sin pruebas elegidas sigue ADR-29.
@@ -991,12 +992,14 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Evidencia sobre `NO_TESTS_SELECTED` (27/09/2026):** la decisión partió de que el contrato no tiene ese código, pero la sección 1.2 lo lista en `PUT /me/preferences`: 400, "Debe seleccionarse al menos una prueba". Es el único lugar del contrato donde aparece, y no está en la lista de errores del módulo de `CLAUDE.md` ni en `backend/app/core/errors.py`. Se informó a Jeremías. Mientras no responda, la ruta usa `VALIDATION_ERROR`.
 * **Alternativa descartada:** descontar al entregar, como dice la descripción de `GET /practice/next`. Una pregunta pedida y no respondida gastaría cuota, y si la respuesta también descuenta, cada pregunta contaría dos veces.
 * **Verificación:** `test_la_pendiente_se_repite_sin_gastar_cuota`, en `backend/tests/test_practica.py`, pide la pregunta dos veces seguidas sin responder: recibe la misma y `quota.used` no cambia.
+* **Decisión sobre `NO_TESTS_SELECTED` (27/09/2026):** con la evidencia de la sección 1.2, Jeremías decidió seguir el contrato. `PUT /me/preferences` con `selectedTests` vacío responde `NO_TESTS_SELECTED` 400 con `field` `selectedTests`, y el código entra al catálogo con su mensaje en español e inglés. Reemplaza al `VALIDATION_ERROR` de la decisión anterior. `GET /practice/next` sin pruebas elegidas sigue ADR-29.
+* **Iteración de la respuesta (27/09/2026):** vale la lista de historias: HU-03 y HU-04, con `POST /questions/{id}/answer`, van en la iteración 4. Esta ADR y ADR-73 decían iteración 5 y se corrigieron.
 
 ---
 
 ### ADR-73: Detalles de implementación de la práctica en la iteración 3
 
-* **Estado:** **PROPUESTA, PENDIENTE DE RESPUESTA DE JEREMÍAS Y DE RATIFICACIÓN DEL EQUIPO**
+* **Estado:** **EN PARTE RATIFICADA POR JEREMÍAS EL 27/09. DOS PUNTOS VAN EN LA CONSULTA A MAX Y EL RESTO SE RATIFICA EN LA SESIÓN DEL EQUIPO**
 * **Contexto:** al implementar `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next` aparecieron detalles que no cubren la bitácora ni el encargo de la iteración 3. En cada uno se tomó la opción más simple.
 * **Decisiones tomadas al implementar:**
   * `GET /practice/next` busca preguntas `published` de las pruebas elegidas y de la dificultad preferida a partir de un `randomKey` al azar, en orden, y si no encuentra da la vuelta desde 0. Usa el índice `testId, status, difficulty, randomKey` de `firestore.indexes.json`. Las respondidas se descartan en memoria (ADR-09), así que cada tramo lee hasta una pregunta más que las respondidas. Con miles de respondidas conviene guardar un cursor por prueba.
@@ -1004,7 +1007,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Solo se sirve la dificultad preferida. Si en ella no quedan preguntas por responder, la ruta responde 404 `NO_QUESTIONS_AVAILABLE` sin `field`, aunque queden en otras dificultades.
   * Si la pendiente dejó de estar `published`, por ejemplo porque la administración la retiró, se elige otra.
   * La pendiente se sigue entregando aunque el alumno cambie sus pruebas o su dificultad, porque ADR-72 dice que solo cambia al responder.
-  * Dos pedidos simultáneos sin pendiente pueden elegir preguntas distintas, y queda pendiente la última. No hay transacción. La respuesta de la iteración 5 puede exigir que la pregunta respondida sea la pendiente.
+  * Dos pedidos simultáneos sin pendiente pueden elegir preguntas distintas, y queda pendiente la última. No hay transacción. La respuesta de la iteración 4 puede exigir que la pregunta respondida sea la pendiente.
   * Si `quota.date` no es hoy, `GET /practice/next` pone `used` en 0 con la fecha de hoy y recalcula `max` y `unlimited` desde el plan con los bonos ya reclamados, por si la consola cambió `qDay`.
   * Con la cuota llena, `QUOTA_BASE_REACHED` si `max` está bajo `QUOTA_CAP` y queda un bono sin reclamar. Si no, `QUOTA_DAILY_LIMIT`. Con `qDay` 20, el valor del ejemplo de Max (ADR-64), ningún bono suma, y la app no lleva al alumno a un desbloqueo que no le daría preguntas.
   * En un plan ilimitado `progress.total` es `null`. `meta.quota` lleva `unlimited` además de `used` y `max`, igual que `GET /me` (ADR-66). El contrato muestra `meta.quota` solo con `used` y `max`.
@@ -1014,12 +1017,14 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * `PUT /me/preferences` quita las pruebas repetidas y conserva el orden. Una prueba fuera del catálogo activo, o sin preguntas, da `VALIDATION_ERROR` 400 con un elemento de `details` por prueba (regla de negocio 6). `country`, `language` y `gradeId` son opcionales en la app y se escriben solo si llegan, `language` en `locale` (ADR-28). La ruta actualiza `updatedAt`.
 * **Alternativa descartada:** detener la parte 2 hasta resolver cada detalle. Ninguno cambia lo que lee la administración.
 * **Verificación:** doce pruebas en `backend/tests/test_practica.py` y una en `backend/tests/test_integridad.py`, contra el emulador. La de integridad recorre todas las rutas registradas y falla si alguna respuesta trae `correctAnswer` en cualquier nivel del JSON.
+* **Ratificación (27/09/2026):** Jeremías ratificó dos puntos. La pregunta pendiente se mantiene aunque cambien las preferencias, y `testId` y `sessionId` no se implementan mientras la app no los envíe. La dificultad estricta y el facsímil guardado sin un comportamiento distinto van en la consulta a Max. Los demás detalles se ratifican en la sesión del equipo.
+* **Banco de la demo (27/09/2026):** el banco del seed es el mismo que tiene producción: 20 preguntas publicadas, una por prueba y dificultad. `aprueba2@demo.cl` elige lectora y m1 con dificultad d1, así que tiene 2 preguntas; si la dificultad no fuera estricta tendría 8. A `aprueba@demo.cl` le quedan 2 en d1. La cuota del plan `free` es 10, de modo que la demo de responder, en la iteración 4, se queda sin preguntas en la segunda respuesta. Ampliar el banco del seed en d1 lo resuelve sin esperar la respuesta de Max sobre la dificultad. Falta que el equipo lo decida.
 
 ---
 
 ### ADR-74: Estados de la pantalla Pregunta y errores de red en la app
 
-* **Estado:** **PROPUESTA, PENDIENTE DE RESPUESTA DE JEREMÍAS Y DE RATIFICACIÓN DEL EQUIPO**
+* **Estado:** **RATIFICADA POR JEREMÍAS EL 27/09/2026**
 * **Contexto:** el encargo de cierre de la iteración 3 pidió que `api_exception.dart` reconozca los códigos del módulo, que cada uno lleve a su estado de interfaz (regla de negocio 8) y que "sin conexión" aparezca solo cuando falla la red. Al conectar la pantalla Pregunta aparecieron detalles que no cubren la bitácora ni el encargo.
 * **Decisiones tomadas al implementar:**
   * `PracticeSession.loadNext()` ya no relanza los errores de la API: los guarda en la sesión y la pantalla Pregunta los muestra. Así `home`, fuera del alcance, no se toca. Su botón de practicar abre siempre la pantalla Pregunta, y su rama que llevaba al muro de pago con `isQuotaExhausted` queda sin uso. La pantalla Resultado hace lo mismo al pedir la siguiente pregunta.
@@ -1032,3 +1037,9 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * Con un plan ilimitado el título es "Pregunta N", sin total ni barra de progreso. La cuota muestra ∞. `User` lee `quota.unlimited` y lo guarda en la caché de `GET /me` (ADR-66).
 * **Alternativa descartada:** que `home` y la pantalla Resultado traduzcan cada código antes de navegar. `home` está fuera del alcance.
 * **Verificación:** once pruebas en `test/question_screen_test.dart`. Cubren los códigos del módulo, la clasificación de errores del cliente ante un 404 con envelope, un 404 sin envelope, un 401 sin envelope y una conexión caída, `progress.total` nulo y `quota.unlimited` en los modelos, la pantalla con plan limitado e ilimitado y cada estado de error, incluida la elección de pruebas.
+* **Ratificación (27/09/2026):** Jeremías ratificó la ADR completa. El cambio en `lib/core/` alcanza pantallas fuera del alcance, que se listan abajo, y se informa a Max.
+* **Pantallas fuera del alcance que cambian:**
+  * `AsyncValueView` muestra la nube tachada solo sin red, y ante cualquier otro error un ícono de error. La usan `feed_screen.dart` de comunidad; `groups_screen.dart`, `group_detail_screen.dart`, `group_stats_screen.dart`, `create_group_screen.dart` y `share_group_screen.dart` de grupos; `home_screen.dart`; `medals_screen.dart`, `exchange_screen.dart`, `gift_screen.dart` y `benefits_screen.dart` de medallas; `select_tests_screen.dart` y `setup_screens.dart` del onboarding; `paywall_screen.dart` y `manage_plan_screen.dart` de suscripción, y `tutors_screen.dart`, `tutor_profile_screen.dart`, `tutor_contact_screen.dart`, `tutor_review_screen.dart` y `tutor_chat_screen.dart` de tutores.
+  * Una respuesta sin envelope pasa a `HTTP_<estado>` con el mensaje "Respuesta inesperada del servidor (<estado>).", en vez del texto en inglés de Dio. Una falla sin respuesta, como un timeout de envío o un certificado rechazado, pasa a `NETWORK_ERROR`, que antes quedaba solo para la conexión caída y los timeouts de conexión y de recepción. Lo notan las pantallas que muestran el mensaje de un error de la API en un aviso: `login_screen.dart`, `register_screen.dart` y `social_buttons.dart` de autenticación; `create_group_screen.dart`, `invite_members_screen.dart` y `share_group_screen.dart` de grupos; las cuatro de medallas; `setup_screens.dart` del onboarding; `checkout_screen.dart` y `manage_plan_screen.dart` de suscripción, y `tutor_chat_screen.dart`, `tutor_contact_screen.dart` y `tutor_review_screen.dart` de tutores.
+  * `ProfileRepository.me()` sirve la copia de Drift de `GET /me` ante `NETWORK_ERROR`, así que ahora también la sirve en esas fallas sin respuesta. Esa copia la leen `home` y el router.
+  * En `home_screen.dart`, el botón de practicar abre siempre la pantalla Pregunta, porque `loadNext()` ya no relanza. Su aviso con el mensaje del error y su paso al muro de pago con `isQuotaExhausted` quedan sin uso.

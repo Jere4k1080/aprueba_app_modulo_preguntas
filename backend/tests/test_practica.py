@@ -87,7 +87,7 @@ def test_la_pendiente_se_repite_sin_gastar_cuota(banco):
     assert segunda["data"] == primera["data"], "dos pedidos seguidos sin responder dan la misma pregunta"
     assert segunda["meta"]["quota"] == primera["meta"]["quota"] and banco.user.get().to_dict()["quota"]["used"] == 5
     assert banco.estado.get().to_dict()["lastQuestionId"] == primera["data"]["id"]
-    # La transacción de responder (iteración 5) la agrega a answeredQuestionIds y deja de estar pendiente.
+    # La transacción de responder (iteración 4) la agrega a answeredQuestionIds y deja de estar pendiente.
     banco.estado.update({"answeredQuestionIds": firestore.ArrayUnion([primera["data"]["id"]])})
     tercera = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
     assert tercera["id"] != primera["data"]["id"]
