@@ -44,7 +44,13 @@ def test_preferencias_get_y_put(banco):
 def test_put_rechaza_seleccion_vacia_o_pruebas_sin_preguntas(banco):
     vacia = put(banco, selectedTests=[])
     assert vacia.status_code == 400
-    assert (vacia.json()["error"]["code"], vacia.json()["error"]["field"]) == ("VALIDATION_ERROR", "selectedTests")
+    assert (vacia.json()["error"]["code"], vacia.json()["error"]["field"]) == ("NO_TESTS_SELECTED", "selectedTests")
+    assert vacia.json()["error"]["message"] == "Debe seleccionarse al menos una prueba.", "el texto del contrato"
+    en = banco.cliente.put(PREFS, headers={**BEARER, "Accept-Language": "en"},
+                           json={"selectedTests": [], "format": "random", "difficulty": "d1"})
+    assert en.json()["error"]["message"] == "At least one test must be selected."
+    sin_campo = banco.cliente.put(PREFS, headers=BEARER, json={"format": "random", "difficulty": "d1"})
+    assert (sin_campo.status_code, sin_campo.json()["error"]["code"]) == (400, "VALIDATION_ERROR"), "falta el campo"
     banco.db.document("tests/hist").update({"approvedStock": 0})
     mala = put(banco, selectedTests=["lectora", "hist", "maths"])
     error = mala.json()["error"]

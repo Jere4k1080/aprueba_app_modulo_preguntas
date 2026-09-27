@@ -15,8 +15,8 @@ class TestOut(CamelModel):
 
 class PreferencesIn(CamelModel):
     """Cuerpo de PUT /me/preferences: los campos que envía Preferences.toJson() de la app."""
-    # Vacío da VALIDATION_ERROR con field selectedTests (ADR-73).
-    selected_tests: list[str] = Field(min_length=1)
+    # Vacía da NO_TESTS_SELECTED en la ruta, como pide el contrato (ADR-72).
+    selected_tests: list[str]
     format: Literal["random", "facsim"]
     difficulty: Literal["d1", "d2", "d3", "d4"]
     country: str | None = Field(default=None, pattern=r"^[A-Z]{2}$")

@@ -135,7 +135,7 @@ Una variable definida pero vacía cuenta como no definida.
 
 Toda respuesta usa el envelope `{data, error, meta}`. En error, `data` es `null` y `error` trae `code`, `message`, `field` y `details`. `details` es una lista, vacía por defecto. En `VALIDATION_ERROR` lleva un elemento `{field, message, type}` por cada campo que falla, y `field` repite el del primero. `meta.requestId` es `req_` más 12 caracteres hexadecimales, y la cabecera `X-Request-Id` lleva el mismo valor. `meta.timestamp` va en UTC con milisegundos y `Z`.
 
-El catálogo está en `app/core/errors.py` y tiene 21 códigos. A los diez estándar de Max y los nueve del módulo se suman `METHOD_NOT_ALLOWED` 405 (ADR-32) y `PAYLOAD_TOO_LARGE` 413 (ADR-33), propios de este backend. El mensaje sale en español, o en inglés si `Accept-Language` pide `en`. `ApiError` rechaza un código del catálogo con un status distinto del suyo.
+El catálogo está en `app/core/errors.py` y tiene 22 códigos. A los diez estándar de Max y los diez del módulo, entre ellos `NO_TESTS_SELECTED` 400, que el contrato lista en `PUT /me/preferences` (ADR-72), se suman `METHOD_NOT_ALLOWED` 405 (ADR-32) y `PAYLOAD_TOO_LARGE` 413 (ADR-33), propios de este backend. El mensaje sale en español, o en inglés si `Accept-Language` pide `en`. `ApiError` rechaza un código del catálogo con un status distinto del suyo.
 
 Un POST, PUT o PATCH con `Content-Type: application/json` se revisa antes del enrutamiento. Un JSON inválido da 400 y un cuerpo sobre 100 kB da 413. Un error no controlado da 500 `INTERNAL_ERROR`, sin traza, y queda en el log con su `requestId`.
 

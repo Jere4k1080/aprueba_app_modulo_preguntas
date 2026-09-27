@@ -66,6 +66,9 @@ async def get_preferences(student: Student) -> JSONResponse:
 async def put_preferences(body: PreferencesIn, student: Student, db: DB) -> JSONResponse:
     """Guarda las preferencias de práctica. selectedTests solo acepta pruebas activas con preguntas, y
     facsim exige que el plan incluya mock_mode (ADR-70)."""
+    if not body.selected_tests:
+        # Sección 1.2 del contrato (ADR-72). GET /practice/next sin pruebas sigue ADR-29.
+        raise ApiError(400, "NO_TESTS_SELECTED", field="selectedTests")
     selected = list(dict.fromkeys(body.selected_tests))  # sin repetidas, en el orden en que llegaron
     tests = await active_tests(db)
     invalid = [t for t in selected if t not in tests or not has_questions(tests[t])]
