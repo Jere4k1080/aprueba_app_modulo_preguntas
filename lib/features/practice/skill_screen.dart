@@ -60,7 +60,7 @@ class SkillScreen extends ConsumerWidget {
             SoftCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text('Tu dominio'),
+                  const Text('Tu dominio'),
                   const Spacer(),
                   Text('${s.masteryPercent}%',
                       style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w800, fontSize: 18, color: t.brand)),
@@ -115,7 +115,7 @@ class SkillScreen extends ConsumerWidget {
 
   Widget _miniTag(String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(color: Colors.white.withOpacity(.18), borderRadius: BorderRadius.circular(6)),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .18), borderRadius: BorderRadius.circular(6)),
         child: Text(text, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
       );
 }

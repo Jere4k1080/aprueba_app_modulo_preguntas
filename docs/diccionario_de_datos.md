@@ -363,7 +363,7 @@ Responde el modelo `User` a partir de `users/usr_<UID>` (ADR-66).
 | `name`, `email`, `plan`, `streak` | Campos del mismo nombre | |
 | `quota.used` | `quota.used` | Después de reiniciar la cuota si `quota.date` no es hoy. |
 | `quota.max` | `quota.max` | 0 en un plan ilimitado. |
-| `quota.unlimited` | `quota.unlimited` | La app tiene que revisarlo antes que `quota.max`. `User` todavía no lo lee: se agrega en la iteración 3, con una prueba de la app para un plan ilimitado (ADR-66). |
+| `quota.unlimited` | `quota.unlimited` | La app lo revisa antes que `quota.max`. `User` lo lee y lo guarda en la caché, y la pantalla Pregunta muestra ∞ (ADR-66 y ADR-74). |
 | `medals` | `medalWallet` | Mismo mapa de cinco niveles. |
 | `school`, `region`, `age`, `authProvider` | Campos del mismo nombre | |
 | `phone` | No se guarda | `null`. La verificación por SMS está apagada (ADR-40). |

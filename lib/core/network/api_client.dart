@@ -168,15 +168,15 @@ class ApiClient {
           statusCode: e.response?.statusCode,
         );
       }
-      if (e.type == DioExceptionType.connectionError ||
-          e.type == DioExceptionType.connectionTimeout ||
-          e.type == DioExceptionType.receiveTimeout) {
-        throw ApiException.network();
-      }
+      // Sin respuesta es falta de red, lo único que la app muestra como "sin
+      // conexión". Un 404 o un 401 sin envelope, como los de la plataforma,
+      // traen respuesta y no lo son.
+      final status = e.response?.statusCode;
+      if (status == null) throw ApiException.network();
       throw ApiException(
-        code: 'HTTP_${e.response?.statusCode ?? 'ERR'}',
-        message: e.message ?? 'Error de red',
-        statusCode: e.response?.statusCode,
+        code: 'HTTP_$status',
+        message: 'Respuesta inesperada del servidor ($status).',
+        statusCode: status,
       );
     }
   }

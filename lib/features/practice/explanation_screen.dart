@@ -44,7 +44,7 @@ class ExplanationScreen extends ConsumerWidget {
               ),
             if (e.verification != null)
               SoftCard(
-                background: AppColors.exito.withOpacity(.08),
+                background: AppColors.exito.withValues(alpha: .08),
                 borderColor: AppColors.exito,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('✅ Verificación', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
@@ -55,7 +55,7 @@ class ExplanationScreen extends ConsumerWidget {
             if (e.keyConcept != null) ...[
               const SizedBox(height: 10),
               SoftCard(
-                background: AppColors.azul.withOpacity(.07),
+                background: AppColors.azul.withValues(alpha: .07),
                 borderColor: t.brand,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Text('💡 Concepto clave', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),

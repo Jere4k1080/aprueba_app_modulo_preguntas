@@ -49,7 +49,7 @@ Estas se verifican en toda auditoría. Un incumplimiento se reporta siempre, aun
 **1. La respuesta correcta nunca llega al cliente antes de tiempo.**
 Es la regla de integridad del producto. Se cumple en cinco lugares y hay que verificar los cinco:
 - `sanitize_question()` en `backend/app/services/questions.py` elimina `correctAnswer` antes de emitir
-- `GET /practice/next` y `GET /questions/{id}` no la incluyen
+- `GET /practice/next` y `GET /questions/{id}` no la incluyen. `backend/tests/test_integridad.py` recorre todas las rutas y falla si alguna la entrega
 - `Question.correctAnswer` es nullable en el modelo Dart
 - `CachedQuestions.correctAnswer` entra en nulo y solo se puebla tras responder, verificado en `test/drift_integrity_test.dart`
 - `firestore.rules` niega al cliente toda lectura y escritura, así que nadie puede leer `questions` directo desde Firestore y saltarse `sanitize_question()`. Decidido en ADR-21
@@ -99,7 +99,7 @@ Excepción: si `flutter analyze` reporta una advertencia en código fuera del m�
 
 Cambio autorizado: el 23/09/2026 Alloxentric autorizó tocar lo necesario del login para pasar a Firebase Auth y sacar la verificación por SMS. Los archivos tocados y el motivo de cada uno están en ADR-41. Siguen fuera del alcance y sin tocar la pantalla de registro (`register_screen.dart`), el login social, el olvido de contraseña y su restablecimiento. Del registro cambiaron el router, que salta los pasos de teléfono, y `PhoneAuthService`.
 
-`flutter analyze` reporta 38 avisos informativos y ninguna advertencia. 28 son deprecaciones de `withOpacity` y no se tocan, decidido en ADR-08. 14 de los 38 están en `lib/features/practice/`, 10 de ellos de `withOpacity`.
+`flutter analyze` reporta 24 avisos informativos y ninguna advertencia, todos fuera de `lib/features/practice/`. 18 son deprecaciones de `withOpacity` y no se tocan, decidido en ADR-08. Los 14 avisos que tenía el módulo se corrigieron al cerrar la iteración 3.
 
 ---
 
@@ -110,7 +110,7 @@ Cambio autorizado: el 23/09/2026 Alloxentric autorizó tocar lo necesario del lo
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs   # obligatorio, genera database.g.dart
 flutter analyze                                            # debe salir sin advertencias
-flutter test                                               # todas en verde
+flutter test                                               # 56 pruebas, todas en verde
 flutter build web --release --dart-define=API_BASE_URL=$API_BASE_URL
 
 # Backend (en Windows el intérprete es .venv/Scripts/python.exe)
@@ -120,7 +120,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements-dev.txt
 .venv/bin/python -m app.seed     # datos de prueba; pide SEED_DEMO_UID y SEED_DEMO_NEW_UID en .env
 .venv/bin/python -m app          # API en /api/v1
-.venv/bin/python -m pytest       # 38 pruebas; sin emulador, 36 y 2 omitidas
+.venv/bin/python -m pytest       # 58 pruebas; sin emulador, 36 y 22 omitidas
 
 # Verificador sin SDK de Flutter
 python3 tool/check_static.py .
@@ -206,7 +206,7 @@ seed/README.md              lo que carga el seed, con ejemplos
 
 ## Reglas de negocio
 
-1. La cuota diaria base sale de `plans/{plan}.limits.qDay`, y 0 es ilimitado (ADR-64). Declarar colegio suma 5 y declarar región suma 5, con tope de 20; esos tres valores son constantes de `backend/app/core/config.py`. Cada bonificación se reclama una sola vez. Reinicio diario. El seed da `qDay` 10 al plan `free`, como dice esta regla. El ejemplo de la administración trae 20, y eso va en la consulta a Max.
+1. La cuota diaria base sale de `plans/{plan}.limits.qDay`, y 0 es ilimitado (ADR-64). Declarar colegio suma 5 y declarar región suma 5, con tope de 20; esos tres valores son constantes de `backend/app/core/config.py`. Cada bonificación se reclama una sola vez. Reinicio diario. La cuota se descuenta al responder, no al entregar la pregunta (ADR-72). El seed da `qDay` 10 al plan `free`, como dice esta regla. El ejemplo de la administración trae 20, y eso va en la consulta a Max.
 2. La respuesta correcta no viaja al cliente antes de que el estudiante responda.
 3. Medallas de bronce: las de cada respuesta correcta salen de `plans/{plan}.badges.correct`. Cada desbloqueo de cuota da 1, fijado en `UNLOCK_MEDALS`. Una recorrección confirmada da 250, y los otorga la administración al aprobar, no el estudiante al enviar. La medalla por ingreso diario (`badges.login`) es de un módulo fuera del alcance (ADR-68). Cada movimiento va a `medalTransactions` y suma en `users.medalWallet` y `badgesTotal` en la misma transacción (ADR-59).
 4. `cohortPercentile` compara la velocidad del estudiante contra su cohorte. Lo calcula el backend al responder con el histograma de `questions.stats` (ADR-63). Firestore no hace agregaciones económicas en consulta.
@@ -234,7 +234,7 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-12** Sanitización centralizada de `correctAnswer` en la capa de servicios
 - **ADR-30** Backend en Python 3.12 con FastAPI, por decisión de la contraparte. Sus convenciones vienen del backend de administración de Max (ADR-31)
 - **ADR-40** Autenticación con Firebase Auth, por decisión de la contraparte. El backend verifica el ID token con `firebase-admin` y no tiene JWT propio ni refresh token. Reemplaza ADR-20 y ADR-38
-- **ADR-43** `verify_id_token` sin revisar revocación. El retraso de hasta una hora en rechazar un token revocado queda cubierto cuando se implementen el rechazo de usuarios suspendidos y la comprobación de `sessionsRevokedAt` (ADR-65)
+- **ADR-43** `verify_id_token` sin revisar revocación. El retraso de hasta una hora en rechazar un token revocado queda cubierto por el rechazo de usuarios suspendidos y la comprobación de `sessionsRevokedAt` que hace `get_current_student` (ADR-65 y ADR-71)
 - **ADR-49**, en la parte del proyecto local, con el ajuste del 2026-09-25: en local Firestore usa el emulador con el proyecto `demo-aprueba` (`FIRESTORE_EMULATOR_PROJECT_ID`), y `FIREBASE_PROJECT_ID` lleva el ID real, `aprueba-app-modulo-preguntas`, solo para validar tokens de Firebase Auth
 - **ADR-56** Los 35 commits de "Audit Sim" en `main` no se reescriben. Los agentes commitean con la identidad global de quien los opera (regla 7)
 - **ADR-57** El modelo sigue a la administración donde ella define una colección o un campo, y al modelo de datos de junio y su extensión del generador donde no. Decidido por la contraparte
@@ -250,8 +250,10 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-67** `reason` guarda el comentario del alumno, o la etiqueta en español del código si no hay comentario. El código va en `reasonCode`
 - **ADR-68** El backend actualiza `lastActivityAt` en la primera petición de cada día. La racha y la medalla por ingreso diario quedan fuera del alcance, igual que `activity`
 - **ADR-70** El modo facsímil depende de que el plan incluya la funcionalidad `mock_mode`. Las recorrecciones no dependen del plan
+- **ADR-71** `get_current_student` lee una vez `users/usr_<UID>` en cada petición del alumno. Lo crea si no existe, responde 401 si la sesión fue revocada y 403 si está suspendido, y marca `lastActivityAt` una vez al día. Los detalles de implementación son propuesta
+- **ADR-72** La cuota se descuenta al responder. `GET /practice/next` deja la pregunta entregada pendiente en `state/practice.lastQuestionId` y la repite hasta que se responda. `progress` sale de la cuota del día y `hasQuestions` es `approvedStock > 0`. Sin pruebas elegidas, `PUT /me/preferences` responde `VALIDATION_ERROR`. La contradicción del contrato sobre el descuento está en consulta a Max
 
-Las ADR-09 a ADR-12 son propuestas pendientes de ratificación por el equipo. Los tramos de ADR-63 y las decisiones menores de ADR-69 se ratifican en la sesión del equipo.
+ADR-11 y ADR-12 son propuestas pendientes de ratificación por el equipo. Los tramos de ADR-63 y las decisiones menores de ADR-69 se ratifican en la sesión del equipo. Jeremías aprobó el 27/09 ADR-09, ADR-29, ADR-66, ADR-71 y ADR-72, la parte de ADR-65 sobre suspendidos y `sessionsRevokedAt`, la de ADR-68 sobre `lastActivityAt` y la de ADR-69 sobre `hasQuestions`. El equipo las ratifica el 28/09.
 
 ---
 
@@ -271,15 +273,18 @@ En los documentos, usa datos concretos del proyecto —nombres de archivo, núme
 
 ## Pendientes conocidos
 
-Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-25:
+Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-27:
 
-- ADR-09 a ADR-12 pendientes de ratificación
+- La iteración 3 cerró el 2026-09-27 con los PR #21 a #23. Falta la prueba de punta a punta con `aprueba2@demo.cl` en la vista previa web de la app, que necesita la API de esos PR en producción
+- ADR-11 y ADR-12 pendientes de ratificación. Las aprobaciones de Jeremías del 27/09 se ratifican el 28/09
+- ADR-73 y ADR-74, y los detalles de implementación de ADR-71, son propuestas que esperan la respuesta de Jeremías
 - ADR-32 a ADR-39 y ADR-44 a ADR-55 son propuestas. El equipo las ratifica después de la Entrega A, porque varias dependen de `users`. De ADR-49 ya está decidido el proyecto local
 - El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
-- Los trece servicios del módulo no están implementados. La API está desplegada en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1`, pero solo responde `/health`
-- Al desplegar el backend FastAPI hay que borrar `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV` del proyecto de Vercel de la API, porque ya nadie las lee (ADR-40)
+- De los trece servicios, la iteración 3 dejó `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next`, además de `GET /me`. Faltan `GET /questions/{id}`, `POST /questions/{id}/answer`, la explicación, la habilidad, `GET /me/quota`, `POST /me/quota/unlock`, `GET` y `POST /corrections` y `GET /me/progress`. La API está en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1` y toma cada fusión a `main` con el despliegue automático
 - Los tramos de ADR-63 y las decisiones menores de ADR-69 se ratifican en la sesión del equipo. Los supuestos de ADR-65 siguen pendientes de confirmar con la empresa
-- Iteración 3: `User` lee `quota.unlimited` y lo revisa antes que `quota.max`, con una prueba de la app para un plan ilimitado (ADR-66)
-- Consulta a Max, por enviar: si el plan `free` lleva `qDay` 10, como dice la regla 1 y carga el seed, o 20, como trae su ejemplo (ADR-64); que su código crea `correction_confirmed` con un ID automático y el campo `by`, aunque su sección 2.8 declara `mtx_*` (ADR-59); que su confirmación de recorrecciones no baja `questions.flagCount` (ADR-61); si `uni` debe incluir `mock_mode`, que hoy solo trae `all` (ADR-70); y qué módulo lleva la racha, la medalla por ingreso diario y el registro en `activity` (ADR-68)
+- Consulta a Max, por enviar: que el contrato descuenta la cuota tanto en `GET /practice/next` como en `POST /questions/{id}/answer`, y su modelo al responder (ADR-72); si el plan `free` lleva `qDay` 10, como dice la regla 1 y carga el seed, o 20, como trae su ejemplo (ADR-64); que su código crea `correction_confirmed` con un ID automático y el campo `by`, aunque su sección 2.8 declara `mtx_*` (ADR-59); que su confirmación de recorrecciones no baja `questions.flagCount` (ADR-61); si `uni` debe incluir `mock_mode`, que hoy solo trae `all` (ADR-70); y qué módulo lleva la racha, la medalla por ingreso diario y el registro en `activity` (ADR-68)
+- La sección 1.2 del contrato lista `400 NO_TESTS_SELECTED` para `PUT /me/preferences`, y la ruta usa `VALIDATION_ERROR` como pidió Jeremías. Falta su respuesta sobre esa evidencia (ADR-72)
+- El formato facsímil se guarda y se valida contra el plan, pero `GET /practice/next` sirve preguntas al azar en los dos formatos (ADR-73). En la app, formato y dificultad solo se eligen en el onboarding, que está fuera del alcance
+- La lista de historias pone HU-03 y HU-04 en la iteración 4, y el encargo de la iteración 3 dejó `POST /questions/{id}/answer` para la iteración 5. Martin tiene que alinear el plan
 - Con `PHONE_VERIFICATION_ENABLED` apagada el registro no tiene salida, y el login social y el restablecimiento de contraseña llaman a rutas `/auth/*` que el backend no tiene. Falta que Alloxentric defina ese camino (ADR-41)
-Ya no son pendientes: la rotación de la llave de la cuenta de servicio está cerrada. La cuenta anterior `firebase-adminsdk-fbsvc` no se pudo restaurar; la actual, con el mismo nombre, tiene una sola llave creada por el equipo, `34b4db8b`, que desde el 2026-09-25 va en `FIREBASE_SERVICE_ACCOUNT_BASE64` de production y preview de la API, y que la API toma con el despliegue automático al fusionar el #15. Las llaves `b0014dfe` y `af27835c` ya no autentican y sus JSON se borraron. El proveedor de correo y contraseña de Firebase Authentication está habilitado y hay dos cuentas de demostración, creadas desde la consola el 2026-09-24. `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed nuevo de la Entrega A está cargado en ese proyecto desde el 2026-09-26, con 68 documentos de IDs fijos. Las dos cuentas de demostración tienen su documento `users/usr_<UID>` y su nombre visible en Firebase Authentication, y no quedan documentos del seed del 2026-09-23. Los 5 índices de `firestore.indexes.json` están `READY`, y los tres del modelo anterior se borraron. Un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+Ya no son pendientes: `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV` ya no están en el proyecto de Vercel de la API (revisado el 2026-09-27). La rotación de la llave de la cuenta de servicio está cerrada. La cuenta anterior `firebase-adminsdk-fbsvc` no se pudo restaurar; la actual, con el mismo nombre, tiene una sola llave creada por el equipo, `34b4db8b`, que desde el 2026-09-25 va en `FIREBASE_SERVICE_ACCOUNT_BASE64` de production y preview de la API, y que la API toma con el despliegue automático al fusionar el #15. Las llaves `b0014dfe` y `af27835c` ya no autentican y sus JSON se borraron. El proveedor de correo y contraseña de Firebase Authentication está habilitado y hay dos cuentas de demostración, creadas desde la consola el 2026-09-24. `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed nuevo de la Entrega A está cargado en ese proyecto desde el 2026-09-26, con 68 documentos de IDs fijos. Las dos cuentas de demostración tienen su documento `users/usr_<UID>` y su nombre visible en Firebase Authentication, y no quedan documentos del seed del 2026-09-23. Los 5 índices de `firestore.indexes.json` están `READY`, y los tres del modelo anterior se borraron. Un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.

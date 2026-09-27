@@ -83,7 +83,7 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(11),
                     border: Border.all(color: _selected == i ? t.brand : t.line, width: 1.5),
-                    color: _selected == i ? t.brand.withOpacity(.05) : null,
+                    color: _selected == i ? t.brand.withValues(alpha: .05) : null,
                   ),
                   child: Row(children: [
                     Icon(_selected == i ? Icons.radio_button_checked : Icons.radio_button_off,
@@ -102,12 +102,12 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
           ),
           const SizedBox(height: 10),
           SoftCard(
-            background: AppColors.bronze.withOpacity(.12),
+            background: AppColors.bronze.withValues(alpha: .12),
             borderColor: AppColors.bronze,
-            child: Row(children: [
-              const MedalCoin('bronze', size: 24),
-              const SizedBox(width: 8),
-              const Expanded(child: Text('Si el error se confirma, recibirás 250 medallas de bronce.', style: TextStyle(fontSize: 12))),
+            child: const Row(children: [
+              MedalCoin('bronze', size: 24),
+              SizedBox(width: 8),
+              Expanded(child: Text('Si el error se confirma, recibirás 250 medallas de bronce.', style: TextStyle(fontSize: 12))),
             ]),
           ),
           const SizedBox(height: 12),

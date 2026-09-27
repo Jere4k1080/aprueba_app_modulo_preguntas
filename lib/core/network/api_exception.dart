@@ -15,8 +15,23 @@ class ApiException implements Exception {
   final int? statusCode;
   final List<dynamic> details;
 
-  bool get isQuotaExhausted =>
-      code == 'QUOTA_EXHAUSTED' || code == 'PRACTICE_QUOTA_EXHAUSTED';
+  /// Sin respuesta del servidor. Es el único error que la app muestra como
+  /// "sin conexión": un 404 o un 401 traen respuesta.
+  bool get isNetwork => code == 'NETWORK_ERROR';
+
+  /// Cuota base alcanzada con un bono que todavía suma: lleva a la pantalla de
+  /// desbloqueo, no a un error (regla de negocio 8).
+  bool get isQuotaBaseReached => code == 'QUOTA_BASE_REACHED';
+
+  /// Límite diario alcanzado: seguir hoy requiere un plan de pago.
+  bool get isQuotaExhausted => code == 'QUOTA_DAILY_LIMIT';
+
+  /// No quedan preguntas para las pruebas y la dificultad elegidas.
+  bool get isNoQuestions => code == 'NO_QUESTIONS_AVAILABLE';
+
+  /// El alumno no tiene pruebas elegidas (ADR-29): la app lo invita a elegirlas.
+  bool get needsTests => isNoQuestions && field == 'selectedTests';
+
   bool get isAuthRequired => code == 'AUTH_REQUIRED' || statusCode == 401;
   bool get isForbidden => code == 'AUTH_FORBIDDEN' || statusCode == 403;
 

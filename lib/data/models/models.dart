@@ -19,6 +19,7 @@ class User {
     this.streak = 0,
     this.quotaUsed = 0,
     this.quotaMax = 10,
+    this.quotaUnlimited = false,
     this.medals = const Medals(),
     this.school,
     this.region,
@@ -39,6 +40,10 @@ class User {
   final int streak;
   final int quotaUsed;
   final int quotaMax;
+
+  /// Plan sin tope diario. Se revisa antes que [quotaMax], que en ese caso
+  /// vale 0 (ADR-66).
+  final bool quotaUnlimited;
   final Medals medals;
   final String? school;
   final String? region;
@@ -63,6 +68,7 @@ class User {
       streak: _int(j['streak']),
       quotaUsed: _int(quota?['used']),
       quotaMax: _int(quota?['max'], 10),
+      quotaUnlimited: _bool(quota?['unlimited']),
       medals: Medals.fromJson(_as<Map>(j['medals'])?.cast<String, dynamic>() ?? const {}),
       school: _as<String>(j['school']),
       region: _as<String>(j['region']),
@@ -83,7 +89,7 @@ class User {
         'email': email,
         'plan': plan,
         'streak': streak,
-        'quota': {'used': quotaUsed, 'max': quotaMax},
+        'quota': {'used': quotaUsed, 'max': quotaMax, 'unlimited': quotaUnlimited},
         'medals': medals.toJson(),
         'school': school,
         'region': region,
@@ -407,7 +413,8 @@ class Question {
       explanation: _as<String>(j['explanation']),
       status: _str(j['status'], 'active'),
       progressCurrent: prog == null ? null : _int(prog['current']),
-      progressTotal: prog == null ? null : _int(prog['total']),
+      // total llega en null con un plan ilimitado: no hay "de N" (ADR-73).
+      progressTotal: _as<num>(prog?['total'])?.toInt(),
     );
   }
 

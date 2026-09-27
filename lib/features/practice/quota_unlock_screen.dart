@@ -61,7 +61,7 @@ class _QuotaUnlockScreenState extends ConsumerState<QuotaUnlockScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: _region,
+                initialValue: _region,
                 items: const ['Metropolitana', 'Valparaíso', 'Biobío', 'Otra']
                     .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                     .toList(),
