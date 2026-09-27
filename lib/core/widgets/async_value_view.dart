@@ -19,11 +19,13 @@ class AsyncValueView<T> extends StatelessWidget {
           child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
       error: (e, _) {
         final msg = e is ApiException ? e.message : context.s('error_generic');
+        // La nube tachada es solo para la falta de red: un 404 o un 401 no lo son.
+        final offline = e is ApiException && e.isNetwork;
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.cloud_off, size: 40),
+              Icon(offline ? Icons.cloud_off : Icons.error_outline, size: 40),
               const SizedBox(height: 10),
               Text(msg, textAlign: TextAlign.center),
               if (onRetry != null) ...[
