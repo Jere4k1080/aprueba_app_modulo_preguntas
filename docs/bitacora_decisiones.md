@@ -80,6 +80,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 68. [ADR-68: Actividad del alumno y medalla por ingreso diario (Decidida)](#adr-68-actividad-del-alumno-y-medalla-por-ingreso-diario)
 69. [ADR-69: Decisiones menores del modelo alineado (Propuestas)](#adr-69-decisiones-menores-del-modelo-alineado)
 70. [ADR-70: Modo facsímil según `plans.features` (Decidida)](#adr-70-modo-facsímil-según-plansfeatures)
+71. [ADR-71: Alumno de cada petición en una sola lectura de `users` (Aprobada por Jeremías, pendiente de ratificación)](#adr-71-alumno-de-cada-petición-en-una-sola-lectura-de-users)
 
 ---
 
@@ -187,6 +188,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * El límite de 1 MB por documento de Firestore almacena cómodamente más de 30.000 IDs de preguntas, superando con creces la vida útil anual de la batería PAES.
 
 * **Actualización (2026-09-25):** se mantiene como extensión del modelo alineado (ADR-65), ahora en `users/usr_<UID>/state/practice` (ADR-58).
+* **Aprobación (27/09/2026):** aprobada por Jeremías el 27/09, pendiente de ratificación del equipo el 28/09. Se implementa en `GET /practice/next` en la iteración 3.
 ---
 
 ### ADR-10: Precálculo de percentil de cohorte mediante umbrales en questions
@@ -399,6 +401,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Impacto:** el cliente tiene que leer `field` en `NO_QUESTIONS_AVAILABLE`. Cuando las pruebas elegidas ya no tienen preguntas pendientes, la respuesta es la misma sin `field` ni `details`.
 * **Actualización (2026-09-23):** con las convenciones de ADR-31, `details` es una lista de objetos `{field, message, type}` y no un objeto. Al implementar la ruta, `{ "reason": "NO_TESTS_SELECTED" }` tiene que pasar a un elemento de esa lista, por ejemplo con `type: "NO_TESTS_SELECTED"`. Se ratifica junto con esta ADR.
 
+* **Aprobación (27/09/2026):** aprobada por Jeremías el 27/09, pendiente de ratificación del equipo el 28/09. Se implementa en `GET /practice/next` en la iteración 3, con `details` como lista (ADR-31).
 ---
 
 ### ADR-30: Backend en FastAPI
@@ -647,6 +650,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Verificación:** `test_token_de_firebase_valido_entrega_el_usuario` cubre los valores por defecto y los claims presentes.
 
 * **Actualización (2026-09-25):** `users` salió de la pausa con ADR-57, y la administración guarda el plan en `users/usr_<UID>.plan`. Por la regla de precedencia, al implementar la iteración 3 el plan se lee de ahí y no de los custom claims.
+* **Actualización (27/09/2026):** con ADR-71 las rutas del alumno toman el plan de `users/usr_<UID>`. `get_current_user` sigue sin leer Firestore y queda para las rutas que no necesitan el documento.
 ---
 
 ### ADR-45: `CertificateFetchError` como 503 `SERVICE_UNAVAILABLE`
@@ -889,6 +893,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Reglas de Firestore:** niegan todo acceso al cliente (ADR-21). Es más estricto que el modelo de junio, que deja a cada alumno leer y escribir sus documentos, y alcanza porque el módulo solo habla con la API.
 * **ID de `users`:** el encargo lo daba como supuesto con el UID solo. Quedó decidido con el prefijo `usr_` en ADR-58.
 
+* **Aprobación (27/09/2026):** el control de suspendidos y la comprobación de `sessionsRevokedAt` quedan aprobada por Jeremías el 27/09, pendiente de ratificación del equipo el 28/09. Se implementan en la iteración 3 (ADR-71).
 ---
 
 ### ADR-66: Alta de `users` en la primera petición autenticada y `GET /me`
@@ -902,6 +907,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Seed (decisión del equipo, 2026-09-26):** el seed crea las cuentas de demostración con la misma función del alta, `new_user()` en `backend/app/services/users.py`, y agrega encima solo lo propio de la demo: las preguntas respondidas, que traen sus medallas y la cuota usada, y las pruebas elegidas. Así el seed prueba el alta y queda una sola forma de crear un alumno. Las dos cuentas no tienen nombre visible en Firebase Authentication, así que su `name` sale del correo, igual que en el alta: `aprueba` y `aprueba2`. La función escribe también, con valores vacíos, los campos de la ficha de usuario de la consola (`subscriptionId`, `school`, `region`, `age` y `streak`), y `updatedAt`, que la consola actualiza al editar un alumno (sección 7). La creación en la primera petición autenticada, con la transacción que no pisa un documento existente, llega con los endpoints y llama a la misma función.
 * **Actualización (2026-09-26):** el equipo puso nombre visible a las dos cuentas en Firebase Authentication: `Estudiante Demo` y `Estudiante Nuevo`. El seed no lee Firebase Authentication, así que `backend/app/seed/data/users.json` guarda ese nombre y el seed lo pasa al alta dentro del token simulado. Los documentos lo toman en vez del correo, igual que el alta con el token real de cada cuenta.
 
+* **Aprobación (27/09/2026):** aprobada por Jeremías el 27/09, pendiente de ratificación del equipo el 28/09. El alta y `GET /me` se implementan en la iteración 3 (ADR-71).
 ---
 
 ### ADR-67: `reason` de la recorrección a partir del código y el comentario de la app
@@ -921,6 +927,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Decisión del equipo (2026-09-26):** el backend actualiza `lastActivityAt` en la primera petición autenticada de cada día, junto con el alta de ADR-66, porque la consola ordena por ese campo y la escritura cuesta poco. La racha y la medalla por ingreso diario son de módulos fuera del alcance, igual que el registro en `activity`. El módulo no los implementa, y quién los lleva va en la consulta a Max.
 * **Alternativa descartada:** dejar también `lastActivityAt` a otros módulos. La consola mostraría como inactivos a los alumnos que solo practican.
 
+* **Aprobación (27/09/2026):** la marca de `lastActivityAt` queda aprobada por Jeremías el 27/09, pendiente de ratificación del equipo el 28/09. Se implementa en la iteración 3 (ADR-71).
 ---
 
 ### ADR-69: Decisiones menores del modelo alineado
@@ -947,3 +954,18 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Consecuencia:** con los planes de ejemplo de la administración solo `all` incluye `f2`. `uni` es de pago y no la incluye, así que pierde el modo facsímil que le daba la regla anterior. Si `uni` debe incluir `mock_mode` va en la consulta a Max.
 * **Recorrecciones:** la sección 7.2 describe la recorrección como una funcionalidad del plan, pero el contrato de la API no le pone restricción de plan. El módulo no la agrega.
 * **Alternativa descartada:** seguir con la regla 5 como plan de pago. El módulo contradiría lo que la consola configura en cada plan.
+
+---
+
+### ADR-71: Alumno de cada petición en una sola lectura de `users`
+
+* **Estado:** **APROBADA POR JEREMÍAS EL 27/09, PENDIENTE DE RATIFICACIÓN DEL EQUIPO EL 28/09. LOS DETALLES DE IMPLEMENTACIÓN SON PROPUESTA**
+* **Decisión:** `get_current_student`, en `backend/app/core/deps.py`, verifica el token y llama a `current_student()`, en `backend/app/services/users.py`. Esa función lee una vez `users/usr_<UID>`. Si el documento no existe, lo crea con `new_user()` (ADR-66). Si existe, responde 401 `AUTH_REQUIRED` cuando el `auth_time` del token es anterior a `sessionsRevokedAt` y 403 `AUTH_FORBIDDEN` cuando `state` es `suspended` (ADR-65), y actualiza `lastActivityAt` si su día no es el de hoy (ADR-68). Las rutas del alumno usan esta dependencia, con el alias `Student`, y toman el plan del documento y no de los custom claims (ADR-44).
+* **Detalles tomados al implementar:**
+  * El alta corre en una transacción que relee el documento y lo crea solo si sigue sin existir. Si otra petición lo creó entremedio, devuelve ese. Pasa una vez por alumno, así que la segunda lectura de `users` y la de `plans/free` no se repiten. Sin `plans/free` el alta termina en 500.
+  * La revocación se revisa antes que la suspensión. Al suspender, la consola escribe las dos cosas: la app recibe 401, renueva el token, vuelve a recibir 401 porque `auth_time` no cambia y cierra la sesión. Si el alumno inicia sesión de nuevo, recibe 403.
+  * Un token sin `auth_time` cuenta como emitido antes de cualquier revocación.
+  * El día de `lastActivityAt` se cuenta en `QUOTA_RESET_TIMEZONE` desde `QUOTA_RESET_HOUR_LOCAL`, igual que el de la cuota, con `quota_day()`.
+  * `GET /me` devuelve `quota.used` en 0 si `quota.date` no es hoy, sin escribir el reinicio. Lo escribe `GET /practice/next`.
+* **Alternativa descartada:** leer y escribir siempre dentro de una transacción. Sumaría dos llamadas a Firestore en cada petición para cubrir una carrera que solo puede pasar en el alta.
+* **Verificación:** siete pruebas en `backend/tests/test_alumno.py`, contra el emulador: alta nueva, alta repetida y carrera sin pisar el documento, suspendido, sesión revocada, `lastActivityAt` una vez al día, forma de `GET /me` y petición sin token.
