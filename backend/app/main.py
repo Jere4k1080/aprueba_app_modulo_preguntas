@@ -7,7 +7,7 @@ from .core.config import get_settings
 from .core.envelope import RequestIdMiddleware
 from .core.errors import JsonBodyMiddleware, UnhandledErrorMiddleware, install_error_handlers
 from .db.firestore import get_db, get_firebase_app
-from .routers import health
+from .routers import health, me
 
 
 def create_app() -> FastAPI:
@@ -36,7 +36,7 @@ def create_app() -> FastAPI:
     install_error_handlers(app)
 
     app.include_router(health.router, prefix="/api/v1")
-    # Los trece servicios del módulo (/practice/next, /questions/{id}, ...) llegan en iteraciones siguientes.
+    app.include_router(me.router, prefix="/api/v1")
     return app
 
 
