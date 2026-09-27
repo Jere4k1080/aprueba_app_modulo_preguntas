@@ -66,7 +66,7 @@ class ResultScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             SoftCard(
               borderColor: AppColors.bronze,
-              background: AppColors.bronze.withOpacity(.12),
+              background: AppColors.bronze.withValues(alpha: .12),
               child: Row(children: [
                 MedalCoin(r.medalTier ?? 'bronze', size: 28),
                 const SizedBox(width: 9),
@@ -78,7 +78,7 @@ class ResultScreen extends ConsumerWidget {
           if (r.cohortPercentile != null) ...[
             const SizedBox(height: 8),
             SoftCard(
-              background: AppColors.exito.withOpacity(.08),
+              background: AppColors.exito.withValues(alpha: .08),
               borderColor: AppColors.exito,
               child: Text('⚡ Más rápido que el ${r.cohortPercentile}% de tu cohorte.',
                   style: const TextStyle(fontSize: 12)),
@@ -109,12 +109,12 @@ class _ResultOption extends StatelessWidget {
     Color border = t.line, bg = Colors.transparent, key = Colors.transparent, keyText = t.ink;
     if (isCorrect) {
       border = AppColors.exito;
-      bg = AppColors.exito.withOpacity(.08);
+      bg = AppColors.exito.withValues(alpha: .08);
       key = AppColors.exito;
       keyText = Colors.white;
     } else if (isWrongChoice) {
       border = AppColors.error;
-      bg = AppColors.error.withOpacity(.06);
+      bg = AppColors.error.withValues(alpha: .06);
       key = AppColors.error;
       keyText = Colors.white;
     }

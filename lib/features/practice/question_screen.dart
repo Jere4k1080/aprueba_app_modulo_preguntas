@@ -127,7 +127,7 @@ class _OptionTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: selected ? t.brand : t.line, width: 1.5),
-            color: selected ? t.brand.withOpacity(.06) : null,
+            color: selected ? t.brand.withValues(alpha: .06) : null,
           ),
           child: Row(children: [
             CircleAvatar(
