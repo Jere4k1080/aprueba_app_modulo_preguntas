@@ -998,6 +998,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Contexto:** al implementar `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next` aparecieron detalles que no cubren la bitácora ni el encargo de la iteración 3. En cada uno se tomó la opción más simple.
 * **Decisiones tomadas al implementar:**
   * `GET /practice/next` busca preguntas `published` de las pruebas elegidas y de la dificultad preferida a partir de un `randomKey` al azar, en orden, y si no encuentra da la vuelta desde 0. Usa el índice `testId, status, difficulty, randomKey` de `firestore.indexes.json`. Las respondidas se descartan en memoria (ADR-09), así que cada tramo lee hasta una pregunta más que las respondidas. Con miles de respondidas conviene guardar un cursor por prueba.
+  * El formato `facsim` se guarda y se valida contra el plan (ADR-70), pero `GET /practice/next` sirve preguntas al azar en los dos formatos. El orden de ensayo del facsímil no está implementado: falta definir cómo se arma un ensayo.
   * Solo se sirve la dificultad preferida. Si en ella no quedan preguntas por responder, la ruta responde 404 `NO_QUESTIONS_AVAILABLE` sin `field`, aunque queden en otras dificultades.
   * Si la pendiente dejó de estar `published`, por ejemplo porque la administración la retiró, se elige otra.
   * La pendiente se sigue entregando aunque el alumno cambie sus pruebas o su dificultad, porque ADR-72 dice que solo cambia al responder.
