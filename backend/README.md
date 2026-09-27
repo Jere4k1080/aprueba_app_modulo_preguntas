@@ -2,7 +2,7 @@
 
 API REST del módulo de práctica de Aprueba, escrita en Python 3.12 con FastAPI sobre Firestore. Reemplazó al backend Node y Express por decisión de la contraparte (ADR-30) y sigue las convenciones del backend de administración que especificó Max (ADR-31).
 
-Por ahora la API solo expone `GET /api/v1/health`. Los trece servicios del módulo llegan en las iteraciones siguientes. `sanitize_question()` y `calculate_cohort_percentile()` ya están en `app/services/questions.py`, con sus pruebas, aunque ninguna ruta las usa todavía.
+La API expone `GET /api/v1/health` y `GET /api/v1/me`. Los demás servicios del módulo llegan en las iteraciones siguientes. `sanitize_question()` y `calculate_cohort_percentile()` ya están en `app/services/questions.py`, con sus pruebas, aunque ninguna ruta las usa todavía.
 
 ## Stack
 
@@ -34,12 +34,12 @@ backend/
 │   │   ├── envelope.py      ok(), created(), no_content(), meta() y RequestIdMiddleware
 │   │   ├── errors.py        ApiError, catálogo es/en, manejadores de error, JsonBodyMiddleware y UnhandledErrorMiddleware
 │   │   ├── i18n.py          idioma por Accept-Language
-│   │   ├── deps.py          get_current_user y get_optional_user, que validan el token de Firebase, y los alias DB, CurrentUser y OptionalUser
+│   │   ├── deps.py          verify_token, get_current_user, get_optional_user y get_current_student, con los alias DB, CurrentUser, OptionalUser y Student
 │   │   └── pagination.py    encode_cursor(), decode_cursor(), PageParams y paginate()
 │   ├── db/firestore.py      AsyncClient único, get_firebase_app() y nombres de colecciones (COL)
-│   ├── routers/health.py    GET y HEAD /api/v1/health
-│   ├── schemas/             CamelModel y modelos del health
-│   ├── services/questions.py
+│   ├── routers/             health.py (GET y HEAD /api/v1/health) y me.py (GET /api/v1/me)
+│   ├── schemas/             CamelModel y modelos de cada respuesta
+│   ├── services/            questions.py (sanitize_question) y users.py (alta y alumno de cada petición)
 │   └── seed/                python -m app.seed y el banco de demostración en data/*.json
 ├── tests/                   pytest
 ├── requirements.txt
@@ -160,7 +160,7 @@ Un POST, PUT o PATCH con `Content-Type: application/json` se revisa antes del en
 
 ## Autenticación
 
-El alumno inicia sesión en la app con Firebase Auth y la app envía su ID token en `Authorization: Bearer`. El backend no emite ni renueva tokens y no tiene `JWT_SECRET` (ADR-40). `get_current_user`, en `app/core/deps.py`, valida el token con `firebase_admin.auth.verify_id_token` en el threadpool, porque la llamada bloquea mientras baja los certificados públicos de Google. Ninguna ruta usa todavía `CurrentUser` ni `OptionalUser`.
+El alumno inicia sesión en la app con Firebase Auth y la app envía su ID token en `Authorization: Bearer`. El backend no emite ni renueva tokens y no tiene `JWT_SECRET` (ADR-40). `verify_token`, en `app/core/deps.py`, valida el token con `firebase_admin.auth.verify_id_token` en el threadpool, porque la llamada bloquea mientras baja los certificados públicos de Google. `get_current_user` devuelve el usuario del token sin leer Firestore. Las rutas del alumno usan `get_current_student` (alias `Student`), que además lee su documento de `users`.
 
 | Caso | Respuesta |
 |---|---|
@@ -172,6 +172,8 @@ El alumno inicia sesión en la app con Firebase Auth y la app envía su ID token
 
 Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Authorization` y el mismo 401 si la cabecera existe pero no sirve (ADR-51). La verificación usa `check_revoked=False`, así que un token revocado sirve hasta que expira, como máximo una hora (ADR-43), y tolera 5 s de diferencia de reloj (ADR-47).
 
+`get_current_student` lee una vez `users/usr_<UID>` (ADR-71). Si no existe, lo crea con `new_user()` en una transacción que no pisa un documento existente (ADR-66). Si existe, responde 401 `AUTH_REQUIRED` cuando el `auth_time` del token es anterior a `sessionsRevokedAt`, 403 `AUTH_FORBIDDEN` cuando el alumno está suspendido (ADR-65), y actualiza `lastActivityAt` en la primera petición del día (ADR-68).
+
 `get_firebase_app()`, en `app/db/firestore.py`, inicia Firebase Admin con la misma configuración que Firestore. Con `FIRESTORE_EMULATOR_HOST` usa una credencial anónima, porque verificar un token solo necesita los certificados públicos. Con `FIREBASE_SERVICE_ACCOUNT_BASE64` usa la cuenta de servicio (ADR-49). El proyecto que resulta es la audiencia que exige `verify_id_token`. La app pide sus tokens al proyecto `aprueba-app-modulo-preguntas`, así que en local `FIREBASE_PROJECT_ID` vale lo mismo, mientras Firestore usa el proyecto `demo-aprueba` del emulador. Lo decidió el equipo el 2026-09-24 y lo ajustó el 2026-09-25 (ADR-49). Con otro valor, la API local rechaza los tokens de la app con 401 `AUTH_REQUIRED`.
 
 ## Pruebas
@@ -180,7 +182,7 @@ Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Auth
 .venv/bin/python -m pytest
 ```
 
-Son 31: 10 en `tests/test_health.py` y 21 en `tests/test_core.py`. `test_paginacion_por_fecha_contra_el_emulador` necesita el emulador en `127.0.0.1:8080`. Sin él, pytest informa 30 aprobadas y 1 omitida. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. Starlette 1.7 deja un aviso de obsolescencia sobre `httpx`, que se fijó en 0.28.1 como pedía el encargo.
+Son 45: 21 en `tests/test_core.py`, 10 en `tests/test_health.py`, 7 en `tests/test_modelo.py` y 7 en `tests/test_alumno.py`. Nueve necesitan el emulador en `127.0.0.1:8080`: la paginación, la carga del seed y las siete del alumno actual. Sin él, pytest informa 36 aprobadas y 9 omitidas. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. Starlette 1.7 deja un aviso de obsolescencia sobre `httpx`, que se fijó en 0.28.1 como pedía el encargo.
 
 Las pruebas de autenticación están en `tests/test_core.py` y montan rutas de sonda (`/api/v1/_yo` y `/api/v1/_opcional`) solo dentro de la prueba. Casi todas reemplazan `verify_id_token` con `monkeypatch` y comprueban que corra fuera del event loop:
 

@@ -7,15 +7,17 @@ from firebase_admin import auth
 from google.cloud.firestore import AsyncClient
 
 from ..db.firestore import get_db, get_firebase_app
+from ..services.users import current_student
 from .errors import ApiError
+from .i18n import Locale, get_locale
 
 # HTTPBearer entrega None si falta la cabecera, si el esquema no es Bearer o si el token viene vacío.
 bearer = HTTPBearer(auto_error=False)
 Credentials = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
 
-async def get_current_user(cred: Credentials) -> dict:
-    """Valida el token de Firebase Auth que la app envía en Authorization."""
+async def verify_token(cred: HTTPAuthorizationCredentials | None) -> dict:
+    """Valida el token de Firebase Auth que la app envía en Authorization y devuelve sus claims."""
     if cred is None:
         raise ApiError(401, "AUTH_REQUIRED")
     firebase_app = get_firebase_app()  # fuera del try: un error de configuración no se disfraza de 401
@@ -24,8 +26,8 @@ async def get_current_user(cred: Credentials) -> dict:
         # check_revoked=False evita una consulta a Firebase Auth por petición; un token revocado
         # sigue sirviendo hasta que expira, como máximo una hora. clock_skew_seconds tolera un
         # reloj del servidor algunos segundos atrasado respecto de Google.
-        claims = await run_in_threadpool(auth.verify_id_token, cred.credentials,
-                                         app=firebase_app, check_revoked=False, clock_skew_seconds=5)
+        return await run_in_threadpool(auth.verify_id_token, cred.credentials,
+                                       app=firebase_app, check_revoked=False, clock_skew_seconds=5)
     except auth.ExpiredIdTokenError:  # hereda de InvalidIdTokenError, por eso va primero
         raise ApiError(401, "AUTH_TOKEN_EXPIRED")
     except auth.CertificateFetchError:
@@ -34,8 +36,12 @@ async def get_current_user(cred: Credentials) -> dict:
     # texto, claim d que no es objeto). Un ValueError, en cambio, es de configuración y termina en 500.
     except (auth.InvalidIdTokenError, TypeError):
         raise ApiError(401, "AUTH_REQUIRED")
-    # role y plan salen de custom claims mientras la forma de users sigue en pausa. Sin ellos,
-    # student y free.
+
+
+async def get_current_user(cred: Credentials) -> dict:
+    """Usuario del token, sin leer Firestore. role y plan salen de custom claims (ADR-44); sin ellos,
+    student y free. Las rutas del alumno usan get_current_student, que lee users."""
+    claims = await verify_token(cred)
     return {
         "uid": claims["uid"],
         "email": claims.get("email"),
@@ -49,6 +55,14 @@ async def get_optional_user(request: Request, cred: Credentials) -> dict | None:
     return None if "authorization" not in request.headers else await get_current_user(cred)
 
 
+async def get_current_student(cred: Credentials, locale: Locale = Depends(get_locale)) -> dict:
+    """Documento users/usr_<UID> del alumno del token, leído una vez por petición. Lo crea si no existe
+    (ADR-66), rechaza sesiones revocadas y alumnos suspendidos (ADR-65) y marca la actividad del día
+    (ADR-68). El plan sale de este documento, no de los custom claims."""
+    return await current_student(get_db(), await verify_token(cred), locale)
+
+
 DB = Annotated[AsyncClient, Depends(get_db)]
 CurrentUser = Annotated[dict, Depends(get_current_user)]
 OptionalUser = Annotated[dict | None, Depends(get_optional_user)]
+Student = Annotated[dict, Depends(get_current_student)]
