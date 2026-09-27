@@ -81,6 +81,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 69. [ADR-69: Decisiones menores del modelo alineado (Propuestas)](#adr-69-decisiones-menores-del-modelo-alineado)
 70. [ADR-70: Modo facsímil según `plans.features` (Decidida)](#adr-70-modo-facsímil-según-plansfeatures)
 71. [ADR-71: Alumno de cada petición en una sola lectura de `users` (Aprobada por Jeremías, pendiente de ratificación)](#adr-71-alumno-de-cada-petición-en-una-sola-lectura-de-users)
+72. [ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3 (Aprobada por Jeremías, pendiente de ratificación; el descuento de cuota en consulta a Max)](#adr-72-cuota-pregunta-pendiente-y-preferencias-en-la-iteración-3)
+73. [ADR-73: Detalles de implementación de la práctica en la iteración 3 (Propuesta)](#adr-73-detalles-de-implementación-de-la-práctica-en-la-iteración-3)
 
 ---
 
@@ -944,6 +946,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Alternativa descartada:** detener la entrega hasta resolver cada detalle. Ninguno cambia la forma que lee la administración.
 * **Nota (2026-09-26):** estas decisiones se ratifican en la sesión del equipo.
 
+* **Aprobación (27/09/2026):** la regla de `hasQuestions` como `approvedStock > 0` queda aprobada por Jeremías el 27/09, pendiente de ratificación del equipo el 28/09 (ADR-72). Las demás decisiones de esta ADR se siguen ratificando en la sesión del equipo.
 ---
 
 ### ADR-70: Modo facsímil según `plans.features`
@@ -969,3 +972,42 @@ Este documento registra las decisiones de diseño tomadas durante la definición
   * `GET /me` devuelve `quota.used` en 0 si `quota.date` no es hoy, sin escribir el reinicio. Lo escribe `GET /practice/next`.
 * **Alternativa descartada:** leer y escribir siempre dentro de una transacción. Sumaría dos llamadas a Firestore en cada petición para cubrir una carrera que solo puede pasar en el alta.
 * **Verificación:** siete pruebas en `backend/tests/test_alumno.py`, contra el emulador: alta nueva, alta repetida y carrera sin pisar el documento, suspendido, sesión revocada, `lastActivityAt` una vez al día, forma de `GET /me` y petición sin token.
+
+---
+
+### ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3
+
+* **Estado:** **APROBADA POR JEREMÍAS EL 27/09, PENDIENTE DE RATIFICACIÓN DEL EQUIPO EL 28/09. LA CONTRADICCIÓN DEL CONTRATO ESTÁ EN CONSULTA A MAX**
+* **Contexto:** el contrato de la API se contradice sobre cuándo se descuenta la cuota. En la sección 1.3, `GET /practice/next` entrega la siguiente pregunta "descontando de la cuota diaria", y en la misma sección `POST /questions/{id}/answer` también "descuenta de la cuota diaria". El modelo de datos de la empresa descuenta al responder: la transacción que crea la respuesta es la que sube `quota.used` (diccionario, sección 2.2).
+* **Decisión:**
+  * La cuota se descuenta al responder, en la transacción de `POST /questions/{id}/answer`, que llega en la iteración 5. `GET /practice/next` reinicia y revisa la cuota sin descontarla, y con la cuota llena responde 422 antes de elegir una pregunta.
+  * `GET /practice/next` guarda la pregunta entregada como pendiente en `users/usr_<UID>/state/practice`, en `lastQuestionId`, y la vuelve a entregar, pasada por `sanitize_question()`, mientras no se responda. La pendiente solo cambia al responder, cuando la transacción de la iteración 5 agrega la pregunta a `answeredQuestionIds`. Sin esto, pedir otra pregunta sin responder recorrería el banco sin gastar cuota.
+  * `progress` sale de la cuota del día: `current` es `quota.used + 1`, la pregunta que el alumno va a responder, y `total` es `quota.max`.
+  * `hasQuestions` de `GET /tests` es `approvedStock > 0`, como proponía ADR-69.
+  * `PUT /me/preferences` con `selectedTests` vacío responde `VALIDATION_ERROR` 400 con `field` `selectedTests`. `NO_TESTS_SELECTED` no se agrega al catálogo. `GET /practice/next` sin pruebas elegidas sigue ADR-29.
+* **Consecuencia:** `meta.quota.used` cuenta las preguntas respondidas. El ejemplo del contrato muestra la sexta pregunta con `used` 6, y la API entrega `used` 5.
+* **Evidencia sobre `NO_TESTS_SELECTED` (27/09/2026):** la decisión partió de que el contrato no tiene ese código, pero la sección 1.2 lo lista en `PUT /me/preferences`: 400, "Debe seleccionarse al menos una prueba". Es el único lugar del contrato donde aparece, y no está en la lista de errores del módulo de `CLAUDE.md` ni en `backend/app/core/errors.py`. Se informó a Jeremías. Mientras no responda, la ruta usa `VALIDATION_ERROR`.
+* **Alternativa descartada:** descontar al entregar, como dice la descripción de `GET /practice/next`. Una pregunta pedida y no respondida gastaría cuota, y si la respuesta también descuenta, cada pregunta contaría dos veces.
+* **Verificación:** `test_la_pendiente_se_repite_sin_gastar_cuota`, en `backend/tests/test_practica.py`, pide la pregunta dos veces seguidas sin responder: recibe la misma y `quota.used` no cambia.
+
+---
+
+### ADR-73: Detalles de implementación de la práctica en la iteración 3
+
+* **Estado:** **PROPUESTA, PENDIENTE DE RESPUESTA DE JEREMÍAS Y DE RATIFICACIÓN DEL EQUIPO**
+* **Contexto:** al implementar `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next` aparecieron detalles que no cubren la bitácora ni el encargo de la iteración 3. En cada uno se tomó la opción más simple.
+* **Decisiones tomadas al implementar:**
+  * `GET /practice/next` busca preguntas `published` de las pruebas elegidas y de la dificultad preferida a partir de un `randomKey` al azar, en orden, y si no encuentra da la vuelta desde 0. Usa el índice `testId, status, difficulty, randomKey` de `firestore.indexes.json`. Las respondidas se descartan en memoria (ADR-09), así que cada tramo lee hasta una pregunta más que las respondidas. Con miles de respondidas conviene guardar un cursor por prueba.
+  * Solo se sirve la dificultad preferida. Si en ella no quedan preguntas por responder, la ruta responde 404 `NO_QUESTIONS_AVAILABLE` sin `field`, aunque queden en otras dificultades.
+  * Si la pendiente dejó de estar `published`, por ejemplo porque la administración la retiró, se elige otra.
+  * La pendiente se sigue entregando aunque el alumno cambie sus pruebas o su dificultad, porque ADR-72 dice que solo cambia al responder.
+  * Dos pedidos simultáneos sin pendiente pueden elegir preguntas distintas, y queda pendiente la última. No hay transacción. La respuesta de la iteración 5 puede exigir que la pregunta respondida sea la pendiente.
+  * Si `quota.date` no es hoy, `GET /practice/next` escribe `used` 0, la fecha de hoy, y `max` y `unlimited` recalculados desde el plan con los bonos ya reclamados, por si la consola cambió `qDay`.
+  * Con la cuota llena, `QUOTA_BASE_REACHED` si `max` está bajo `QUOTA_CAP` y queda un bono sin reclamar. Si no, `QUOTA_DAILY_LIMIT`. Con `qDay` 20, el valor del ejemplo de Max (ADR-64), ningún bono suma, y la app no lleva al alumno a un desbloqueo que no le daría preguntas.
+  * En un plan ilimitado `progress.total` es `null`. `meta.quota` lleva `unlimited` además de `used` y `max`, igual que `GET /me` (ADR-66). El contrato muestra `meta.quota` solo con `used` y `max`.
+  * La pregunta lleva `skillId` además de los campos del contrato, porque el modelo `Question` de la app lo lee. Después de `sanitize_question()`, una proyección deja solo los campos de `QUESTION_FIELDS`, en `backend/app/services/practice.py`, así que un campo nuevo del generador no llega a la app sin agregarlo ahí.
+  * Los parámetros de consulta `testId` y `sessionId` de `GET /practice/next` no se implementan, porque la app no los envía. `sessionId` llega con el modo facsímil.
+  * `GET /tests` entrega solo las pruebas con `active` en `true`, en su `order`. Son cinco documentos y se ordenan en memoria para no pedir un índice de `active` y `order`.
+  * `PUT /me/preferences` quita las pruebas repetidas y conserva el orden. Una prueba que no existe, está inactiva o no tiene preguntas da `VALIDATION_ERROR` 400 con un elemento de `details` por prueba (regla de negocio 6). `country`, `language` y `gradeId` son opcionales en la app y se escriben solo si llegan, `language` en `locale` (ADR-28). La ruta actualiza `updatedAt`.
+* **Alternativa descartada:** detener la parte 2 hasta resolver cada detalle. Ninguno cambia lo que lee la administración.
+* **Verificación:** doce pruebas en `backend/tests/test_practica.py` y una en `backend/tests/test_integridad.py`, contra el emulador. La de integridad recorre todas las rutas registradas y falla si alguna respuesta trae `correctAnswer` en cualquier nivel del JSON.
