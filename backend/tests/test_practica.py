@@ -108,6 +108,9 @@ def test_cuota_base_alcanzada_y_limite_diario(banco):
     banco.user.update({"quota.used": 20, "quota.max": 20, "quota.bonusSchool": True, "quota.bonusAddress": True})
     tope = banco.cliente.get(NEXT, headers=BEARER)
     assert tope.status_code == 422 and tope.json()["error"]["code"] == "QUOTA_DAILY_LIMIT"
+    # Con qDay 20 el máximo ya está en el tope y los bonos no suman: no se ofrece el desbloqueo.
+    banco.user.update({"quota.bonusSchool": False, "quota.bonusAddress": False})
+    assert banco.cliente.get(NEXT, headers=BEARER).json()["error"]["code"] == "QUOTA_DAILY_LIMIT"
 
 
 def test_plan_ilimitado_sin_tope(banco):

@@ -3,6 +3,7 @@ import random
 
 from google.cloud.firestore import FieldFilter
 
+from app.core.config import QUOTA_CAP
 from app.core.errors import ApiError
 from app.db.firestore import COL
 from app.services.questions import sanitize_question
@@ -56,10 +57,11 @@ async def fresh_quota(db, user: dict, plan: dict) -> dict:
 
 def check_quota(quota: dict) -> None:
     """Regla de negocio 1: los planes ilimitados no tienen tope. Al llegar al máximo, QUOTA_BASE_REACHED si
-    queda un bono por reclamar, para que la app lleve al desbloqueo, y QUOTA_DAILY_LIMIT si no."""
+    un bono sin reclamar todavía sumaría preguntas, para que la app lleve al desbloqueo, y QUOTA_DAILY_LIMIT
+    si no. Con max en QUOTA_CAP ningún bono suma, como pasaría con qDay 20 (ADR-73)."""
     if quota.get("unlimited") or quota.get("used", 0) < quota.get("max", 0):
         return
-    if not quota.get("bonusSchool") or not quota.get("bonusAddress"):
+    if quota.get("max", 0) < QUOTA_CAP and (not quota.get("bonusSchool") or not quota.get("bonusAddress")):
         raise ApiError(422, "QUOTA_BASE_REACHED")
     raise ApiError(422, "QUOTA_DAILY_LIMIT")
 
