@@ -103,3 +103,4 @@ desktop.ini
 # ─── Herramientas de análisis local ──────────────────────────────
 # Grafo de conocimiento generado por graphify: 2,4 MB, no aporta al build.
 graphify-out/
+/claude.config.json
