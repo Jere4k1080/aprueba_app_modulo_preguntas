@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/app_strings.dart';
-import '../../core/network/api_exception.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/medal_coin.dart';
@@ -14,17 +13,9 @@ class ResultScreen extends ConsumerWidget {
 
   Future<void> _next(BuildContext context, WidgetRef ref) async {
     final router = GoRouter.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(practiceSessionProvider.notifier).loadNext();
-      router.pushReplacement('/practice/question');
-    } on ApiException catch (e) {
-      if (e.isQuotaExhausted) {
-        router.pushReplacement('/paywall');
-      } else {
-        messenger.showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
+    // Los errores quedan en la sesión y los muestra la pantalla Pregunta.
+    await ref.read(practiceSessionProvider.notifier).loadNext();
+    router.pushReplacement('/practice/question');
   }
 
   @override

@@ -14,16 +14,15 @@ class PracticeRepository {
   final ApiClient _api;
   final AppDatabase _db;
 
-  Future<({Question question, int quotaUsed, int quotaMax})> next() async {
-    int used = 0, max = 0;
+  /// Siguiente pregunta, sin la respuesta correcta, con la cuota del día que
+  /// llega en meta.quota.
+  Future<({Question question, QuotaState? quota})> next() async {
     final res = await _api.get<Question>(Endpoints.practiceNext, parse: (d) {
       return Question.fromJson((d as Map).cast<String, dynamic>());
     });
     final quota = (res.meta?['quota'] as Map?)?.cast<String, dynamic>();
-    used = (quota?['used'] as num?)?.toInt() ?? 0;
-    max = (quota?['max'] as num?)?.toInt() ?? 0;
     await _cacheQuestion(res.data);
-    return (question: res.data, quotaUsed: used, quotaMax: max);
+    return (question: res.data, quota: quota == null ? null : QuotaState.fromJson(quota));
   }
 
   Future<Question> question(String id) async {
