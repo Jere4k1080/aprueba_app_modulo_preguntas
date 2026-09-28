@@ -112,7 +112,8 @@ def test_last_activity_se_marca_una_vez_al_dia(api):
 
 
 def test_me_con_la_forma_del_contrato(api):
-    ayer = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()[:10]
+    # Un día pasado fijo: "ayer" en UTC cae en el día de la cuota de 21:00 a 24:00 en Santiago.
+    ayer = "2020-01-01"
     api.ref.set({"name": "Estudiante Demo", "email": "aprueba@demo.cl", "plan": "free", "state": "active",
                  "streak": 3, "locale": "es", "country": "CL", "authProvider": "password",
                  "school": None, "region": None, "age": None, "selectedTests": ["lectora"],
