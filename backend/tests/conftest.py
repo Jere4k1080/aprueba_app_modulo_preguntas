@@ -1,12 +1,11 @@
 import os
-import socket
 import time
-import urllib.request
 from types import SimpleNamespace
 
 import pytest
 
 from app.core.config import Settings, get_settings
+from emulador import HOST, activo, vaciar
 
 # Las pruebas no leen el .env local de quien las corre.
 Settings.model_config["env_file"] = None
@@ -14,7 +13,7 @@ Settings.model_config["env_file"] = None
 # Entorno fijo antes de importar app.main, que crea la app a nivel de módulo.
 os.environ.update({
     "APP_ENV": "local",
-    "FIRESTORE_EMULATOR_HOST": "127.0.0.1:8080",
+    "FIRESTORE_EMULATOR_HOST": HOST,
     "ALLOWED_ORIGINS": "https://app.aprueba.test,http://localhost:3000",
     "ALLOWED_ORIGIN_PATTERN": r"^https://aprueba-pr-[a-z0-9-]+\.vercel\.app$",
 })
@@ -33,20 +32,12 @@ def _settings_frescos():
     get_settings.cache_clear()
 
 
-def emulador_activo() -> bool:
-    try:
-        socket.create_connection(("127.0.0.1", 8080), timeout=0.5).close()
-        return True
-    except OSError:
-        return False
-
-
 @pytest.fixture
 def banco(monkeypatch):
     """App contra un proyecto del emulador con el seed cargado y un token de aprueba@demo.cl. Se salta si el
-    emulador está apagado."""
-    if not emulador_activo():
-        pytest.skip("emulador de Firestore apagado en 127.0.0.1:8080")
+    emulador no responde."""
+    if not activo():
+        pytest.skip(f"sin emulador de Firestore en {HOST}")
     from fastapi.testclient import TestClient
     from firebase_admin import auth as firebase_auth
     from google.cloud import firestore
@@ -76,6 +67,4 @@ def banco(monkeypatch):
             yield SimpleNamespace(app=app, cliente=cliente, db=db, token=token,
                                   user=db.document(usuario), estado=db.document(f"{usuario}/state/practice"))
     finally:
-        pedido = urllib.request.Request(
-            f"http://127.0.0.1:8080/emulator/v1/projects/{proyecto}/databases/(default)/documents", method="DELETE")
-        urllib.request.urlopen(pedido, timeout=10).close()
+        vaciar(proyecto)

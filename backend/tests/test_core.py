@@ -2,8 +2,9 @@
 autenticación, cursor, 500 y documentación OpenAPI."""
 import asyncio
 import base64
+import http.server
 import json
-import socket
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -30,6 +31,7 @@ from app.core.errors import MAX_JSON_BODY, ApiError
 from app.core.pagination import PageParams, decode_cursor, encode_cursor, paginate
 from app.main import app, create_app
 from app.schemas.common import CamelModel
+import emulador
 
 client = TestClient(app)
 
@@ -362,15 +364,37 @@ def test_fechas_en_utc_con_z():
     assert json.loads(ok({"creadoEn": santiago}).body)["data"]["creadoEn"] == "2026-09-18T12:00:00Z"
 
 
-def _emulador_activo() -> bool:
+def test_el_emulador_se_reconoce_por_su_respuesta(monkeypatch):
+    """Otro programa en el puerto no cuenta como emulador. El 2026-09-27 GRW.exe ocupaba el 8080 y respondía
+    404, y las pruebas creían tener el emulador porque solo revisaban que el puerto aceptara conexiones."""
+    respuesta = {}
+
+    class Raiz(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            codigo, cuerpo = respuesta["actual"]
+            self.send_response(codigo)
+            self.send_header("Content-Length", str(len(cuerpo)))
+            self.end_headers()
+            self.wfile.write(cuerpo)
+
+        def log_message(self, *_):
+            pass
+
+    servidor = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Raiz)
+    threading.Thread(target=servidor.serve_forever, daemon=True).start()
+    monkeypatch.setattr(emulador, "HOST", f"127.0.0.1:{servidor.server_port}")
     try:
-        socket.create_connection(("127.0.0.1", 8080), timeout=0.5).close()
-        return True
-    except OSError:
-        return False
+        for codigo, cuerpo, esperado in ((200, b"Ok\n", True), (404, b"404 Not Found", False),
+                                         (200, b"<html>otra app</html>", False)):
+            respuesta["actual"] = (codigo, cuerpo)
+            assert emulador.activo.__wrapped__() is esperado, (codigo, cuerpo)
+    finally:
+        servidor.shutdown()
+        servidor.server_close()
+    assert emulador.activo.__wrapped__() is False, "puerto cerrado"
 
 
-@pytest.mark.skipif(not _emulador_activo(), reason="emulador de Firestore apagado en 127.0.0.1:8080")
+@pytest.mark.skipif(not emulador.activo(), reason=f"sin emulador de Firestore en {emulador.HOST}")
 def test_paginacion_por_fecha_contra_el_emulador():
     """Sección 9.4 de Max: paginate() contra el emulador, ordenando por una fecha en ambos sentidos."""
     async def recorrer():

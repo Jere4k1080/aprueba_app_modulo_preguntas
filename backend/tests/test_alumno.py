@@ -1,8 +1,6 @@
 """Alumno de cada petición (ADR-65, ADR-66, ADR-68 y ADR-71) y GET /me, contra el emulador de Firestore."""
 import asyncio
-import socket
 import time
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -16,6 +14,7 @@ from app.core.config import get_settings
 from app.main import create_app
 from app.services import users
 from app.services.users import new_user, quota_day
+from emulador import HOST, activo, vaciar
 
 PROYECTO = "demo-pytest-alumno"
 UID = "alumnoPrueba0000000000000001"  # 28 caracteres, como un UID de Firebase
@@ -23,15 +22,7 @@ BEARER = {"Authorization": "Bearer token.de.firebase"}
 FREE = {"limits": {"qDay": 10}}
 
 
-def _emulador_activo() -> bool:
-    try:
-        socket.create_connection(("127.0.0.1", 8080), timeout=0.5).close()
-        return True
-    except OSError:
-        return False
-
-
-pytestmark = pytest.mark.skipif(not _emulador_activo(), reason="emulador de Firestore apagado en 127.0.0.1:8080")
+pytestmark = pytest.mark.skipif(not activo(), reason=f"sin emulador de Firestore en {HOST}")
 
 
 def claims(uid=UID, **extra) -> dict:
@@ -55,9 +46,7 @@ def api(monkeypatch):
             yield SimpleNamespace(cliente=cliente, db=db, token=token,
                                   ref=db.collection("users").document(f"usr_{UID}"))
     finally:
-        pedido = urllib.request.Request(
-            f"http://127.0.0.1:8080/emulator/v1/projects/{PROYECTO}/databases/(default)/documents", method="DELETE")
-        urllib.request.urlopen(pedido, timeout=10).close()
+        vaciar(PROYECTO)
 
 
 def test_alta_nueva_con_la_forma_de_la_administracion(api):
@@ -123,7 +112,8 @@ def test_last_activity_se_marca_una_vez_al_dia(api):
 
 
 def test_me_con_la_forma_del_contrato(api):
-    ayer = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()[:10]
+    # Un día pasado fijo: "ayer" en UTC cae en el día de la cuota de 21:00 a 24:00 en Santiago.
+    ayer = "2020-01-01"
     api.ref.set({"name": "Estudiante Demo", "email": "aprueba@demo.cl", "plan": "free", "state": "active",
                  "streak": 3, "locale": "es", "country": "CL", "authProvider": "password",
                  "school": None, "region": None, "age": None, "selectedTests": ["lectora"],

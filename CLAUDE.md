@@ -120,7 +120,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements-dev.txt
 .venv/bin/python -m app.seed     # datos de prueba; pide SEED_DEMO_UID y SEED_DEMO_NEW_UID en .env
 .venv/bin/python -m app          # API en /api/v1
-.venv/bin/python -m pytest       # 58 pruebas; sin emulador, 36 y 22 omitidas
+.venv/bin/python -m pytest       # 59 pruebas; sin emulador, 37 y 22 omitidas
 
 # Verificador sin SDK de Flutter
 python3 tool/check_static.py .

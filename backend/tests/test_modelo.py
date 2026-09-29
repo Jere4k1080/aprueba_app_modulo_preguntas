@@ -1,8 +1,6 @@
 """Modelo alineado con la administración (Entrega A): IDs, histograma y seed."""
 import asyncio
 import re
-import socket
-import urllib.request
 from collections import Counter
 from datetime import datetime
 
@@ -15,17 +13,10 @@ from app.core.config import get_settings
 from app.db.firestore import USER_ID_PATTERN, user_doc_id
 from app.services.questions import ELAPSED_BUCKETS, elapsed_bucket
 from app.services.users import TIERS, new_user, quota_max
+from emulador import HOST, activo, vaciar
 
 # UID ficticios con el largo de un UID de Firebase (28 caracteres).
 UIDS = {"demo": "demoUid000000000000000000001", "nuevo": "demoUid000000000000000000002"}
-
-
-def _emulador_activo() -> bool:
-    try:
-        socket.create_connection(("127.0.0.1", 8080), timeout=0.5).close()
-        return True
-    except OSError:
-        return False
 
 
 def test_id_de_users_con_el_patron_de_la_administracion():
@@ -155,7 +146,7 @@ def test_modo_facsimil_segun_features():
     assert con_facsim == {"all"}, "con los planes de ejemplo de la administración solo all incluye mock_mode"
 
 
-@pytest.mark.skipif(not _emulador_activo(), reason="emulador de Firestore apagado en 127.0.0.1:8080")
+@pytest.mark.skipif(not activo(), reason=f"sin emulador de Firestore en {HOST}")
 def test_seed_contra_el_emulador(monkeypatch):
     proyecto = "demo-pytest-seed"
     monkeypatch.setenv("FIRESTORE_EMULATOR_PROJECT_ID", proyecto)
@@ -182,6 +173,4 @@ def test_seed_contra_el_emulador(monkeypatch):
         assert usuario["badgesTotal"] == 4 and usuario["quota"]["used"] == 5
     finally:
         # Borra todo lo del proyecto de prueba en el emulador.
-        pedido = urllib.request.Request(
-            f"http://127.0.0.1:8080/emulator/v1/projects/{proyecto}/databases/(default)/documents", method="DELETE")
-        urllib.request.urlopen(pedido, timeout=10).close()
+        vaciar(proyecto)
