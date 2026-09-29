@@ -387,7 +387,7 @@ Responde la lista de `TestInfo` con las pruebas de `tests` que tienen `active` e
 
 ### 3.5 `GET` y `PUT /me/preferences`
 
-Responden `Preferences` desde `users/usr_<UID>`: `selectedTests`, `format` desde `practiceFormat`, `difficulty`, `country`, `language` desde `locale`, `gradeId` y `onboarded`, que se deriva igual que en `GET /me` (ADR-28). `PUT` recibe `selectedTests`, `format` y `difficulty`, obligatorios, y `country`, `language` y `gradeId`, opcionales, que se escriben solo si llegan. Quita las pruebas repetidas y solo acepta pruebas activas con preguntas. Con `selectedTests` vacío o con una prueba sin preguntas responde `VALIDATION_ERROR` 400 con `field` `selectedTests` (ADR-72 y ADR-73). `facsim` sin `mock_mode` en el plan responde `FORMAT_REQUIRES_PLAN` 422 (ADR-70). Actualiza también `updatedAt`.
+Responden `Preferences` desde `users/usr_<UID>`: `selectedTests`, `format` desde `practiceFormat`, `difficulty`, `country`, `language` desde `locale`, `gradeId` y `onboarded`, que se deriva igual que en `GET /me` (ADR-28). `PUT` recibe `selectedTests`, `format` y `difficulty`, obligatorios, y `country`, `language` y `gradeId`, opcionales, que se escriben solo si llegan. Quita las pruebas repetidas y solo acepta pruebas activas con preguntas. Con `selectedTests` vacío responde `NO_TESTS_SELECTED` 400, y con una prueba sin preguntas `VALIDATION_ERROR` 400, los dos con `field` `selectedTests` (ADR-72 y ADR-73). `facsim` sin `mock_mode` en el plan responde `FORMAT_REQUIRES_PLAN` 422 (ADR-70). Actualiza también `updatedAt`.
 
 ### 3.6 `GET /practice/next`
 

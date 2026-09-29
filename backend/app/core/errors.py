@@ -70,6 +70,10 @@ MESSAGES: dict[str, dict[str, str]] = {
     "FORMAT_REQUIRES_PLAN": {
         "es": "El formato de ensayo o práctica seleccionado requiere un plan de pago activo.",
         "en": "The selected mock exam or practice format requires an active paid plan."},
+    # El contrato lo lista en PUT /me/preferences (sección 1.2), con este texto en español (ADR-72).
+    "NO_TESTS_SELECTED": {
+        "es": "Debe seleccionarse al menos una prueba.",
+        "en": "At least one test must be selected."},
 }
 
 # Los estándar van primero: al traducir un status HTTP a código gana el genérico.
@@ -80,6 +84,7 @@ ERROR_STATUS: dict[str, int] = {
     "QUOTA_BASE_REACHED": 422, "QUOTA_DAILY_LIMIT": 422, "NO_QUESTIONS_AVAILABLE": 404,
     "ALREADY_ANSWERED": 409, "INVALID_OPTION": 400, "BONUS_ALREADY_CLAIMED": 409,
     "QUOTA_MAX_REACHED": 422, "CORRECTION_ALREADY_OPEN": 409, "FORMAT_REQUIRES_PLAN": 422,
+    "NO_TESTS_SELECTED": 400,
 }
 
 INVALID_JSON = {"es": "El cuerpo de la petición no contiene un JSON válido.",

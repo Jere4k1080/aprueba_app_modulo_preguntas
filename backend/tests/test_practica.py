@@ -44,7 +44,13 @@ def test_preferencias_get_y_put(banco):
 def test_put_rechaza_seleccion_vacia_o_pruebas_sin_preguntas(banco):
     vacia = put(banco, selectedTests=[])
     assert vacia.status_code == 400
-    assert (vacia.json()["error"]["code"], vacia.json()["error"]["field"]) == ("VALIDATION_ERROR", "selectedTests")
+    assert (vacia.json()["error"]["code"], vacia.json()["error"]["field"]) == ("NO_TESTS_SELECTED", "selectedTests")
+    assert vacia.json()["error"]["message"] == "Debe seleccionarse al menos una prueba.", "el texto del contrato"
+    en = banco.cliente.put(PREFS, headers={**BEARER, "Accept-Language": "en"},
+                           json={"selectedTests": [], "format": "random", "difficulty": "d1"})
+    assert en.json()["error"]["message"] == "At least one test must be selected."
+    sin_campo = banco.cliente.put(PREFS, headers=BEARER, json={"format": "random", "difficulty": "d1"})
+    assert (sin_campo.status_code, sin_campo.json()["error"]["code"]) == (400, "VALIDATION_ERROR"), "falta el campo"
     banco.db.document("tests/hist").update({"approvedStock": 0})
     mala = put(banco, selectedTests=["lectora", "hist", "maths"])
     error = mala.json()["error"]
@@ -81,7 +87,7 @@ def test_la_pendiente_se_repite_sin_gastar_cuota(banco):
     assert segunda["data"] == primera["data"], "dos pedidos seguidos sin responder dan la misma pregunta"
     assert segunda["meta"]["quota"] == primera["meta"]["quota"] and banco.user.get().to_dict()["quota"]["used"] == 5
     assert banco.estado.get().to_dict()["lastQuestionId"] == primera["data"]["id"]
-    # La transacción de responder (iteración 5) la agrega a answeredQuestionIds y deja de estar pendiente.
+    # La transacción de responder (iteración 4) la agrega a answeredQuestionIds y deja de estar pendiente.
     banco.estado.update({"answeredQuestionIds": firestore.ArrayUnion([primera["data"]["id"]])})
     tercera = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
     assert tercera["id"] != primera["data"]["id"]

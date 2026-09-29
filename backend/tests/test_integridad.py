@@ -1,7 +1,7 @@
 """Regla 1 de CLAUDE.md: ninguna ruta entrega correctAnswer, en ningún nivel del JSON, antes de responder.
 
 Recorre todas las rutas registradas, así que una ruta nueva entra sola en la prueba. POST
-/questions/{id}/answer, de la iteración 5, será la única que la devuelva, después de responder, y tendrá
+/questions/{id}/answer, de la iteración 4, será la única que la devuelva, después de responder, y tendrá
 que quedar como excepción explícita."""
 
 BEARER = {"Authorization": "Bearer token.de.firebase"}
