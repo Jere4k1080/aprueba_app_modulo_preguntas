@@ -14,9 +14,9 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 |---|---:|---|
 | `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración salvo el `qDay` de `free` (ADR-64) |
 | `features` | 1 | `f2`, la funcionalidad `mock_mode` que decide el modo facsímil (ADR-70) |
-| `tests` | 5 | Las pruebas PAES, con 4 preguntas aprobadas cada una |
+| `tests` | 5 | Las pruebas PAES: `lectora` y `m1` con 14 preguntas aprobadas y las demás con 4 |
 | `skills` | 20 | Cuatro habilidades por prueba |
-| `questions` | 20 | Una por cada combinación de prueba y dificultad |
+| `questions` | 40 | Una por cada combinación de prueba y dificultad, más 10 de d1 en `lectora` y 10 en `m1` |
 | `users` | 2 | `usr_<UID>` de `aprueba@demo.cl` y de `aprueba2@demo.cl` |
 | `users/{id}/answers` | 5 | Respuestas de `aprueba@demo.cl` |
 | `users/{id}/skillMastery` | 5 | Dominio de `aprueba@demo.cl` en las habilidades que respondió |
@@ -24,11 +24,11 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 | `medalTransactions` | 4 | Una por cada respuesta correcta |
 | `corrections` | 1 | Solicitud pendiente de `aprueba@demo.cl` |
 
-En total son 68 documentos.
+En total son 88 documentos.
 
-`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 10 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 15 preguntas.
+`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 10 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 35 preguntas, 22 de ellas en d1, su dificultad.
 
-`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 8 preguntas de esas dos pruebas.
+`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 28 preguntas de esas dos pruebas, 22 de ellas en d1, su dificultad. Alcanzan para la cuota del día con los dos bonos, que es 20.
 
 Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. El seed arma para cada una el mismo token que entrega Firebase Authentication, con correo, nombre visible y proveedor, así que se llaman `Estudiante Demo` y `Estudiante Nuevo`. Si se cambia el nombre visible de una cuenta, hay que cambiarlo también en `users.json`.
 
@@ -90,7 +90,7 @@ Es la única funcionalidad del catálogo de la consola que lee el módulo (ADR-7
   "active": true,
   "countryId": "cl",
   "examId": "cl_paes",
-  "approvedStock": 4
+  "approvedStock": 14
 }
 ```
 
@@ -176,7 +176,7 @@ Son 20 habilidades, cuatro por prueba, con prerrequisitos dentro del árbol y re
 }
 ```
 
-Las 20 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed.
+Las 40 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed.
 
 El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, así que la equivalencia se puede recalcular (ADR-62):
 
@@ -192,6 +192,8 @@ El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, as
 | `q_demo_m1_d4` | `qst_b72993bcce` | `q_demo_hist_d2` | `qst_f2babea270` |
 | `q_demo_m2_d1` | `qst_17392f3fb1` | `q_demo_hist_d3` | `qst_a61c41a428` |
 | `q_demo_m2_d2` | `qst_4574d5002b` | `q_demo_hist_d4` | `qst_989222c2fc` |
+
+Las 20 preguntas de d1 que se agregaron el 2026-09-27 para la demo, 10 de `lectora` y 10 de `m1`, no tienen ID anterior. Su ID es `qst_` más los primeros 10 hexadecimales del SHA-1 de una semilla fija, de `q_demo_lectora_d1_02` a `q_demo_lectora_d1_11` y de `q_demo_m1_d1_02` a `q_demo_m1_d1_11`. `test_respuestas_de_m1_en_d1_recalculadas`, en `backend/tests/test_modelo.py`, recalcula desde el enunciado la respuesta de cada pregunta de `m1` en d1 y comprueba que coincida una sola alternativa, la marcada. Las de `lectora` no se pueden recalcular: las revisa una persona del equipo antes de la demo (ADR-73).
 
 ---
 

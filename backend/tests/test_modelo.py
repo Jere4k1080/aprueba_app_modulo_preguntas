@@ -1,8 +1,10 @@
 """Modelo alineado con la administración (Entrega A): IDs, histograma y seed."""
 import asyncio
+import math
 import re
 from collections import Counter
 from datetime import datetime
+from fractions import Fraction
 
 import pytest
 from google.cloud.firestore import SERVER_TIMESTAMP, AsyncClient
@@ -146,6 +148,68 @@ def test_modo_facsimil_segun_features():
     assert con_facsim == {"all"}, "con los planes de ejemplo de la administración solo all incluye mock_mode"
 
 
+PREGUNTAS = seed.load("questions")
+
+
+def test_forma_de_las_preguntas_del_banco():
+    ids = [q["id"] for q in PREGUNTAS]
+    assert len(ids) == len(set(ids)) and all(re.fullmatch(r"qst_[0-9a-f]{10}", i) for i in ids)
+    claves = [q["randomKey"] for q in PREGUNTAS]
+    assert len(claves) == len(set(claves)) and all(0 <= k < 1 for k in claves), "randomKey repetido o fuera de rango"
+    habilidades = {s["id"]: s for s in seed.load("skills")}
+    ejes = {t["id"]: set(t["axes"]) for t in seed.load("tests")}
+    for q in PREGUNTAS:
+        assert len(set(q["options"])) == len(q["options"]) == 4 and q["correctAnswer"] in ("A", "B", "C", "D"), q["id"]
+        assert q["axis"] in ejes[q["testId"]] and habilidades[q["skillId"]]["testId"] == q["testId"], q["id"]
+        assert (q["status"], q["reviewStatus"], q["source"]) == ("published", "approved", "seed_demo"), q["id"]
+        assert q["explanation"].startswith("1. ") and "\nVerificación: " in q["explanation"], q["id"]
+
+
+def test_el_banco_alcanza_un_dia_de_cuota_en_d1():
+    """Las cuentas de demostración practican lectora y m1 en d1. Con 10 preguntas o más en cada prueba,
+    aprueba2@demo.cl completa la cuota del día, bonos incluidos, sin quedarse sin preguntas (ADR-73)."""
+    for test in ("lectora", "m1"):
+        assert sum(q["testId"] == test and q["difficulty"] == "d1" for q in PREGUNTAS) >= 10, test
+
+
+def _valor(alternativa: str) -> Fraction:
+    """Número de una alternativa: −4, 17/3, 8,5, $4.550, 10 cm o x = 6."""
+    texto = re.sub(r"(?<=\d)\.(?=\d{3}(?!\d))", "", alternativa.replace("−", "-").replace("$", ""))  # punto de miles
+    return Fraction(re.search(r"-?\d+(?:,\d+)?(?:/\d+)?", texto).group().replace(",", "."))
+
+
+def _hipotenusa(a: int, b: int) -> Fraction:
+    c = math.isqrt(a * a + b * b)
+    assert c * c == a * a + b * b, "la hipotenusa no es entera"
+    return Fraction(c)
+
+
+# Respuesta de cada pregunta de m1 en d1, calculada desde el enunciado y sin mirar correctAnswer.
+RESPUESTAS_M1_D1 = {
+    "qst_9873643c47": 3 + 4 * 2 - Fraction(6, 3),                        # 3 + 4 · 2 − 6 ÷ 3
+    "qst_31705f149a": Fraction(-8 + 5 * 3),                               # −8 + 5 · 3
+    "qst_d410314561": Fraction(20 - (6 - 9) * 2),                         # 20 − (6 − 9) · 2
+    "qst_a366f8d731": Fraction(25, 100) * 40,                             # el 25 % de 40 estudiantes
+    "qst_59b7c06ed6": Fraction(12_500 - 4_750 - 3_200),                   # lo que le queda a Camila
+    "qst_d156e63a9d": Fraction(17 - 5, 2),                                # 2x + 5 = 17
+    "qst_d5d89dc1e5": Fraction(15, 3) + 2,                                # 3(x − 2) = 15
+    "qst_f9b0162f63": Fraction(36, 1 + 2),                                # un número más su doble es 36
+    "qst_a3b859282d": Fraction(5, 3 + 5 + 2),                             # bolita azul
+    "qst_543c93e1d4": Fraction(sum(cara > 4 for cara in range(1, 7)), 6),  # dado mayor que 4
+    "qst_7afdd2173d": _hipotenusa(6, 8),                                  # catetos de 6 y 8 cm
+}
+
+
+def test_respuestas_de_m1_en_d1_recalculadas():
+    """En cada pregunta de m1 en d1 coincide con el cálculo una sola alternativa, y es la marcada."""
+    m1_d1 = {q["id"]: q for q in PREGUNTAS if q["testId"] == "m1" and q["difficulty"] == "d1"}
+    assert set(m1_d1) == set(RESPUESTAS_M1_D1), "cada pregunta de m1 en d1 necesita su cálculo"
+    for q_id, valor in RESPUESTAS_M1_D1.items():
+        q = m1_d1[q_id]
+        coinciden = [letra for letra, alternativa in zip("ABCD", q["options"]) if _valor(alternativa) == valor]
+        assert coinciden == [q["correctAnswer"]], f"{q_id}: coinciden {coinciden} y la marcada es {q['correctAnswer']}"
+
+
 @pytest.mark.skipif(not activo(), reason=f"sin emulador de Firestore en {HOST}")
 def test_seed_contra_el_emulador(monkeypatch):
     proyecto = "demo-pytest-seed"
@@ -167,7 +231,7 @@ def test_seed_contra_el_emulador(monkeypatch):
 
     try:
         conteo, usuario = asyncio.run(sembrar_y_leer())
-        assert conteo == {"questions": 20, "plans": 3, "features": 1, "users": 2, "tests": 5, "skills": 20,
+        assert conteo == {"questions": 40, "plans": 3, "features": 1, "users": 2, "tests": 5, "skills": 20,
                           "medalTransactions": 4, "corrections": 1, "answers": 5}
         assert isinstance(usuario["createdAt"], datetime) and isinstance(usuario["lastActivityAt"], datetime)
         assert usuario["badgesTotal"] == 4 and usuario["quota"]["used"] == 5

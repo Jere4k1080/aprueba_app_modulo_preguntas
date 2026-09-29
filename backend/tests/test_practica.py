@@ -131,8 +131,8 @@ def test_sin_pruebas_elegidas_o_sin_preguntas_por_responder(banco):
     sin_pruebas = banco.cliente.get(NEXT, headers=BEARER).json()["error"]
     assert (sin_pruebas["code"], sin_pruebas["field"], sin_pruebas["details"][0]["type"]) == \
         ("NO_QUESTIONS_AVAILABLE", "selectedTests", "NO_TESTS_SELECTED")
-    # La única pregunta d1 de lectora ya está respondida.
-    banco.user.update({"selectedTests": ["lectora"], "difficulty": "d1"})
+    # La única pregunta d2 de lectora ya está respondida.
+    banco.user.update({"selectedTests": ["lectora"], "difficulty": "d2"})
     res = banco.cliente.get(NEXT, headers=BEARER)
     assert res.status_code == 404 and (res.json()["error"]["code"], res.json()["error"]["field"]) == \
         ("NO_QUESTIONS_AVAILABLE", None)
