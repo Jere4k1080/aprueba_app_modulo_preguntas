@@ -1,4 +1,21 @@
-# Revisión pendiente — fusión sin revisión cruzada del 2026-09-13
+# Antecedentes de revisión cruzada de septiembre de 2026
+
+## Estado documental al 01/10/2026
+
+Este archivo conserva el registro de las fusiones del 13 y 22/09 y las preguntas de revisión de entonces. Sus estados son históricos: no se vuelven a comprobar aquí todas las revisiones ni se convierten aprobaciones por WhatsApp en aprobaciones de GitHub.
+
+La Entrega 1 fue aceptada por Martin el 29/09 en T-24, después de fusionar del #25 al #28 y recargar el banco sintético. Esa aceptación no reemplaza la segunda lectura de cada PR antiguo. Desde los criterios de terminado v1.0, un integrante distinto del autor revisa y aprueba cada PR en GitHub.
+
+| Supuesto del registro original | Referencia vigente |
+|---|---|
+| Backend Express y JWT emitido por el módulo | FastAPI y validación de ID token de Firebase Auth, ADR-30 y ADR-40 |
+| Trece servicios y login como excepción | Catorce servicios con `GET /me` de HT-07 y login sin SMS de HU-21; cinco servicios disponibles |
+| Martin como Coach o cliente delegado | Max es Cliente, Eliana es Coach, Martin es Tracker y Tester; Registro de interesados v1.4 |
+| Próxima iteración 3 y pendientes de aquella entrega | Iteración 4, semana 8; los hallazgos de T-24 pasaron a T-25 a T-28 |
+| ADR-10 con umbrales precalculados | Histograma requerido por ADR-63 y RNF-12; implementación pendiente de HT-04 / T-30 |
+| Consultas abiertas de cuota, facsímil, dificultad y actividad | Confirmaciones registradas en ADR-76 a ADR-83; ADR-72 ratificada en cuota y pendiente |
+
+## Registro original, conservado para revisión
 
 Este documento existe porque los ocho pull requests abiertos ese día se fusionaron (los que pudieron) sin que otro integrante del equipo los revisara, por ausencia del equipo esa semana. Ver ADR-16 en `docs/bitacora_decisiones.md`. De los ocho, #7, #1 y #4 se fusionaron el 2026-09-22 con la aprobación de Sebastián y Martín, dada por WhatsApp; los otros cinco siguen sin una segunda lectura. Ese día se sumó el PR #10, fusionado sin revisión (sección al final). Esta guía es para que Sebastián y Martín puedan hacer esa revisión durante la semana, sin tener que reconstruir el contexto desde cero.
 

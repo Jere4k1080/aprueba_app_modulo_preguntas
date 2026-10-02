@@ -1,5 +1,7 @@
 # Datos semilla de Firestore
 
+Estado del código revisado al 01/10/2026. Los ejemplos describen el seed sintético existente; no son el banco real de Alloxentric ni instrucciones para importarlo. La prueba de aceptación T-24 del 29/09 se hizo con el banco recargado en producción después de fusionar del #25 al #28. Una carga posterior debe salir de `main` revisada y volver a verificarse en el entorno desplegado, con una prueba de aceptación de Martin.
+
 El seed carga en Firestore un banco de demostración y los documentos de las dos cuentas de prueba. Se corre desde `backend/` con `.venv/bin/python -m app.seed` (en Windows, `.venv/Scripts/python.exe -m app.seed`), con el emulador de Firestore activo o con `SEED_ALLOW_REMOTE=true` (ADR-22). Necesita además `SEED_DEMO_UID` y `SEED_DEMO_NEW_UID`, los UID de Firebase Authentication de `aprueba@demo.cl` y `aprueba2@demo.cl`. Si falta uno, o si no da un ID `usr_` que acepte la administración, el seed termina con código 1 antes de abrir Firestore (ADR-58).
 
 Los datos están en `backend/app/seed/data/`: `tests.json`, `skills.json`, `questions.json`, `plans.json`, `features.json`, `users.json`, `answers.json` y `corrections.json`. Los documentos de `users` salen de `new_user()`, la función del alta en `backend/app/services/users.py`, y el seed agrega encima solo lo propio de la demo (ADR-66). `build_documents()`, en `backend/app/seed/__init__.py`, calcula lo que depende de otros documentos: `medalWallet`, `badgesTotal`, `quota.used`, `stats`, `flagCount`, `approvedStock`, `statementPreview`, `skillMastery` y `state/practice`. Todo se escribe en un solo lote, así que se carga completo o no se carga nada. Las fechas las pone el servidor de Firestore con `SERVER_TIMESTAMP` (ADR-14). Los IDs son fijos y otra corrida reescribe los mismos documentos.
@@ -12,8 +14,8 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 
 | Ruta | Documentos | Contenido |
 |---|---:|---|
-| `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración salvo el `qDay` de `free` (ADR-64) |
-| `features` | 1 | `f2`, la funcionalidad `mock_mode` que decide el modo facsímil (ADR-70) |
+| `plans` | 3 | `free`, `uni` y `all`; `free.qDay=10` es el dato del seed actual, pendiente de corregir a tope 20 (ADR-76) |
+| `features` | 1 | `f2`, la funcionalidad `mock_mode` requerida para el facsímil (ADR-77) |
 | `tests` | 5 | Las pruebas PAES: `lectora` y `m1` con 14 preguntas aprobadas y las demás con 4 |
 | `skills` | 20 | Cuatro habilidades por prueba |
 | `questions` | 40 | Una por cada combinación de prueba y dificultad, más 10 de d1 en `lectora` y 10 en `m1` |
@@ -32,7 +34,7 @@ En total son 88 documentos.
 
 Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. El seed arma para cada una el mismo token que entrega Firebase Authentication, con correo, nombre visible y proveedor, así que se llaman `Estudiante Demo` y `Estudiante Nuevo`. Si se cambia el nombre visible de una cuenta, hay que cambiarlo también en `users.json`.
 
-Las dos cuentas están en el plan `free`, con `state` `active` y un límite de 10, la base de la regla de negocio 1. El ejemplo de la administración trae 20 para `free`, y eso va en la consulta a Max (ADR-64).
+Las dos cuentas del seed actual están en `free`, con `state` `active` y `quota.max=10` sin bonos. Max confirmó base 10, bonos de 5 por colegio y 5 por región, y tope 20. `plans.free.limits.qDay=20` representa el tope, no la base (ADR-76, que reemplaza esa interpretación de ADR-64). La consulta ya está resuelta; el JSON aún contiene 10 y `quota_max()` suma bonos a ese campo. La corrección coordinada de dato, cálculo y pruebas queda por planificar en HU-07 y HU-08 antes de otra carga; `test_modelo.py` también afirma `qDay` 10 y cambia con ella.
 
 ---
 
@@ -57,7 +59,7 @@ Las dos cuentas están en el plan `free`, con `state` `active` y un límite de 1
 }
 ```
 
-`uni` tiene `qDay` 0 y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69). Solo `all` incluye `f2`, así que es el único plan con modo facsímil (ADR-70).
+`qDay: 10` en el ejemplo es el dato actual, no el tope confirmado. `uni` tiene `qDay` 0, ilimitado, y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69). Solo `all` incluye `f2`, así que es el único plan del seed habilitado para facsímil (ADR-77). El código aún permite un plan de pago si falta la funcionalidad en el catálogo; ese fallback debe retirarse en HU-12. Los valores `badges.login` se conservan como datos del plan; el módulo no otorga medalla diaria ni modifica rachas (ADR-82).
 
 ---
 
@@ -73,7 +75,7 @@ Las dos cuentas están en el plan `free`, con `state` `active` y un límite de 1
 }
 ```
 
-Es la única funcionalidad del catálogo de la consola que lee el módulo (ADR-70). El resto del catálogo lo administra la consola en el proyecto de la empresa. El nombre en inglés es supuesto.
+Es la única funcionalidad del catálogo de la consola que lee el módulo (ADR-77). El resto del catálogo lo administra la consola en el proyecto de la empresa. El nombre en inglés es supuesto. El facsímil debe seguir un orden fijo por prueba (ADR-79); la selección actual aún es aleatoria en ambos formatos y T-32 debe corregirla.
 
 ---
 
@@ -176,7 +178,7 @@ Son 20 habilidades, cuatro por prueba, con prerrequisitos dentro del árbol y re
 }
 ```
 
-Las 40 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed.
+Las 40 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). Todas tienen cuatro alternativas; el contrato confirmado admite cuatro o cinco (ADR-80). Falta cobertura de cinco de punta a punta, sin usar preguntas reales de la empresa. La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed. `GET /practice/next` elimina `correctAnswer` y `explanation` antes de responder (RNF-02); su presencia en Firestore no autoriza entregarlos al cliente.
 
 El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, así que la equivalencia se puede recalcular (ADR-62):
 
@@ -193,7 +195,7 @@ El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, as
 | `q_demo_m2_d1` | `qst_17392f3fb1` | `q_demo_hist_d3` | `qst_a61c41a428` |
 | `q_demo_m2_d2` | `qst_4574d5002b` | `q_demo_hist_d4` | `qst_989222c2fc` |
 
-Las 20 preguntas de d1 que se agregaron el 2026-09-27 para la demo, 10 de `lectora` y 10 de `m1`, no tienen ID anterior. Su ID es `qst_` más los primeros 10 hexadecimales del SHA-1 de una semilla fija, de `q_demo_lectora_d1_02` a `q_demo_lectora_d1_11` y de `q_demo_m1_d1_02` a `q_demo_m1_d1_11`. `test_respuestas_de_m1_en_d1_recalculadas`, en `backend/tests/test_modelo.py`, recalcula desde el enunciado la respuesta de cada pregunta de `m1` en d1 y comprueba que coincida una sola alternativa, la marcada. Las de `lectora` no se pueden recalcular: las revisa una persona del equipo antes de la demo (ADR-73).
+Las 20 preguntas de d1 que se agregaron el 2026-09-27 para la demo, 10 de `lectora` y 10 de `m1`, no tienen ID anterior. Su ID es `qst_` más los primeros 10 hexadecimales del SHA-1 de una semilla fija, de `q_demo_lectora_d1_02` a `q_demo_lectora_d1_11` y de `q_demo_m1_d1_02` a `q_demo_m1_d1_11`. `test_respuestas_de_m1_en_d1_recalculadas`, en `backend/tests/test_modelo.py`, recalcula desde el enunciado la respuesta de cada pregunta de `m1` en d1 y comprueba que coincida una sola alternativa, la marcada. Las de `lectora` no se pueden recalcular: las revisa una persona del equipo antes de la demo (ADR-73). T-24 registra la aceptación de la Entrega 1 sobre el banco recargado, pero no reemplaza esa revisión. No se extrapola esa aceptación al banco real pendiente de metadatos y curaduría de Alloxentric (ADR-75).
 
 ---
 
@@ -299,6 +301,8 @@ En el seed, `level` es el número de aciertos con tope en `maxLevel` (ADR-69).
 
 El de `aprueba2@demo.cl` solo tiene `answeredQuestionIds` vacío.
 
+La misma pendiente debe mantenerse hasta responder, incluso con solicitudes concurrentes; la cuota se descuenta al responder (ADR-81). La implementación aún selecciona y escribe sin transacción y no registra la hora de entrega para medir el tiempo desde el servidor. T-25 cubre concurrencia, T-28 la medición y T-29 la respuesta. Este ejemplo conserva los campos que existen, sin inventar un campo de entrega ya implementado.
+
 ---
 
 ## `medalTransactions`
@@ -344,10 +348,10 @@ El de `aprueba2@demo.cl` solo tiene `answeredQuestionIds` vacío.
 }
 ```
 
-Tiene todos los campos que lee `GET /admin/corrections` (ADR-61). `reasonCode` y `comment` siguen la propuesta de ADR-67.
+Tiene todos los campos que lee `GET /admin/corrections` (ADR-61 y ADR-83). `reasonCode` y `comment` siguen la propuesta de ADR-67. La sección 2.8 del modelo de administración rige los datos de medallas y recorrecciones. Las diferencias de `flagCount` y de movimiento de medallas se avisaron al equipo de la consola; no se acredita su corrección con este seed.
 
 ---
 
-## Datos del seed anterior
+## Antecedente del seed anterior, 23/09/2026
 
-El seed del 2026-09-23 dejó en el proyecto `aprueba-app-modulo-preguntas` documentos que el nuevo no reescribe: las 20 preguntas con los IDs anteriores de la tabla de `questions`, `users/usr_demo` con `medalLedger/ml_001` y `state/practice`, `users/usr_demo_nuevo` con `state/practice`, `answers/ans_001` y `corrections/cor_001`. Firestore no borra las subcolecciones al borrar un documento, así que hay que borrarlas una por una. `tests` y `skills` usan los mismos IDs y el seed nuevo los reemplaza completos. El borrado se hace después de fusionar y con confirmación del equipo.
+El registro del 23/09 identificó documentos que el seed nuevo no reescribe: las 20 preguntas con los IDs anteriores de la tabla de `questions`, `users/usr_demo` con `medalLedger/ml_001` y `state/practice`, `users/usr_demo_nuevo` con `state/practice`, `answers/ans_001` y `corrections/cor_001`. Firestore no borra subcolecciones al borrar un documento; `tests` y `skills` usan los mismos IDs y se reemplazan completos. Esos 27 documentos se borraron el 2026-09-26, con el inventario revisado y la confirmación del equipo, antes de cargar el seed de la Entrega A (ADR-57). Un borrado futuro sigue el mismo camino: inventario de los documentos actuales y confirmación del equipo.

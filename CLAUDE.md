@@ -14,7 +14,7 @@ Instrucciones para Claude Code en este repositorio.
 
 ## Qué es esto
 
-Módulo de preguntas de la app móvil **Aprueba**, producto de la empresa **Alloxentric**. Proyecto de Título (Capstone) del Grupo 9, PTY4614, sección CAPSTONE_002D, Duoc UC San Bernardo.
+Módulo de preguntas de Aprueba para iOS, Android y web, producto de Alloxentric. Proyecto de Título (Capstone) del Grupo 9, PTY4614, sección CAPSTONE_002D, Duoc UC San Bernardo.
 
 No confundas los nombres: Alloxentric es la empresa, Aprueba es el producto. Ese error ya apareció en documentos entregados.
 
@@ -22,17 +22,24 @@ No confundas los nombres: Alloxentric es la empresa, Aprueba es el producto. Ese
 
 | Integrante | Rol | Foco |
 |---|---|---|
-| Martin Espinoza Morales | Coach y Tracker | Prácticas, velocidad, comunicación con la empresa, cliente delegado |
-| Jeremías Fernández Millacura | Programador | Servicios de backend y modelo de datos |
-| Sebastián Acevedo Araya | Programador | Cliente móvil y capa de presentación |
+| Max Kreimerman, Alloxentric | Cliente | Contraparte: define producto y decisiones técnicas por escrito |
+| Karina Álvarez, Alloxentric | Gestora | Jefa de proyecto: seguimiento semanal y coordinación con Max |
+| Eliana Mallen González, Duoc UC | Coach | Profesora guía: prácticas XP y seguimiento académico |
+| Martin Espinoza Morales | Tracker y Tester | Velocidad, reflexiones de cierre y pruebas de aceptación |
+| Jeremías Fernández Millacura | Programador backend | Servicios y modelo de datos |
+| Sebastián Acevedo Araya | Programador frontend | Cliente Flutter y presentación |
 
-**Metodología:** Extreme Programming, metodología única. No es Scrum ni un híbrido. Diez iteraciones semanales agrupadas en tres entregas funcionales. Si encuentras vocabulario de Scrum en el código o en la documentación, corrígelo: sprint pasa a iteración, Scrum Master a Coach, Product Backlog a lista de historias de usuario.
+Quien programa no acepta su propio trabajo. Martin diseña y ejecuta las pruebas de aceptación en el entorno desplegado; los programadores escriben las unitarias antes del código. Un agente no sustituye esa aceptación.
+
+Metodología: Extreme Programming, con diez iteraciones semanales en tres entregas funcionales. El nombre adoptado es Product Backlog (lista de producto), y se conserva. Planes de iteración, criterios de terminado y reflexiones de cierre incluyen su equivalencia con artefactos de Scrum en los documentos académicos. No hagas reemplazos ciegos: Scrum puede aparecer en comparaciones o equivalencias. Usa iteración en lugar de sprint para describir el trabajo del equipo.
+
+Fuentes vigentes al 01/10/2026: Product Backlog v2.3, Plan de entregas y planes de iteración v1.3, EDT v3.2 (55 paquetes), Carta Gantt v2.1, Registro de interesados v1.4, Enunciado de Alcance v1.2 y Product Vision v1.4. Requisitos no funcionales, Criterios de terminado, Plan de pruebas e Innovación son v1.0. También rigen las reflexiones de iteraciones 1 a 3 y T-24. El Acta de Constitución y el SRS se retiraron; los requisitos no funcionales reemplazan al SRS. Viven en el Drive del equipo, carpeta Documentacion XP.
 
 ---
 
 ## Tu rol
 
-Buena parte del trabajo de este repositorio la producen otros agentes. **Tu función principal es auditar y corregir ese trabajo**, no solo generar más.
+Buena parte del trabajo de este repositorio la producen otros agentes. Revisa su trabajo y corrige dentro del alcance autorizado. Un encargo de solo documentación no autoriza corregir el código que la revisión detecte.
 
 Cuando te pidan revisar algo, o cuando abras el repositorio después de que otro agente haya trabajado, aplica el checklist de auditoría de más abajo antes de hacer nada más.
 
@@ -46,12 +53,12 @@ Cuando algo esté bien, dilo también. Un informe de auditoría que solo lista d
 
 Estas se verifican en toda auditoría. Un incumplimiento se reporta siempre, aunque no te lo hayan preguntado.
 
-**1. La respuesta correcta nunca llega al cliente antes de tiempo.**
-Es la regla de integridad del producto. Se cumple en cinco lugares y hay que verificar los cinco:
-- `sanitize_question()` en `backend/app/services/questions.py` elimina `correctAnswer` antes de emitir
-- `GET /practice/next` y `GET /questions/{id}` no la incluyen. `backend/tests/test_integridad.py` recorre todas las rutas y falla si alguna la entrega
-- `Question.correctAnswer` es nullable en el modelo Dart
-- `CachedQuestions.correctAnswer` entra en nulo y solo se puebla tras responder, verificado en `test/drift_integrity_test.dart`
+**1. Ni la respuesta correcta ni la explicación llegan antes de responder (RNF-02).**
+Se verifican estos cinco puntos:
+- `sanitize_question()` en `backend/app/services/questions.py` elimina `correctAnswer` y `explanation` antes de emitir.
+- Ninguna ruta entrega esos campos antes de responder, incluidas `GET /practice/next` y, cuando exista, `GET /questions/{id}`. `backend/tests/test_integridad.py` debe revisar ambos campos en todos los niveles. Hoy solo busca `correctAnswer`: la diferencia sigue pendiente en RT-01, RT-02 y T-13.
+- `Question.correctAnswer` y `Question.explanation` son nullable en Dart y llegan ausentes antes de responder.
+- La caché de Drift deja nulas la respuesta y la explicación al descargar y solo las completa tras responder. `test/drift_integrity_test.dart` verifica esos momentos. El cierre de sesión borra la caché.
 - `firestore.rules` niega al cliente toda lectura y escritura, así que nadie puede leer `questions` directo desde Firestore y saltarse `sanitize_question()`. Decidido en ADR-21
 
 Si un cambio toca cualquiera de esos puntos, verifica que la regla siga en pie.
@@ -69,12 +76,12 @@ grep -rIl -E "serviceAccount|private_key|BEGIN PRIVATE KEY|sk_live|pk_live|AIza"
 
 Los archivos de cliente de Firebase se excluyen porque su `apiKey` empieza con `AIza` y es pública por diseño: identifica el proyecto y viaja dentro de la app, pero no da acceso a los datos, que protegen `firestore.rules` y la verificación del token en la API (ADR-42). `.dart_tool` se excluye porque una compilación web copia esa `apiKey` a `main.dart.js`. La cuenta de servicio del backend sí es secreta: solo llega por `FIREBASE_SERVICE_ACCOUNT_BASE64` y nunca se versiona.
 
-Con esas exclusiones la búsqueda devuelve cuatro archivos esperados, sin secretos: `.gitignore` y este `CLAUDE.md`, que nombran los patrones; `lib/core/config/app_config.dart`, por un comentario que menciona `pk_live`, y `backend/tests/test_core.py`, que genera una llave RSA en memoria con `rsa.generate_private_key` para firmar tokens de prueba. Cualquier otro resultado se revisa antes de commitear.
+En los archivos versionados hay cuatro coincidencias esperadas, sin secretos: `.gitignore` y este `CLAUDE.md`, que nombran los patrones; `lib/core/config/app_config.dart`, por un comentario que menciona `pk_live`, y `backend/tests/test_core.py`, que genera una llave RSA en memoria con `rsa.generate_private_key` para firmar tokens de prueba. La búsqueda del proyecto puede incluir cachés AST ignoradas de Graphify que derivan de esas mismas pruebas. Cualquier coincidencia adicional se revisa antes de commitear; que esté ignorada no basta para darla por segura.
 
 Las credenciales van por `--dart-define` en el cliente y por variables de entorno en el backend. `.env.example` no lleva valores reales.
 
 **3. Nada va directo a `main`.**
-Una rama por tarea con nombre `feature/<descripción>`, un pull request por rama, y revisión de otro integrante antes de fusionar. Si te piden commitear a `main`, adviértelo antes de hacerlo.
+Una rama por tarea con nombre `feature/<descripción>`, un pull request por rama y aprobación en GitHub de otro integrante antes de fusionar. Si te piden commitear a `main`, adviértelo antes de hacerlo.
 
 **4. No subas versiones de dependencias para que algo compile.**
 Ni en `pubspec.yaml` ni en `backend/requirements.txt` o `backend/requirements-dev.txt`. Si hay un conflicto de versiones, repórtalo y detente.
@@ -90,19 +97,35 @@ Los commits llevan la identidad global de quien opera el agente, la de `git conf
 **8. Ninguna pregunta del banco real se versiona.**
 El banco real de preguntas es contenido de Alloxentric y nunca se versiona: no entra al seed, a las pruebas, a los ejemplos ni a los documentos. La empresa lo entregó en su Drive técnico, en la carpeta Aprueba, como archivos JSON por materia en las subcarpetas PAES Chile Biologia, PAES Chile Matematica y PAES Chile Verbal. Su importación está pendiente de que la empresa entregue la clasificación de cada pregunta: la prueba en Matemática, la dificultad, el eje y la habilidad. Ningún agente inventa esos datos ni escribe preguntas para reemplazar el banco real. Mientras tanto, la demo usa el banco sintético del seed, que escribió el equipo. Antes de cada commit se verifica, buscando sus textos en los archivos versionados, que ningún enunciado, alternativa ni explicación del banco real esté en el repositorio (ADR-75).
 
+Max preguntó si el equipo puede curar el banco con IA. Sigue pendiente de decisión y sería un cambio de alcance: primero se registra como historia, se estima y se planifica. No es autorización para importar ni para cambiar el banco.
+
+**9. Los encargos usan los IDs del Product Backlog vigente, y las pruebas de aceptación son de Martin.**
+
+Épicas E1 a E7, características F, historias HU, historias técnicas HT, restricciones RT-01 a RT-04 y tareas T. No uses los IDs de la lista de Fase 1. HU-22 está retirada. Registra como historia el trabajo no planificado. Antes de numerar una ADR, consulta el máximo en `main` y en todos los PR abiertos. Un agente corre las pruebas automáticas, pero no ejecuta ni registra una prueba de aceptación: las diseña y ejecuta Martin sobre el entorno desplegado.
+
+**10. Las cargas de producción provienen de `main` revisado.**
+
+Después de cada carga se repite la prueba de aceptación, a cargo de Martin. No cargues desde una rama sin revisión. Son acuerdos de las reflexiones de cierre de las iteraciones 1 a 3, junto con planificar desde el backlog vigente, separar las historias parciales y no permitir identidades Git de agentes.
+
 ---
 
 ## Límites de alcance
 
-Dentro del alcance: `lib/features/practice/` y los servicios del backend que lo alimentan. Seis pantallas y trece servicios.
+Dentro del alcance: seis pantallas de `lib/features/practice/` y catorce servicios bajo `/api/v1`: los trece del contrato más `GET /me`, incorporado como HT-07. El inicio de sesión con Firebase Auth, correo y contraseña sin SMS, está dentro por autorización del cliente (HU-21). La app se entrega en iOS, Android y navegador desde una base de código (RNF-10).
 
-**Fuera del alcance, aunque esté en el repositorio:** onboarding, registro y autenticación, home, medallas y canjes, grupos, comunidad, tutores, muro de pago, ajustes y notificaciones. Ese código es del cliente y no se toca.
+Fuera del alcance: registro y restablecimiento de contraseña, onboarding, home, pantallas de medallas y canjes, grupos, comunidad, tutores, muro de pago, ajustes y notificaciones. La racha y medalla diaria por login quedan fuera; las recompensas por respuesta y desbloqueo sí pertenecen al módulo. También quedan fuera la consola, el generador, el sitio web del alumno y la landing. El sitio web del alumno es otro componente; la versión Flutter para navegador sí es plataforma del módulo. Pagos, login social y push no se intervienen.
 
 Excepción: si `flutter analyze` reporta una advertencia en código fuera del módulo, se corrige, porque el analizador limpio es criterio de terminado. Hazlo en un commit separado para que el límite del alcance quede visible en el historial.
 
-Cambio autorizado: el 23/09/2026 Alloxentric autorizó tocar lo necesario del login para pasar a Firebase Auth y sacar la verificación por SMS. Los archivos tocados y el motivo de cada uno están en ADR-41. Siguen fuera del alcance y sin tocar la pantalla de registro (`register_screen.dart`), el login social, el olvido de contraseña y su restablecimiento. Del registro cambiaron el router, que salta los pasos de teléfono, y `PhoneAuthService`.
+Cambio autorizado: el 23/09/2026 Alloxentric autorizó pasar el login a Firebase Auth y sacar SMS. ADR-41 conserva los archivos y motivos. Enunciado de Alcance v1.2 y HU-21 incorporan ese login; el registro y restablecimiento siguen fuera. Los ajustes históricos del router y de `PhoneAuthService` no amplían esa autorización.
 
-`flutter analyze` reporta 24 avisos informativos y ninguna advertencia, todos fuera de `lib/features/practice/`. 18 son deprecaciones de `withOpacity` y no se tocan, decidido en ADR-08. Los 14 avisos que tenía el módulo se corrigieron al cerrar la iteración 3.
+`flutter analyze` reporta 24 avisos informativos y ninguna advertencia, todos fuera de `lib/features/practice/`. 18 son deprecaciones de `withOpacity` y no se tocan, decidido en ADR-08. Medido el 01/10/2026 sobre el código de `main` en `df925e0`, junto con 56 pruebas de Flutter en verde y pytest sin emulador con 40 aprobadas y 22 omitidas. El Plan de pruebas v1.0 registra las 62 del backend aprobadas con el emulador al cierre de la iteración 3.
+
+## Criterios de terminado v1.0
+
+Una historia suma velocidad solo si Martin verificó sus criterios de aceptación en el entorno desplegado y registró el resultado; las pruebas unitarias se escribieron antes del código y pasan, incluida integridad; el analizador no reporta advertencias en el módulo; ingresó por PR aprobado en GitHub por alguien distinto del autor; respeta el contrato y traduce errores de negocio a estados de interfaz; no hay secretos ni datos reales versionados y las cargas de producción provienen de `main` revisado; y las decisiones están en las bitácoras. RNF-02 exige comprobar también la explicación.
+
+Una historia parcial no suma puntos. Su trabajo pendiente vuelve a planificarse. La velocidad registrada de las iteraciones 1, 2 y 3 es 4, 5 y 26; las dos primeras no son referencia porque el equipo aprendía el framework.
 
 ---
 
@@ -144,11 +167,12 @@ Cuando revises trabajo hecho por otro agente, recorre esta lista y reporta el re
 - [ ] `flutter test` en verde, y el número de pruebas no bajó
 - [ ] `python -m pytest` en `backend/` en verde con el emulador activo, y el número de pruebas no bajó
 - [ ] `build_runner` regenera sin conflictos
-- [ ] La búsqueda de secretos no arroja nada fuera de los cuatro archivos esperados de la regla 2
+- [ ] La búsqueda de secretos solo coincide con los cuatro archivos versionados esperados de la regla 2; se revisó cualquier coincidencia adicional, incluidas cachés ignoradas
 - [ ] Ningún texto del banco real está en los archivos versionados (regla 8)
 
 **Integridad del dominio**
-- [ ] La respuesta correcta sigue protegida en los cinco puntos
+- [ ] La respuesta correcta y la explicación siguen protegidas en los cinco puntos (RNF-02)
+- [ ] La pendiente impide recorrer el banco sin cuota, incluso con peticiones simultáneas (RNF-04, T-25)
 - [ ] Las reglas de Firestore coinciden con lo que dice `docs/diccionario_de_datos.md`
 - [ ] Los índices de `firestore.indexes.json` respaldan consultas del módulo o los declara el modelo de datos de la empresa
 - [ ] Las respuestas del backend respetan el envelope `{data, error, meta}` y el catálogo de errores
@@ -162,7 +186,7 @@ Cuando revises trabajo hecho por otro agente, recorre esta lista y reporta el re
 - [ ] Los commits nuevos llevan la identidad global de quien opera el agente y `.git/config` no tiene sección `[user]` (regla 7)
 
 **Coherencia documental**
-- [ ] Vocabulario XP, sin residuos de Scrum
+- [ ] Vocabulario XP e IDs del Product Backlog vigente; las equivalencias académicas con Scrum se conservan
 - [ ] Alloxentric como empresa, Aprueba como producto
 - [ ] El README de la raíz es el del equipo, no el heredado del cliente
 - [ ] Lo que afirma la documentación coincide con lo que hace el código
@@ -177,7 +201,7 @@ Cuando revises trabajo hecho por otro agente, recorre esta lista y reporta el re
 lib/
   core/        tema, i18n, router, red (Dio), storage seguro, config
   data/
-    local/     Drift — caché y preferencias
+    local/     Drift: caché y preferencias
     models/    modelo lógico de la API
     repositories/  uno por dominio, patrón API + caché
     services/  integraciones externas
@@ -198,11 +222,11 @@ backend/          Python 3.12 + FastAPI
 
 docs/
   bitacora_decisiones.md    ADR del proyecto
-  diccionario_de_datos.md   entregable EDT 1.3.2.1
+  diccionario_de_datos.md   entregable EDT 1.3.7.1, documento del modelo de datos
 seed/README.md              lo que carga el seed, con ejemplos
 ```
 
-**Flujo de datos:** UI → provider → repositorio → `ApiClient` (Dio). La interfaz nunca habla directo con la red. Cada lectura se escribe en Drift y, ante error de red, el repositorio sirve la última copia.
+**Flujo de datos:** UI → provider → repositorio → `ApiClient` (Dio). La interfaz nunca habla directo con la red. El perfil recupera su última copia de Drift ante una falla de red. La práctica guarda las preguntas descargadas, pero `next()` y `question()` todavía requieren la API y no recuperan esa copia al fallar. HU-14, en la iteración 9, debe completar la práctica sin conexión (RNF-08).
 
 **Sesión:** Firebase Auth con correo y contraseña. La app envía en `Authorization` el ID token de Firebase, que dura una hora y que el SDK de Firebase renueva solo. El backend lo valida con `verify_id_token` de `firebase-admin` en `backend/app/core/deps.py`, y no emite ni renueva tokens. Ante un 401, `ApiClient` pide un token nuevo con `getIdToken(forceRefresh: true)` y reintenta una sola vez. Si el reintento vuelve a dar 401, o Firebase ya no tiene usuario, llama a `AuthController.logout()`, que cierra la sesión de Firebase y borra la caché de Drift. Después el router redirige al inicio. Decidido en ADR-40.
 
@@ -210,13 +234,13 @@ seed/README.md              lo que carga el seed, con ejemplos
 
 ## Reglas de negocio
 
-1. La cuota diaria base sale de `plans/{plan}.limits.qDay`, y 0 es ilimitado (ADR-64). Declarar colegio suma 5 y declarar región suma 5, con tope de 20; esos tres valores son constantes de `backend/app/core/config.py`. Cada bonificación se reclama una sola vez. Reinicio diario. La cuota se descuenta al responder, no al entregar la pregunta (ADR-72). El seed da `qDay` 10 al plan `free`, como dice esta regla. El ejemplo de la administración trae 20, y eso va en la consulta a Max.
-2. La respuesta correcta no viaja al cliente antes de que el estudiante responda.
+1. Cuota gratuita base 10, más 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope, y `qDay=0` es ilimitado (ADR-76). Cada bonificación se reclama una sola vez. Reinicio diario y descuento al responder. El código todavía usa `qDay` como base y el seed conserva 10: son diferencias registradas, no la regla vigente.
+2. Ni la respuesta correcta ni la explicación viajan antes de responder (RNF-02). La pregunta entregada queda pendiente y se repite hasta responderla, incluso si cambian las preferencias; T-25 debe asegurar la misma pendiente con peticiones simultáneas (RNF-04, ADR-81).
 3. Medallas de bronce: las de cada respuesta correcta salen de `plans/{plan}.badges.correct`. Cada desbloqueo de cuota da 1, fijado en `UNLOCK_MEDALS`. Una recorrección confirmada da 250, y los otorga la administración al aprobar, no el estudiante al enviar. La medalla por ingreso diario (`badges.login`) es de un módulo fuera del alcance (ADR-68). Cada movimiento va a `medalTransactions` y suma en `users.medalWallet` y `badgesTotal` en la misma transacción (ADR-59).
-4. `cohortPercentile` compara la velocidad del estudiante contra su cohorte. Lo calcula el backend al responder con el histograma de `questions.stats` (ADR-63). Firestore no hace agregaciones económicas en consulta.
-5. El modo facsímil requiere que el plan incluya la funcionalidad `mock_mode` del catálogo `features` de la consola (ADR-70); `random` es el modo libre. Las recorrecciones no dependen del plan.
+4. `cohortPercentile` compara el tiempo de respuesta contra la cohorte de esa pregunta. HT-04 / T-30 lo calcula desde `questions.stats.elapsedBuckets`, sin agregaciones (RNF-12, ADR-63). T-28 mide desde la entrega registrada por el servidor; el cronómetro del cliente no es la fuente. Ambos cambios están pendientes en la iteración 4.
+5. El facsímil requiere que el plan incluya `mock_mode` y presenta orden fijo por prueba, como un ensayo (ADR-77 y ADR-79). `random` es el modo libre. El código todavía selecciona al azar en ambos formatos y tiene un fallback por pago si falta la funcionalidad; HU-12 debe corregirlo. Las recorrecciones no dependen del plan.
 6. Las materias que no son PAES llegan con `hasQuestions: false`.
-7. Dificultad de `d1` a `d4`. El estudiante solo recibe preguntas de las pruebas que seleccionó.
+7. Dificultad de `d1` a `d4`, estricta para preguntas nuevas. Si se agota en las pruebas elegidas, se avisa sin cambiarla automáticamente (ADR-78). Las preguntas admiten cuatro o cinco alternativas, y la letra enviada debe existir en esa pregunta (ADR-80).
 8. Los errores de negocio se traducen a estados de interfaz. Alcanzar la cuota base lleva a la pantalla de desbloqueo, no a un error.
 
 **Errores propios del módulo:** `QUOTA_BASE_REACHED` 422, `QUOTA_DAILY_LIMIT` 422, `NO_QUESTIONS_AVAILABLE` 404, `ALREADY_ANSWERED` 409, `INVALID_OPTION` 400, `BONUS_ALREADY_CLAIMED` 409, `QUOTA_MAX_REACHED` 422, `CORRECTION_ALREADY_OPEN` 409, `FORMAT_REQUIRES_PLAN` 422, `NO_TESTS_SELECTED` 400.
@@ -235,7 +259,7 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-08** Se resuelven las advertencias del analizador; los avisos de deprecación heredados no se tocan
 - **ADR-09** Exclusión de preguntas respondidas mediante `users/usr_<UID>/state/practice` con `answeredQuestionIds`
 - **ADR-11** Reinicio de cuota configurable por variables de entorno
-- **ADR-12** Sanitización centralizada de `correctAnswer` en la capa de servicios
+- **ADR-12** Sanitización centralizada de `correctAnswer` y `explanation` en la capa de servicios (RNF-02)
 - **ADR-30** Backend en Python 3.12 con FastAPI, por decisión de la contraparte. Sus convenciones vienen del backend de administración de Max (ADR-31)
 - **ADR-40** Autenticación con Firebase Auth, por decisión de la contraparte. El backend verifica el ID token con `firebase-admin` y no tiene JWT propio ni refresh token. Reemplaza ADR-20 y ADR-38
 - **ADR-43** `verify_id_token` sin revisar revocación. El retraso de hasta una hora en rechazar un token revocado queda cubierto por el rechazo de usuarios suspendidos y la comprobación de `sessionsRevokedAt` que hace `get_current_student` (ADR-65 y ADR-71)
@@ -248,19 +272,21 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-61** `corrections` tiene la forma que lee la cola de la consola, con IDs `cor_*`
 - **ADR-62** `questions` usa IDs `qst_*` y los campos del generador. Solo se sirven preguntas `published`, y `published` implica `approved`
 - **ADR-63** Percentil de cohorte con el histograma de `questions.stats`, actualizado en la transacción de responder. Sustituye a ADR-10 y ADR-23
-- **ADR-64** La cuota base sale de `plans/{plan}.limits.qDay` y las medallas por acierto de `badges.correct`. Los bonos, el tope y la medalla por desbloqueo son constantes del backend. El seed da `qDay` 10 a `free`
+- **ADR-64** Reemplazada en la interpretación de cuota por ADR-76. Las medallas por acierto siguen saliendo de `badges.correct`, ratificadas por ADR-83. El seed todavía carga `qDay` 10 en `free`, una diferencia registrada en ADR-76
 - **ADR-65**, en la parte que decidió el equipo: un token con `auth_time` anterior a `sessionsRevokedAt` da 401, en la misma lectura de `users` que hacen el alta y el control de suspendidos
 - **ADR-66** El backend crea `users/usr_<UID>` en la primera petición autenticada, solo con los campos de la administración y los del módulo. `GET /me` entrega `quota.unlimited`. El seed crea las cuentas de demostración con la misma función, `new_user()`
 - **ADR-67** `reason` guarda el comentario del alumno, o la etiqueta en español del código si no hay comentario. El código va en `reasonCode`
-- **ADR-68** El backend actualiza `lastActivityAt` en la primera petición de cada día. La racha y la medalla por ingreso diario quedan fuera del alcance, igual que `activity`
-- **ADR-70** El modo facsímil depende de que el plan incluya la funcionalidad `mock_mode`. Las recorrecciones no dependen del plan
+- **ADR-68 y ADR-82** Max ratificó que solo se actualiza `lastActivityAt`. Racha, medalla diaria y `activity` quedan fuera del módulo
+- **ADR-70, ADR-77 y ADR-79** Facsímil requiere `mock_mode` y orden fijo por prueba. El fallback por pago de ADR-70 y el azar del facsímil de ADR-73 quedan reemplazados
 - **ADR-71** `get_current_student` lee una vez `users/usr_<UID>` en cada petición del alumno. Lo crea si no existe, responde 401 si la sesión fue revocada y 403 si está suspendido, y marca `lastActivityAt` una vez al día. Los detalles de implementación son propuesta
-- **ADR-72** La cuota se descuenta al responder. `GET /practice/next` deja la pregunta entregada pendiente en `state/practice.lastQuestionId` y la repite hasta que se responda. `progress` sale de la cuota del día y `hasQuestions` es `approvedStock > 0`. Con `selectedTests` vacío, `PUT /me/preferences` responde `NO_TESTS_SELECTED` 400, como dice el contrato; `GET /practice/next` sin pruebas sigue ADR-29. La contradicción del contrato sobre el descuento está en consulta a Max
+- **ADR-72 y ADR-81** Max ratificó descuento al responder y pregunta pendiente. `progress` sale de la cuota del día y `hasQuestions` es `approvedStock > 0`. Con `selectedTests` vacío, `PUT /me/preferences` responde `NO_TESTS_SELECTED` 400; `GET /practice/next` sin pruebas sigue ADR-29. T-25 debe corregir la selección sin transacción
 - **ADR-73**, en la parte ratificada: la pregunta pendiente se mantiene aunque cambien las preferencias, y `testId` y `sessionId` no se implementan mientras la app no los envíe
 - **ADR-74** Cada error de negocio es un estado de la pantalla Pregunta, y "sin conexión" aparece solo cuando no hay respuesta del servidor. El cambio en `lib/core/` alcanza pantallas fuera del alcance, listadas en la ADR, y se informa a Max
-- **ADR-75** El banco real de preguntas es contenido de Alloxentric y nunca se versiona. Su importación espera la clasificación de la empresa, y mientras tanto la demo usa el banco sintético del seed
+- **ADR-75** El banco real nunca se versiona. La importación espera clasificación y curación de la empresa. La consulta sobre curarlo con IA es un cambio de alcance pendiente; la demo sigue con el seed sintético
+- **ADR-78 y ADR-80** Max confirmó dificultad estricta con aviso y preguntas de cuatro o cinco alternativas
+- **ADR-83** Max confirmó seguir la sección 2.8 para medallas y recorrecciones. Se avisó al equipo de la consola sobre `flagCount` y el registro de la medalla; no se da por corregido su código
 
-ADR-11 y ADR-12 son propuestas pendientes de ratificación por el equipo. Los tramos de ADR-63 y las decisiones menores de ADR-69 se ratifican en la sesión del equipo. Jeremías aprobó el 27/09 ADR-09, ADR-29, ADR-66, ADR-71 y ADR-72, la parte de ADR-65 sobre suspendidos y `sessionsRevokedAt`, la de ADR-68 sobre `lastActivityAt` y la de ADR-69 sobre `hasQuestions`. El mismo día ratificó ADR-74 completa y dos puntos de ADR-73. Lo demás lo ratifica el equipo el 28/09.
+ADR-11 y ADR-12, los tramos de ADR-63, las decisiones menores de ADR-69 y los detalles de ADR-71 conservan sus pendientes de ratificación cuando no hay evidencia posterior. Las aprobaciones de Jeremías del 27/09 están en la bitácora. Las confirmaciones de Max registradas en ADR-76 a ADR-83 no ratifican otros detalles de diseño ni sustituyen la aceptación de Martin.
 
 ---
 
@@ -272,27 +298,36 @@ Prosa directa, sin adornos. Prohibido: guiones largos, la construcción "no solo
 
 Párrafos en vez de viñetas cuando el contenido lo permita. No cierres las secciones con una frase que resuma lo ya dicho. No uses negrita para enfatizar dentro de párrafos. Escribe algunas oraciones cortas.
 
-En los documentos, usa datos concretos del proyecto —nombres de archivo, números, problemas reales— en vez de afirmaciones generales.
+En los documentos, usa datos concretos del proyecto (nombres de archivo, números, problemas reales) en vez de afirmaciones generales.
 
 **Mensajes de commit:** en español, formato `tipo(ámbito): descripción en minúscula`. Sin punto final.
 
 ---
 
-## Pendientes conocidos
+## Iteración, calendario y pendientes al 01/10/2026
 
-Verifica si siguen abiertos antes de reportarlos. Estado revisado el 2026-09-27:
+La iteración 4 corresponde a la semana 8, del 28/09 al 03/10/2026. Product Backlog v2.3 asigna HU-03, HU-04, HT-04, HU-12 y HT-06, con 15 puntos. El Plan de iteración v1.3 propone adelantar HT-03 y llegar a 18; el documento lo presenta como propuesta para el juego de planificación, no como acuerdo ya confirmado. Tareas: T-23, T-25 a T-35 y T-01. La Entrega 2 termina en la iteración 6, el 17/10.
 
-- La iteración 3 cerró el 2026-09-27 con los PR #21 a #23, que aprobó Martin (`Titin8`) y ya están en `main`
-- La importación del banco real queda pendiente hasta que la empresa entregue la clasificación de cada pregunta y cure los problemas de calidad del banco. El importador no se escribe mientras tanto (ADR-75)
-- Pedido a la empresa, por enviar: la prueba en Matemática, la dificultad, el eje y la habilidad de cada pregunta del banco real; la corrección de los dos archivos de Verbal que no son JSON válido; los problemas de calidad de ADR-75, y cuál de las dos copias del Drive vale
-- ADR-11 y ADR-12 pendientes de ratificación. Las aprobaciones de Jeremías del 27/09 se ratifican el 28/09
-- Los detalles de implementación de ADR-71 y los de ADR-73 que Jeremías no ratificó el 27/09 se ratifican en la sesión del equipo
-- ADR-32 a ADR-39 y ADR-44 a ADR-55 son propuestas. El equipo las ratifica después de la Entrega A, porque varias dependen de `users`. De ADR-49 ya está decidido el proyecto local
-- El repositorio es público y contiene el código completo del cliente. Pendiente de confirmación con la contraparte
-- De los trece servicios, la iteración 3 dejó `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next`, además de `GET /me`. Faltan `GET /questions/{id}`, `POST /questions/{id}/answer`, la explicación, la habilidad, `GET /me/quota`, `POST /me/quota/unlock`, `GET` y `POST /corrections` y `GET /me/progress`. La API está en `https://aprueba-app-modulo-preguntas-api.vercel.app/api/v1` y toma cada fusión a `main` con el despliegue automático
-- Los tramos de ADR-63 y las decisiones menores de ADR-69 se ratifican en la sesión del equipo. Los supuestos de ADR-65 siguen pendientes de confirmar con la empresa
-- Consulta a Max, por enviar: que el contrato descuenta la cuota tanto en `GET /practice/next` como en `POST /questions/{id}/answer`, y su modelo al responder (ADR-72); si la dificultad es estricta o pasa a otra cuando se acaban las preguntas de la preferida, y si el facsímil guardado cambia lo que entrega `GET /practice/next` (ADR-73); el aviso de ADR-74 sobre el cambio en `lib/core/`, con las pantallas fuera del alcance que lo notan; si el plan `free` lleva `qDay` 10, como dice la regla 1 y carga el seed, o 20, como trae su ejemplo (ADR-64); que su código crea `correction_confirmed` con un ID automático y el campo `by`, aunque su sección 2.8 declara `mtx_*` (ADR-59); que su confirmación de recorrecciones no baja `questions.flagCount` (ADR-61); si `uni` debe incluir `mock_mode`, que hoy solo trae `all` (ADR-70); y qué módulo lleva la racha, la medalla por ingreso diario y el registro en `activity` (ADR-68)
-- El formato facsímil se guarda y se valida contra el plan, pero `GET /practice/next` sirve preguntas al azar en los dos formatos, y la dificultad es estricta. Los dos puntos van en la consulta a Max (ADR-73). En la app, formato y dificultad solo se eligen en el onboarding, que está fuera del alcance
-- El banco del seed suma 10 preguntas de d1 en `lectora` y 10 en `m1`, y `aprueba2@demo.cl` queda con 22 en su dificultad (ADR-73). La demo lo usa mientras la empresa clasifica el banco real (ADR-75), y se carga en producción después de fusionar del #25 al #27. Antes de la demo, una persona del equipo revisa las 10 de lectora
-- Con `PHONE_VERIFICATION_ENABLED` apagada el registro no tiene salida, y el login social y el restablecimiento de contraseña llaman a rutas `/auth/*` que el backend no tiene. Falta que Alloxentric defina ese camino (ADR-41)
-Ya no son pendientes: Jeremías hizo el 2026-09-27 la prueba de punta a punta en la app web con `aprueba2@demo.cl`: inicia sesión, muestra una pregunta con su cronómetro y ya no aparece "sin conexión". `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN` y `NODE_ENV` ya no están en el proyecto de Vercel de la API (revisado el 2026-09-27). La rotación de la llave de la cuenta de servicio está cerrada. La cuenta anterior `firebase-adminsdk-fbsvc` no se pudo restaurar; la actual, con el mismo nombre, tiene una sola llave creada por el equipo, `34b4db8b`, que desde el 2026-09-25 va en `FIREBASE_SERVICE_ACCOUNT_BASE64` de production y preview de la API, y que la API toma con el despliegue automático al fusionar el #15. Las llaves `b0014dfe` y `af27835c` ya no autentican y sus JSON se borraron. El proveedor de correo y contraseña de Firebase Authentication está habilitado y hay dos cuentas de demostración, creadas desde la consola el 2026-09-24. `APP_ENV=production` existe en production y preview del proyecto de Vercel de la API desde el 2026-09-24, y la API en Node siguió respondiendo 200 en `/health` (ADR-36). La app web responde 200 en `https://aprueba-app-modulo-preguntas.vercel.app`, y `firestore.rules` niega al cliente toda lectura y escritura en el proyecto `aprueba-app-modulo-preguntas`, con las reglas activas iguales al archivo. El seed nuevo de la Entrega A está cargado en ese proyecto desde el 2026-09-26, con 68 documentos de IDs fijos. Las dos cuentas de demostración tienen su documento `users/usr_<UID>` y su nombre visible en Firebase Authentication, y no quedan documentos del seed del 2026-09-23. Los 5 índices de `firestore.indexes.json` están `READY`, y los tres del modelo anterior se borraron. Un cliente anónimo recibe 403 al leer cualquiera de sus documentos. El PR #12 está fusionado en main y backend/vercel.json ya está versionado. El 2026-09-23, la API respondió 200 en /health y el preflight de la vista previa respondió 204 con Access-Control-Allow-Origin. Era el backend Node: con FastAPI ese preflight responde 200 (ADR-39). Que las vistas previas y las URLs propias de cada despliegue pidan iniciar sesión en Vercel es la protección del proyecto, no un error.
+| Semana y fechas | Hito |
+|---|---|
+| 8, 28/09 al 03/10 | Alloxentric: Hito 1, MVP con base de datos operativa |
+| 9, 05 al 10/10 | Informe de avance |
+| 10, 12 al 17/10 | Presentación de avance y video de 5 minutos |
+| 11, 19 al 24/10 | Retroalimentación |
+| 12, 26 al 31/10 | Alloxentric: Hito 2, proyecto en contenedores |
+| 13, 02 al 07/11 | Presentación y definición de continuidad |
+| 15, 16 al 21/11 | Informe final |
+| 15 y 16, 16 al 28/11 | Alloxentric: Hito 3, entregado y documentado |
+| 16, 23 al 28/11 | Correcciones posteriores al informe final |
+| 17, 30/11 al 05/12 | Comisión evaluadora |
+| 18, 07 al 12/12 | Empresas vinculadas |
+
+La Entrega 1 fue aceptada por Martin el 29/09/2026: T-24, ocho de ocho pasos y hallazgos H-01 a H-07. El registro acredita la recarga del seed sintético tras integrar #25 a #28.
+
+En el checkout revisado existen cinco servicios del módulo: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, y `GET /practice/next`. `/health` es una sonda y no suma a los catorce. No está `GET /questions/{id}`, aunque T-20 aparece hecha en el backlog: conciliar esa diferencia antes de declararlo disponible. Tampoco están respuesta, explicación, habilidad, los dos servicios de cuota, los dos de recorrección ni progreso. La implementación de cada historia necesita su aceptación; que la pantalla o el modelo exista no basta.
+
+Pendientes de implementación: cuota según ADR-76; prueba general de integridad que busque la explicación; elección transaccional de pendiente (T-25); tiempo desde la entrega del servidor (T-28); histograma y percentil (T-30); orden de facsímil (T-32); permiso sin fallback por pago; validación de la letra elegida contra las alternativas de cada pregunta (T-29) y cobertura de cinco alternativas, que hoy bloquea `test_forma_de_las_preguntas_del_banco` al exigir cuatro en el seed; ruta web al recargar (T-26); representación de cita (T-27) y práctica sin conexión (HU-14). No los corrijas desde un encargo limitado a documentación.
+
+Siguen pendientes la clasificación y curación del banco real, decidir cuál copia vale, la propuesta de curarlo con IA y la autorización del repositorio público. No se escriben importadores ni se infieren metadatos. Antes de la demo, una persona del equipo revisa las 10 preguntas de lectora en d1 del seed, que no se pueden recalcular con un script (ADR-73). El aviso de diferencias de `flagCount` y medalla ya se hizo al equipo de la consola, pero no hay evidencia de corrección de ese código. Las decisiones de Max sobre cuota, formato, dificultad, alternativas, pendiente y actividad ya están confirmadas; no vuelvas a presentarlas como consultas abiertas.
+
+Las ratificaciones de propuestas del equipo que no tengan evidencia posterior siguen pendientes. No supongas que una sesión prevista para el 28/09 ocurrió ni que ratificó todas las ADR.
