@@ -1,4 +1,14 @@
-# App del alumno — alineación con el wireframe y los endpoints nuevos
+# Antecedente de cambios del cliente del alumno
+
+## Contexto vigente al 01/10/2026
+
+El texto que sigue registra la adaptación original del cliente completo de Aprueba. Sus flujos de SMS, onboarding, tutores, chat, pagos y backend `aprueba_student_web/backend` no son el alcance actual del módulo de preguntas. El proyecto vigente usa Flutter para iOS, Android y web, FastAPI y Firebase Auth por correo y contraseña sin SMS (HU-21). Registro y recuperación quedan fuera; HU-22 fue retirada.
+
+El módulo comprende seis pantallas y catorce servicios comprometidos; cinco están implementados. Las rutas disponibles, instrucciones de ejecución y fuentes XP están en [README.md](README.md). `lib/firebase_options.dart`, `android/app/google-services.json` e `ios/Runner/GoogleService-Info.plist` ya están versionados. No se activa el proveedor de teléfono para HU-21.
+
+La verificación actual sigue el README y los criterios de terminado: pruebas unitarias, análisis estático, PR revisado y aprobado por otro integrante, y aceptación independiente de Martin. Las instrucciones Node y `check_models.py` del antecedente describen otro backend y quedan fuera de esta verificación.
+
+## Registro original conservado
 
 Cambios sobre `aprueba_app` para consumir el backend actualizado
 (`aprueba_student_web/backend`) y cubrir lo que faltaba de `Aprueba_App.html`.
@@ -86,7 +96,7 @@ y pestaña de **Tutores solo para planes de pago**.
   y el perfil quedaba en error después de entrar.
 - Piso de Flutter a `>=3.22.0` (el código ya usaba `WidgetStatePropertyAll`).
 
-## Cómo verificar
+## Verificación del cliente original, como antecedente
 
 ```bash
 cd aprueba_app
@@ -107,7 +117,9 @@ node src/seed/dump_payloads.js /tmp/payloads.json
 cd ../../aprueba_app && python3 tool/check_models.py /tmp/payloads.json
 ```
 
-## Pendiente
+## Pendientes consignados en el antecedente
+
+Los puntos siguientes son el registro original. La falta de archivos de Firebase ya quedó resuelta; SMS, app del tutor y asignaturas escolares no son trabajo pendiente de este módulo.
 
 - Faltan `google-services.json` / `GoogleService-Info.plist` y habilitar el
   proveedor de teléfono en la consola de Firebase para el flujo real de SMS.

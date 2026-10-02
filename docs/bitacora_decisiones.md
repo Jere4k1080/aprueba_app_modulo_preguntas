@@ -1,4 +1,10 @@
-# Bitácora de Decisiones Arquitectónicas — Iteración 2
+# Bitácora de decisiones del módulo de preguntas
+
+Vigente al 01/10/2026. El Product Backlog v2.3, el Plan de entregas v1.3 y la EDT v3.2 sustituyen las referencias de planificación anteriores. Las entradas originales se conservan como evidencia de lo que se decidió en cada fecha. Un reemplazo o una ratificación posterior se indica en la misma ADR y en el índice.
+
+Las ADR-76 a ADR-83 registran las ocho decisiones de Max Kreimerman informadas en el encargo de actualización de documentación. Max las aceptó antes del 01/10/2026; no se aportó la fecha exacta de los mensajes. El 01/10 es la fecha de registro, no una fecha inventada de confirmación. Cada una dice qué parte del código todavía no la sigue y qué tarea del Product Backlog lo corrige.
+
+Registro inicial conservado:
 
 **Módulo:** Preguntas y Práctica PAES — App Aprueba  
 **Fecha:** Semana 6 · 14 al 18 de septiembre de 2026  
@@ -73,18 +79,26 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 61. [ADR-61: `corrections` con la forma que lee la cola de la administración](#adr-61-corrections-con-la-forma-que-lee-la-cola-de-la-administración)
 62. [ADR-62: `questions` con IDs `qst_` y los campos del generador](#adr-62-questions-con-ids-qst_-y-los-campos-del-generador)
 63. [ADR-63: Percentil de cohorte con el histograma de `questions.stats` (Tramos propuestos)](#adr-63-percentil-de-cohorte-con-el-histograma-de-questionsstats)
-64. [ADR-64: `plans` como fuente de la cuota base y de las medallas por acierto (Decidida, `qDay` de `free` en consulta a Max)](#adr-64-plans-como-fuente-de-la-cuota-base-y-de-las-medallas-por-acierto)
+64. [ADR-64: `plans` como fuente de la cuota base y de las medallas por acierto (Cuota reemplazada por ADR-76; medallas ratificadas por ADR-83)](#adr-64-plans-como-fuente-de-la-cuota-base-y-de-las-medallas-por-acierto)
 65. [ADR-65: Supuestos del modelo alineado (Supuestos)](#adr-65-supuestos-del-modelo-alineado)
 66. [ADR-66: Alta de `users` en la primera petición autenticada y `GET /me` (Decidida)](#adr-66-alta-de-users-en-la-primera-petición-autenticada-y-get-me)
 67. [ADR-67: `reason` de la recorrección a partir del código y el comentario de la app (Decidida)](#adr-67-reason-de-la-recorrección-a-partir-del-código-y-el-comentario-de-la-app)
-68. [ADR-68: Actividad del alumno y medalla por ingreso diario (Decidida)](#adr-68-actividad-del-alumno-y-medalla-por-ingreso-diario)
+68. [ADR-68: Actividad del alumno y medalla por ingreso diario (Alcance ratificado por ADR-82)](#adr-68-actividad-del-alumno-y-medalla-por-ingreso-diario)
 69. [ADR-69: Decisiones menores del modelo alineado (Propuestas)](#adr-69-decisiones-menores-del-modelo-alineado)
-70. [ADR-70: Modo facsímil según `plans.features` (Decidida)](#adr-70-modo-facsímil-según-plansfeatures)
+70. [ADR-70: Modo facsímil según `plans.features` (Condición ratificada; fallback reemplazado por ADR-77)](#adr-70-modo-facsímil-según-plansfeatures)
 71. [ADR-71: Alumno de cada petición en una sola lectura de `users` (Aprobada por Jeremías, pendiente de ratificación)](#adr-71-alumno-de-cada-petición-en-una-sola-lectura-de-users)
-72. [ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3 (Aprobada por Jeremías, pendiente de ratificación; el descuento de cuota en consulta a Max)](#adr-72-cuota-pregunta-pendiente-y-preferencias-en-la-iteración-3)
-73. [ADR-73: Detalles de implementación de la práctica en la iteración 3 (En parte ratificada)](#adr-73-detalles-de-implementación-de-la-práctica-en-la-iteración-3)
+72. [ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3 (Cuota y pendiente ratificadas por Max en ADR-81)](#adr-72-cuota-pregunta-pendiente-y-preferencias-en-la-iteración-3)
+73. [ADR-73: Detalles de implementación de la práctica en la iteración 3 (Dificultad ratificada; reemplazos parciales por ADR-76, ADR-79 y ADR-81)](#adr-73-detalles-de-implementación-de-la-práctica-en-la-iteración-3)
 74. [ADR-74: Estados de la pantalla Pregunta y errores de red en la app (Ratificada)](#adr-74-estados-de-la-pantalla-pregunta-y-errores-de-red-en-la-app)
 75. [ADR-75: Banco real de preguntas de la empresa, fuera del repositorio (Decidida; importación pendiente de la empresa)](#adr-75-banco-real-de-preguntas-de-la-empresa-fuera-del-repositorio)
+76. [ADR-76: Cuota gratuita con base 10 y qDay como tope (Confirmada por Max)](#adr-76-cuota-gratuita-con-base-10-y-qday-como-tope)
+77. [ADR-77: Facsímil autorizado solo por mock_mode (Confirmada por Max)](#adr-77-facsímil-autorizado-solo-por-mock_mode)
+78. [ADR-78: Dificultad estricta y aviso de preguntas agotadas (Confirmada por Max)](#adr-78-dificultad-estricta-y-aviso-de-preguntas-agotadas)
+79. [ADR-79: Facsímil con orden fijo por prueba (Confirmada por Max)](#adr-79-facsímil-con-orden-fijo-por-prueba)
+80. [ADR-80: Preguntas de cuatro y cinco alternativas (Confirmada por Max)](#adr-80-preguntas-de-cuatro-y-cinco-alternativas)
+81. [ADR-81: Descuento al responder y protección de la pregunta pendiente (Confirmada por Max)](#adr-81-descuento-al-responder-y-protección-de-la-pregunta-pendiente)
+82. [ADR-82: Actividad del alumno limitada a lastActivityAt (Confirmada por Max)](#adr-82-actividad-del-alumno-limitada-a-lastactivityat)
+83. [ADR-83: Medallas y recorrecciones según la sección 2.8 (Confirmada por Max)](#adr-83-medallas-y-recorrecciones-según-la-sección-28)
 
 ---
 
@@ -217,6 +231,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 ---
 
 ### ADR-12: Proyección y sanitización centralizada de correctAnswer
+
+Actualización vigente (01/10/2026): RNF-02 exige excluir también `explanation` antes de responder. `sanitize_question()` ya quita ambos campos; la prueba de todas las rutas aún solo busca `correctAnswer`. Completar esa cobertura corresponde a RT-01, RT-02 y T-13. La ratificación del diseño general sigue pendiente.
 
 * **Estado:** **PROPUESTA PARA RATIFICACIÓN**
 * **Decisión:** Implementar la función `sanitizeQuestion(questionDoc)` en la capa de servicios del backend (`backend/src/services/questionService.js`).
@@ -378,6 +394,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 ---
 
 ### ADR-27: Cuota y preferencias en `users/{uid}` según el modelo de la empresa
+
+Actualización vigente (01/10/2026): la interpretación de `qDay` como base, añadida el 25/09 y conservada abajo, queda reemplazada por ADR-76. El perfil se crea mediante el alta de ADR-66, no mediante el registro del alumno. Los campos de cuota y preferencias permanecen en `users/usr_<UID>`.
 
 * **Estado:** **APROBADA POR EL EQUIPO (2026-09-23)**
 * **Contexto:** el diccionario del módulo no definía el documento `users/{uid}`. El modelo de datos de la empresa (Aprueba, Modelo de Datos Firebase/Firestore v1.0) lo define como el perfil del alumno. Ahí la cuota es el mapa `quota` `{used, max, date, bonusSchool, bonusAddress, unlimited}`, y las preferencias `selectedTests`, `practiceFormat` y `difficulty` van en el primer nivel. La consola de administración, que construye otro equipo, lee ese documento.
@@ -595,6 +613,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 ---
 
 ### ADR-41: Cambio de alcance autorizado: login y registro
+
+Alcance vigente (01/10/2026): el inicio de sesión con Firebase Authentication forma parte del módulo, HU-21, según Enunciado de Alcance v1.2. El registro y el restablecimiento de contraseña quedan fuera y HU-22 está retirada. Los ajustes históricos del router y de `PhoneAuthService` descritos abajo no autorizan desarrollar esos flujos ni el login social.
 
 * **Estado:** **AUTORIZADA POR LA CONTRAPARTE (2026-09-23), IMPLEMENTADA EN `feature/firebase-auth`, PENDIENTE DE REVISIÓN CRUZADA**
 * **Contexto:** `CLAUDE.md` deja fuera del alcance el registro y la autenticación, y dice que ese código es del cliente y no se toca. Pasar a Firebase Auth (ADR-40) obligaba a cambiar el login, que pedía tokens a `/auth/login` y los renovaba con `/auth/refresh`. El 23/09/2026 Alloxentric autorizó tocar lo necesario para ese cambio y sacar la verificación por SMS.
@@ -823,6 +843,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-59: `medalTransactions` en lugar de `users/{uid}/medalLedger`
 
+Ratificación vigente (01/10/2026): Max confirmó seguir la sección 2.8, registrada en ADR-83. La diferencia del movimiento de medalla fue avisada al equipo de la consola; no se da por corregida su implementación. Los detalles de `refId` que eran propuesta siguen sujetos a la ratificación del equipo.
+
 * **Estado:** **APLICADA EN `feature/alinear-modelo-admin` (2026-09-25), DERIVADA DE ADR-57. LOS `refId` SON PROPUESTA (ADR-69)**
 * **Decisión:** los movimientos de medallas van en la colección raíz `medalTransactions`, con IDs `mtx_` más 10 hexadecimales y los campos `userId`, `tier`, `amount`, `reason`, `refId` y `at` (sección 2.8). Todo otorgamiento es una transacción que crea el movimiento e incrementa `users.medalWallet.<tier>` y `users.badgesTotal`, igual que la confirmación de recorrecciones de la administración. `medalWallet` y `badgesTotal` reemplazan al mapa `medals` del modelo de junio.
 * **Motivos del módulo,** con el estilo de `correction_confirmed`:
@@ -847,6 +869,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-61: `corrections` con la forma que lee la cola de la administración
 
+Ratificación vigente (01/10/2026): Max confirmó seguir la sección 2.8, registrada en ADR-83. La diferencia de `flagCount` fue avisada al equipo de la consola; no se da por corregida ni se compensa desde el módulo.
+
 * **Estado:** **APLICADA EN `feature/alinear-modelo-admin` (2026-09-25), DERIVADA DE ADR-57**
 * **Decisión:** IDs `cor_` más 10 hexadecimales. Campos de la sección 2.8: `userId`, `userName`, `questionId`, `testId`, `reason`, `state` (`pending | confirmed | rejected`), `resolvedBy`, `resolvedAt`, `note`, `rewardGranted` y `createdAt`. Se suman los que lee `GET /admin/corrections` (sección 7.2): `axis`, `difficulty`, `statementPreview` y `proposedAnswer`. La especificación indica que `statementPreview` lo desnormaliza la API del alumno al crear la solicitud; el módulo lo escribe como un renglón de hasta 120 caracteres. La cola lee sin valor por defecto `userId`, `questionId`, `state`, `reason` y `createdAt`, y llama a `.isoformat()` sobre `createdAt`, así que tiene que ser una fecha. `reason` guarda texto del alumno y no un código (ADR-67).
 * **Índices:** el historial del alumno usa `(userId ASC, createdAt DESC)`. La comprobación de `CORRECTION_ALREADY_OPEN` solo usa igualdades y no necesita índice compuesto. La cola de la consola filtra por `state`, `testId` o `questionId` y ordena por `createdAt` en los dos sentidos, así que necesita `(state, createdAt)`, `(testId, createdAt)` y `(questionId, createdAt)`, cada uno ascendente y descendente. Cuando se combinan filtros, Firestore une esos índices porque terminan en el mismo campo de orden.
@@ -868,6 +892,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-63: Percentil de cohorte con el histograma de `questions.stats`
 
+Trazabilidad vigente (01/10/2026): HT-04, RNF-12 y T-30 requieren cálculo desde el histograma, sin agregaciones. T-28 requiere medir el tiempo desde la entrega registrada por el servidor. `calculate_cohort_percentile()` todavía usa umbrales; la presencia del histograma en el seed no completa HT-04 ni su aceptación. Los tramos propuestos abajo siguen sin ratificar.
+
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25). LOS TRAMOS SON PROPUESTA. EL CÁLCULO SE IMPLEMENTA EN LA ITERACIÓN 4**
 * **Decisión:** el percentil sale de `questions.stats.elapsedBuckets`, el histograma de tiempos del modelo de junio. `stats` se actualiza dentro de la transacción de responder, la misma que descuenta la cuota y otorga las medallas (ADR-59). El proyecto está en el plan Spark, sin Cloud Functions, así que esa transacción corre en el backend.
 * **Tramos:** diez, en segundos: `lt10`, `lt20`, `lt30`, `lt45`, `lt60`, `lt90`, `lt120`, `lt180`, `lt300` y `gte300`. Cada tramo cuenta las respuestas con tiempo menor que su límite y mayor o igual que el límite anterior. Están en `ELAPSED_BUCKETS`, en `backend/app/services/questions.py`. Son más finos en el primer minuto y más gruesos después de dos. Sus nombres empiezan con letra para servir como ruta de campo en Firestore, por ejemplo `stats.elapsedBuckets.lt30`.
@@ -878,6 +904,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 ---
 
 ### ADR-64: `plans` como fuente de la cuota base y de las medallas por acierto
+
+Estado vigente (01/10/2026): reemplazada en la interpretación de cuota por ADR-76. La base gratuita es 10 y `plans.free.limits.qDay=20` representa el tope. Se conserva abajo el texto original y el dato del seed como antecedente; el código y el seed todavía no siguen ADR-76. La fuente de las medallas por acierto se mantiene, ratificada por ADR-83.
 
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25). `free` LLEVA `qDay` 10 DESDE EL 2026-09-26, Y EL 20 DEL EJEMPLO VA EN LA CONSULTA A MAX**
 * **Decisión:** la cuota base diaria sale de `plans/{plan}.limits.qDay`, donde 0 es ilimitado, y las medallas por respuesta correcta de `plans/{plan}.badges.correct`. Ninguna de las dos queda fija en el código: se quitó `BASE_QUOTA` de `backend/app/core/config.py`. El seed crea `free`, `uni` y `all` con la forma de la administración (`name {es, en}`, `price`, `currency`, `color`, `features`, `limits {qDay, groups, tests}`, `badges {login, purchase, correct}`, `stripeProductId`, `stripePriceId` y `system`), porque sin esos documentos el backend no tiene de dónde leer la base.
@@ -904,6 +932,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-66: Alta de `users` en la primera petición autenticada y `GET /me`
 
+Alcance vigente (01/10/2026): el Product Backlog v2.3 registra esta incorporación como HT-07, trabajo no planificado de la iteración 3 y ajuste a catorce servicios. La Entrega 1 fue aceptada por Martin mediante T-24 el 29/09/2026. La cuota prevista para el alta se rige ahora por ADR-76; la implementación todavía usa la interpretación anterior de ADR-64.
+
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-26). SE IMPLEMENTA EN LA ITERACIÓN 3**
 * **Decisión:** en la primera petición autenticada de un UID sin documento, el backend crea `users/usr_<UID>` de forma idempotente, con una transacción que no pisa un documento existente. Lleva la forma de la administración: `state` `active`, `plan` `free`, `medalWallet` en cero, `badgesTotal` 0, `country` `CL`, `createdAt` y `lastActivityAt`. `email` sale del token, `authProvider` de `firebase.sign_in_provider` y `locale` de `Accept-Language`. `name` sale del token cuando la cuenta tiene nombre y, si no, de la parte del correo antes de la arroba. Los campos del módulo parten en sus valores iniciales: `quota` con la base del plan y 0 usadas, `selectedTests` vacío, `practiceFormat` `random` y `difficulty` `d1`. `nameLower`, `lastActivityAt`, `badgesTotal` y `createdAt` van siempre, porque la consola ordena por ellos y Firestore deja fuera de una consulta ordenada los documentos que no tienen el campo.
 * **`GET /me`:** la app lo pide después de iniciar sesión, y como la ruta no existe hoy muestra "sin conexión". Su respuesta sale de `users` según la sección 3 del diccionario.
@@ -926,6 +956,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 ---
 
 ### ADR-68: Actividad del alumno y medalla por ingreso diario
+
+Estado vigente (01/10/2026): el límite de alcance queda ratificado por Max en ADR-82. Racha, medalla diaria y registro de actividad están fuera del módulo; solo se actualiza `lastActivityAt`. La asignación de esos módulos a otro equipo no se presume.
 
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-26)**
 * **Contexto:** la consola lee `users.lastActivityAt` y `users.streak`, y su ficha de usuario lee la subcolección `users/{id}/activity` (`at`, `type`, `detail`). Su job de métricas calcula los usuarios activos con `activity` y `users` (sección 9.3). Ningún documento dice quién escribe esos datos, y el modelo de junio no define `activity`. La regla de negocio 3 da una medalla por ingreso diario, y `plans.badges.login` dice cuántas.
@@ -955,6 +987,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-70: Modo facsímil según `plans.features`
 
+Estado vigente (01/10/2026): la condición de `mock_mode` queda ratificada por Max en ADR-77. Queda reemplazado el fallback del contexto original que habilitaba por ser plan de pago si faltaba la funcionalidad en el catálogo. El orden fijo por prueba se registra en ADR-79. No se añade automáticamente `mock_mode` a `uni`.
+
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-26). SE IMPLEMENTA CON LOS ENDPOINTS**
 * **Contexto:** la regla de negocio 5 pedía plan de pago para el modo facsímil. La administración arma cada plan con funcionalidades de su catálogo `features`, de IDs fijos `f1` a `f10` (secciones 2.8 y 8). En su ejemplo, `f2` tiene `key` `mock_mode` y el nombre "Modo facsímil (ensayos)", y la especificación dice que los servicios del alumno tienen que conocer la `key` de cada funcionalidad. El equipo decidió que el módulo use esa `key` si el catálogo tiene una que corresponda al facsímil, y que si no la tiene siga la regla 5.
 * **Decisión:** el modo facsímil se permite cuando `plans/{plan}.features` incluye el ID de la funcionalidad con `key` `mock_mode`. Si no la incluye, el módulo responde `FORMAT_REQUIRES_PLAN` 422 (ADR-13). El seed carga `features/f2` con los datos del ejemplo; es la única funcionalidad que lee el módulo. El nombre en inglés, "Mock exam mode", no está en el documento y es supuesto.
@@ -981,6 +1015,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-72: Cuota, pregunta pendiente y preferencias en la iteración 3
 
+Ratificación vigente (01/10/2026): Max confirmó descontar al responder y mantener la pregunta entregada pendiente hasta responderla (ADR-81). La consulta sobre esos dos puntos queda cerrada. Los detalles de preferencias y los resultados históricos se conservan abajo; no se atribuye a Max una confirmación adicional sobre ellos. HU-03 / T-29 debe completar la transacción de respuesta, y T-25 debe impedir entregar distintas pendientes con solicitudes simultáneas.
+
 * **Estado:** **APROBADA POR JEREMÍAS EL 27/09, PENDIENTE DE RATIFICACIÓN DEL EQUIPO EL 28/09. LA CONTRADICCIÓN DEL CONTRATO ESTÁ EN CONSULTA A MAX**
 * **Contexto:** el contrato de la API se contradice sobre cuándo se descuenta la cuota. En la sección 1.3, `GET /practice/next` entrega la siguiente pregunta "descontando de la cuota diaria", y en la misma sección `POST /questions/{id}/answer` también "descuenta de la cuota diaria". El modelo de datos de la empresa descuenta al responder: la transacción que crea la respuesta es la que sube `quota.used` (diccionario, sección 2.2).
 * **Decisión:**
@@ -999,6 +1035,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 ---
 
 ### ADR-73: Detalles de implementación de la práctica en la iteración 3
+
+Estado vigente (01/10/2026): la dificultad estricta queda ratificada por Max mediante ADR-78. El azar en formato facsímil queda reemplazado por el orden fijo de ADR-79, y la tolerancia de elección sin transacción queda reemplazada por la protección de pendiente de ADR-81 y T-25. La interpretación de `qDay=20` que anulaba los bonos queda reemplazada por ADR-76. Estos reemplazos describen el comportamiento requerido; el código todavía conserva esas diferencias. Los demás detalles de diseño no quedan ratificados por este registro.
 
 * **Estado:** **EN PARTE RATIFICADA POR JEREMÍAS EL 27/09. DOS PUNTOS VAN EN LA CONSULTA A MAX Y EL RESTO SE RATIFICA EN LA SESIÓN DEL EQUIPO**
 * **Contexto:** al implementar `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next` aparecieron detalles que no cubren la bitácora ni el encargo de la iteración 3. En cada uno se tomó la opción más simple.
@@ -1050,6 +1088,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-75: Banco real de preguntas de la empresa, fuera del repositorio
 
+Actualización vigente (01/10/2026): Max preguntó si el equipo puede corregir el banco con IA. La decisión del equipo está pendiente y sería un cambio de alcance, que necesita historia, estimación y planificación antes de aceptarse. Esta pregunta no autoriza importar, escribir un importador, inventar clasificación ni versionar contenido. La demo usa el banco sintético; T-24 acredita su recarga después de integrar #25 a #28. La autorización para mantener público el repositorio sigue pendiente.
+
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-27). LA IMPORTACIÓN QUEDA PENDIENTE DE LA CLASIFICACIÓN QUE ENTREGUE LA EMPRESA**
 * **Contexto:** Alloxentric entregó el banco real de preguntas en su Drive técnico, en la carpeta Aprueba: archivos JSON por materia en las subcarpetas PAES Chile Biologia, PAES Chile Matematica y PAES Chile Verbal, que subió Max el 2026-08-26. Hay otra copia de esas carpetas, del 2026-08-06, en otra carpeta del mismo Drive. El repositorio es público, y hasta ahora las únicas preguntas del proyecto eran las del seed, que escribió el equipo.
 * **Decisión:** el banco real es contenido de la empresa y nunca se versiona: no entra al seed, a las pruebas, a los ejemplos ni a los documentos. No se importa todavía y el importador no se escribe, porque le faltan datos que el modelo exige y tiene problemas de calidad, y clasificarlo y curarlo le corresponde a la empresa. La importación queda pendiente de que la empresa entregue la clasificación. Mientras tanto, la demo usa el banco sintético del seed, que se carga en producción después de fusionar del #25 al #27, como planificaba ADR-73.
@@ -1061,3 +1101,91 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 * **Propuesta para cuando se importe:** Matemática va a `m1` mientras la empresa no separe M1 de M2, Biología a `cien` y Verbal a `lectora`. El ID sale de la prueba, el enunciado y las alternativas: reimportar el mismo contenido no duplica y las copias idénticas se juntan, pero si la empresa corrige un texto el ID cambia y la pregunta corregida entra como nueva. La dificultad, el eje y la habilidad los entrega la empresa, y no se crean habilidades inventadas. `origin` va en `manual`, el valor que el generador usa al migrar el banco existente, porque no define uno para contenido importado. `source` lleva `import:` y el nombre del archivo, la forma que el generador usa en `contents`. Los dos quedan como supuestos.
 * **Pedido a la empresa:** la clasificación de cada pregunta, la corrección de los dos archivos de Verbal que no son JSON válido y de los problemas de calidad, y cuál de las dos copias del Drive vale.
 * **Alternativa descartada:** clasificar y curar el banco en el equipo, deduciendo la dificultad, el eje o la habilidad. Serían datos inventados sobre contenido de la empresa.
+
+---
+
+### ADR-76: Cuota gratuita con base 10 y qDay como tope
+
+Estado: confirmada por Max; implementación pendiente. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo en el encargo de actualización; fecha exacta del mensaje no aportada.
+
+La cuota gratuita parte en 10 preguntas. Declarar colegio suma 5 y declarar región suma 5, hasta 20. Cada bono se reclama una sola vez. `plans.free.limits.qDay=20` representa ese tope, no la base. En `free`, el máximo del día es `min(10 + bonos, 20)`. `qDay=0` mantiene los planes ilimitados.
+
+Quedan reemplazadas la interpretación de cuota de ADR-64 y la actualización de ADR-27 que tomaba `qDay` como base. Las medallas por acierto siguen saliendo de `plans.badges.correct`. Se descarta partir en 20 sin bonos: dejaría sin efecto los desbloqueos que Max confirmó.
+
+El código todavía suma bonos a `qDay` y el seed conserva 10. Corregirlo compete a HU-07 y HU-08, con impacto en el alta HT-07, la entrega HU-01 y T-09. Este registro no cambia el dato ni autoriza cargarlo en producción. Tampoco define límites distintos para planes que la contraparte no haya especificado.
+
+---
+
+### ADR-77: Facsímil autorizado solo por mock_mode
+
+Estado: confirmada por Max. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+El formato facsímil requiere que el plan incluya la funcionalidad `mock_mode`. Tener un plan de pago no basta. Si el catálogo no identifica esa funcionalidad, no hay evidencia de permiso y no se habilita el formato por pago.
+
+Se ratifica la condición de ADR-70 y se reemplaza su fallback a plan de pago. Se descarta añadir el permiso a `uni` desde el módulo: la empresa configura las funcionalidades de cada plan.
+
+`mock_mode_allowed()` todavía devuelve `plan_id != "free"` si falta la funcionalidad. HU-12 debe cerrar esa diferencia y comprobar plan sin permiso y catálogo sin funcionalidad. La decisión no cambia `features.json` ni `plans.json`.
+
+---
+
+### ADR-78: Dificultad estricta y aviso de preguntas agotadas
+
+Estado: confirmada por Max; selección y aviso presentes en el código revisado. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+Las preguntas nuevas solo se eligen en la dificultad seleccionada. Si se agotan en las pruebas elegidas, se avisa al alumno. Se ratifica este punto de ADR-73 y se cierra su consulta a Max. La pregunta que ya está pendiente se mantiene según ADR-81.
+
+Se descarta pasar a otra dificultad sin decisión del alumno. `GET /practice/next` responde 404 `NO_QUESTIONS_AVAILABLE` sin `field` al agotarse, y Pregunta muestra el estado correspondiente. La selección estricta tiene una prueba en `test_practica.py`; el comportamiento debe mantenerse en HU-12 y verificarse por Martin en T-35.
+
+---
+
+### ADR-79: Facsímil con orden fijo por prueba
+
+Estado: confirmada por Max; implementación pendiente. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+El facsímil presenta las preguntas en orden fijo por prueba, como un ensayo. Queda reemplazado el comportamiento de ADR-73 que admitía selección al azar en ambos formatos. El modo `random` conserva su selección aleatoria entre las preguntas disponibles según preferencias.
+
+Se descarta considerar HU-12 terminada por guardar y validar `facsim`: debe cambiar también la selección. `pending_or_next()` todavía usa `pick_question()` sin leer el formato. HU-12 / T-32, en la propuesta de iteración 4, cubre el orden. El campo de orden y los detalles del ensayo se definen en T-32, y esas decisiones se registran en esta bitácora.
+
+---
+
+### ADR-80: Preguntas de cuatro y cinco alternativas
+
+Estado: confirmada por Max; soporte parcial verificado. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+El módulo acepta preguntas de cuatro o cinco alternativas. La letra correcta y la elegida deben corresponder a una alternativa que exista en esa pregunta: A a D con cuatro, A a E con cinco. La cardinalidad del diccionario ya coincide.
+
+El modelo Dart usa una lista y las pantallas la recorren por longitud, así que ya muestran cuatro o cinco. Las 40 preguntas del seed tienen cuatro. `test_10_banco_de_demostracion_consistente`, en `test_health.py`, acepta cuatro o cinco, pero `test_forma_de_las_preguntas_del_banco`, en `test_modelo.py`, exige cuatro y fallaría con una pregunta de cinco en el seed. Faltan la prueba de cinco de punta a punta y la validación de la letra al responder, HU-03 / T-29. HU-20 / T-08, HU-02 y RT-02 deben conservar la compatibilidad. Se descarta exigir cinco a todas las preguntas o completar con una alternativa inventada. La decisión no autoriza importar el banco real ni inferir sus metadatos.
+
+---
+
+### ADR-81: Descuento al responder y protección de la pregunta pendiente
+
+Estado: confirmada por Max; comportamiento secuencial presente, concurrencia y respuesta pendientes. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+La cuota se descuenta al registrar la respuesta. La pregunta entregada queda pendiente hasta responderla y se repite sin consumir cuota, incluso si cambian las preferencias. Se ratifican estos puntos de ADR-72 y se cierra la contradicción consultada a Max. RNF-04 exige que la pendiente impida recorrer el banco sin consumir cuota.
+
+La elección debe conservar una sola pendiente también con peticiones simultáneas. Queda reemplazada la tolerancia de ADR-73 a devolver preguntas distintas cuando no hay pendiente: T-25 requiere elegir dentro de una transacción. HU-03 / T-29 registra la respuesta, descuenta y libera la pendiente. T-28 mide desde la entrega del servidor, y Martin comprueba CP-02 y CP-04 en T-35.
+
+Se descarta descontar tanto al entregar como al responder. También se descarta dar por satisfecha RNF-04 solo con dos solicitudes consecutivas: falta comprobar concurrencia. Los campos de almacenamiento que necesiten T-25 y T-28 se definen en esas tareas.
+
+---
+
+### ADR-82: Actividad del alumno limitada a lastActivityAt
+
+Estado: confirmada por Max; límite respetado por el código revisado. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+La racha, la medalla por ingreso diario y el registro de actividad están fuera del módulo. El backend solo actualiza `lastActivityAt`, en la primera petición autenticada de cada día. Se ratifica el límite de ADR-68 y se cierra su consulta de alcance.
+
+Se descarta añadir un evento a `activity` o emitir `daily_login` desde la práctica. HT-07 y HU-16 mantienen la marca de actividad y la sesión; las historias HU-03 y HU-08 otorgan únicamente sus recompensas propias. Que el perfil contenga `streak` no autoriza actualizarlo desde el módulo.
+
+---
+
+### ADR-83: Medallas y recorrecciones según la sección 2.8
+
+Estado: confirmada por Max; servicios del módulo pendientes de completar. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo; fecha exacta no aportada.
+
+El módulo sigue la sección 2.8 de la API de administración para medallas y recorrecciones. Se ratifica esa precedencia de ADR-59 y ADR-61. Las diferencias del código de la consola en `flagCount` y en el registro de la medalla ya fueron avisadas a su equipo, según el encargo. El aviso no acredita que estén corregidas.
+
+Por respuesta correcta, el monto sale de `plans.badges.correct`; cada bono da un bronce. La consola otorga los 250 bronces al confirmar una recorrección. Los movimientos del módulo se escriben junto con la actualización de la billetera y el total en la misma transacción. HU-03 / T-29, HU-08, HU-09 y HU-10 cubren las implementaciones restantes.
+
+Se descarta copiar las dos diferencias de la consola al módulo o compensarlas con escrituras fuera del alcance. Esta confirmación no ratifica todos los detalles propuestos de ADR-69 ni amplía el trabajo a la consola.
