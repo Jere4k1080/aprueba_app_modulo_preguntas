@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from google.cloud import firestore
 from google.cloud.firestore import SERVER_TIMESTAMP
 
-from app.core.config import ADDRESS_BONUS, QUOTA_CAP, SCHOOL_BONUS, get_settings
+from app.core.config import ADDRESS_BONUS, BASE_QUOTA, SCHOOL_BONUS, get_settings
 from app.core.errors import ApiError
 from app.db.firestore import COL, user_doc_id
 
@@ -16,11 +16,12 @@ TIERS = ("bronze", "silver", "gold", "diamond", "platinum")
 
 
 def quota_max(plan: dict, bonus_school: bool = False, bonus_address: bool = False) -> int:
-    """Límite diario de preguntas (ADR-64): la base del plan más los bonos, con tope. 0 si el plan es ilimitado."""
-    q_day = plan["limits"]["qDay"]
-    if q_day == 0:
+    """Límite diario de preguntas (ADR-76): la base más 5 por cada bono reclamado, sin pasar del tope
+    plans.<plan>.limits.qDay. 0 si el plan es ilimitado (qDay 0)."""
+    cap = plan["limits"]["qDay"]
+    if cap == 0:
         return 0
-    return min(q_day + SCHOOL_BONUS * bonus_school + ADDRESS_BONUS * bonus_address, QUOTA_CAP)
+    return min(BASE_QUOTA + SCHOOL_BONUS * bonus_school + ADDRESS_BONUS * bonus_address, cap)
 
 
 def quota_day(now: datetime | None = None) -> str:
@@ -81,7 +82,7 @@ async def create_user(db, ref, claims: dict, locale: str) -> dict:
     repiten."""
     free = await db.collection(COL.plans).document("free").get()
     if not free.exists:
-        raise RuntimeError("Falta plans/free: sin ese documento el alta no tiene base de cuota (ADR-64).")
+        raise RuntimeError("Falta plans/free: sin ese documento el alta no tiene tope de cuota (ADR-76).")
     doc = new_user(claims, locale, free.to_dict(), quota_day())
 
     @firestore.async_transactional

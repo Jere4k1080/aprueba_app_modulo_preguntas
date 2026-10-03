@@ -14,7 +14,7 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 
 | Ruta | Documentos | Contenido |
 |---|---:|---|
-| `plans` | 3 | `free`, `uni` y `all`; `free.qDay=10` es el dato del seed actual, pendiente de corregir a tope 20 (ADR-76) |
+| `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración; `free.qDay=20` es el tope diario (ADR-76) |
 | `features` | 1 | `f2`, la funcionalidad `mock_mode` requerida para el facsímil (ADR-77) |
 | `tests` | 5 | Las pruebas PAES: `lectora` y `m1` con 14 preguntas aprobadas y las demás con 4 |
 | `skills` | 20 | Cuatro habilidades por prueba |
@@ -34,7 +34,7 @@ En total son 88 documentos.
 
 Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. El seed arma para cada una el mismo token que entrega Firebase Authentication, con correo, nombre visible y proveedor, así que se llaman `Estudiante Demo` y `Estudiante Nuevo`. Si se cambia el nombre visible de una cuenta, hay que cambiarlo también en `users.json`.
 
-Las dos cuentas del seed actual están en `free`, con `state` `active` y `quota.max=10` sin bonos. Max confirmó base 10, bonos de 5 por colegio y 5 por región, y tope 20. `plans.free.limits.qDay=20` representa el tope, no la base (ADR-76, que reemplaza esa interpretación de ADR-64). La consulta ya está resuelta; el JSON aún contiene 10 y `quota_max()` suma bonos a ese campo. La corrección coordinada de dato, cálculo y pruebas queda por planificar en HU-07 y HU-08 antes de otra carga; `test_modelo.py` también afirma `qDay` 10 y cambia con ella.
+Las dos cuentas están en `free`, con `state` `active` y `quota.max=10`: la base, sin bonos. `plans.free.limits.qDay=20` es el tope que alcanzan los dos bonos, no la base (ADR-76, que reemplaza esa interpretación de ADR-64). Producción tiene `qDay` 10 hasta que se cargue este seed desde `main` revisada.
 
 ---
 
@@ -49,7 +49,7 @@ Las dos cuentas del seed actual están en `free`, con `state` `active` y `quota.
   "currency": "USD",
   "color": "#64748B",
   "features": ["f3"],
-  "limits": { "qDay": 10, "groups": 1, "tests": 1 },
+  "limits": { "qDay": 20, "groups": 1, "tests": 1 },
   "badges": { "login": 1, "purchase": 0, "correct": 1 },
   "stripeProductId": null,
   "stripePriceId": null,
@@ -59,7 +59,7 @@ Las dos cuentas del seed actual están en `free`, con `state` `active` y `quota.
 }
 ```
 
-`qDay: 10` en el ejemplo es el dato actual, no el tope confirmado. `uni` tiene `qDay` 0, ilimitado, y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69). Solo `all` incluye `f2`, así que es el único plan del seed habilitado para facsímil (ADR-77). El código aún permite un plan de pago si falta la funcionalidad en el catálogo; ese fallback debe retirarse en HU-12. Los valores `badges.login` se conservan como datos del plan; el módulo no otorga medalla diaria ni modifica rachas (ADR-82).
+`qDay: 20` es el tope diario del plan gratuito. `uni` tiene `qDay` 0, ilimitado, y `badges` `{login: 1, purchase: 5, correct: 1}`. `all` tiene `qDay` 0 y `badges` `{login: 2, purchase: 10, correct: 2}`. Los nombres en español son los de la administración, y los nombres en inglés son supuesto (ADR-69). Solo `all` incluye `f2`, así que es el único plan del seed habilitado para facsímil (ADR-77). El código aún permite un plan de pago si falta la funcionalidad en el catálogo; ese fallback debe retirarse en HU-12. Los valores `badges.login` se conservan como datos del plan; el módulo no otorga medalla diaria ni modifica rachas (ADR-82).
 
 ---
 

@@ -1106,13 +1106,15 @@ Actualización vigente (01/10/2026): Max preguntó si el equipo puede corregir e
 
 ### ADR-76: Cuota gratuita con base 10 y qDay como tope
 
-Estado: confirmada por Max; implementación pendiente. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo en el encargo de actualización; fecha exacta del mensaje no aportada.
+Estado: confirmada por Max; implementada en el código el 03/10/2026, con `qDay` 20 pendiente de cargar en producción. Fecha de registro: 01/10/2026. Fuente: Max Kreimerman (Alloxentric), confirmación anterior al 01/10 informada por el equipo en el encargo de actualización; fecha exacta del mensaje no aportada.
 
 La cuota gratuita parte en 10 preguntas. Declarar colegio suma 5 y declarar región suma 5, hasta 20. Cada bono se reclama una sola vez. `plans.free.limits.qDay=20` representa ese tope, no la base. En `free`, el máximo del día es `min(10 + bonos, 20)`. `qDay=0` mantiene los planes ilimitados.
 
 Quedan reemplazadas la interpretación de cuota de ADR-64 y la actualización de ADR-27 que tomaba `qDay` como base. Las medallas por acierto siguen saliendo de `plans.badges.correct`. Se descarta partir en 20 sin bonos: dejaría sin efecto los desbloqueos que Max confirmó.
 
 El código todavía suma bonos a `qDay` y el seed conserva 10. Corregirlo compete a HU-07 y HU-08, con impacto en el alta HT-07, la entrega HU-01 y T-09. Este registro no cambia el dato ni autoriza cargarlo en producción. Tampoco define límites distintos para planes que la contraparte no haya especificado.
+
+Implementación (03/10/2026, rama `feature/cuota-tope`): `quota_max()` calcula `min(BASE_QUOTA + 5 por cada bono reclamado, qDay)`, con `BASE_QUOTA` 10 en `backend/app/core/config.py`, junto a los bonos. Sale la constante `QUOTA_CAP`: el tope es el `qDay` de cada plan. `check_quota()` responde `QUOTA_BASE_REACHED` mientras quede un bono sin reclamar y el máximo esté bajo `qDay`, y `QUOTA_DAILY_LIMIT` si no. El seed carga `qDay` 20 en `free`, y `users.quota.max` se recalcula al cambiar el día, como antes (ADR-73). Producción sigue con `qDay` 10 en `plans/free` hasta la próxima carga desde `main` revisada: con ese dato el tope queda en 10, ningún bono suma y la app muestra el límite diario en vez del desbloqueo. La carga y la prueba de aceptación que la sigue van por la regla 10 de `CLAUDE.md`.
 
 ---
 

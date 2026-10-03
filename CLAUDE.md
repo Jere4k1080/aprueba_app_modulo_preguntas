@@ -146,7 +146,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements-dev.txt
 .venv/bin/python -m app.seed     # datos de prueba; pide SEED_DEMO_UID y SEED_DEMO_NEW_UID en .env
 .venv/bin/python -m app          # API en /api/v1
-.venv/bin/python -m pytest       # 62 pruebas; sin emulador, 40 y 22 omitidas
+.venv/bin/python -m pytest       # 64 pruebas; sin emulador, 42 y 22 omitidas
 
 # Verificador sin SDK de Flutter
 python3 tool/check_static.py .
@@ -234,7 +234,7 @@ seed/README.md              lo que carga el seed, con ejemplos
 
 ## Reglas de negocio
 
-1. Cuota gratuita base 10, más 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope, y `qDay=0` es ilimitado (ADR-76). Cada bonificación se reclama una sola vez. Reinicio diario y descuento al responder. El código todavía usa `qDay` como base y el seed conserva 10: son diferencias registradas, no la regla vigente.
+1. Cuota gratuita base 10, más 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope, y `qDay=0` es ilimitado (ADR-76). Cada bonificación se reclama una sola vez. Reinicio diario y descuento al responder. La base y los bonos son constantes de `backend/app/core/config.py`. Producción conserva `qDay` 10 en `plans/free` hasta la próxima carga del seed desde `main` revisada.
 2. Ni la respuesta correcta ni la explicación viajan antes de responder (RNF-02). La pregunta entregada queda pendiente y se repite hasta responderla, incluso si cambian las preferencias; T-25 debe asegurar la misma pendiente con peticiones simultáneas (RNF-04, ADR-81).
 3. Medallas de bronce: las de cada respuesta correcta salen de `plans/{plan}.badges.correct`. Cada desbloqueo de cuota da 1, fijado en `UNLOCK_MEDALS`. Una recorrección confirmada da 250, y los otorga la administración al aprobar, no el estudiante al enviar. La medalla por ingreso diario (`badges.login`) es de un módulo fuera del alcance (ADR-68). Cada movimiento va a `medalTransactions` y suma en `users.medalWallet` y `badgesTotal` en la misma transacción (ADR-59).
 4. `cohortPercentile` compara el tiempo de respuesta contra la cohorte de esa pregunta. HT-04 / T-30 lo calcula desde `questions.stats.elapsedBuckets`, sin agregaciones (RNF-12, ADR-63). T-28 mide desde la entrega registrada por el servidor; el cronómetro del cliente no es la fuente. Ambos cambios están pendientes en la iteración 4.
@@ -272,7 +272,7 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-61** `corrections` tiene la forma que lee la cola de la consola, con IDs `cor_*`
 - **ADR-62** `questions` usa IDs `qst_*` y los campos del generador. Solo se sirven preguntas `published`, y `published` implica `approved`
 - **ADR-63** Percentil de cohorte con el histograma de `questions.stats`, actualizado en la transacción de responder. Sustituye a ADR-10 y ADR-23
-- **ADR-64** Reemplazada en la interpretación de cuota por ADR-76. Las medallas por acierto siguen saliendo de `badges.correct`, ratificadas por ADR-83. El seed todavía carga `qDay` 10 en `free`, una diferencia registrada en ADR-76
+- **ADR-64** Reemplazada en la interpretación de cuota por ADR-76. Las medallas por acierto siguen saliendo de `badges.correct`, ratificadas por ADR-83. El seed carga `qDay` 20 en `free`; producción lo recibe con la próxima carga desde `main`
 - **ADR-65**, en la parte que decidió el equipo: un token con `auth_time` anterior a `sessionsRevokedAt` da 401, en la misma lectura de `users` que hacen el alta y el control de suspendidos
 - **ADR-66** El backend crea `users/usr_<UID>` en la primera petición autenticada, solo con los campos de la administración y los del módulo. `GET /me` entrega `quota.unlimited`. El seed crea las cuentas de demostración con la misma función, `new_user()`
 - **ADR-67** `reason` guarda el comentario del alumno, o la etiqueta en español del código si no hay comentario. El código va en `reasonCode`
@@ -326,7 +326,7 @@ La Entrega 1 fue aceptada por Martin el 29/09/2026: T-24, ocho de ocho pasos y h
 
 En el checkout revisado existen cinco servicios del módulo: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, y `GET /practice/next`. `/health` es una sonda y no suma a los catorce. No está `GET /questions/{id}`, aunque T-20 aparece hecha en el backlog: conciliar esa diferencia antes de declararlo disponible. Tampoco están respuesta, explicación, habilidad, los dos servicios de cuota, los dos de recorrección ni progreso. La implementación de cada historia necesita su aceptación; que la pantalla o el modelo exista no basta.
 
-Pendientes de implementación: cuota según ADR-76; prueba general de integridad que busque la explicación; elección transaccional de pendiente (T-25); tiempo desde la entrega del servidor (T-28); histograma y percentil (T-30); orden de facsímil (T-32); permiso sin fallback por pago; validación de la letra elegida contra las alternativas de cada pregunta (T-29) y cobertura de cinco alternativas, que hoy bloquea `test_forma_de_las_preguntas_del_banco` al exigir cuatro en el seed; ruta web al recargar (T-26); representación de cita (T-27) y práctica sin conexión (HU-14). No los corrijas desde un encargo limitado a documentación.
+Pendientes de implementación: prueba general de integridad que busque la explicación; elección transaccional de pendiente (T-25); tiempo desde la entrega del servidor (T-28); histograma y percentil (T-30); orden de facsímil (T-32); permiso sin fallback por pago; validación de la letra elegida contra las alternativas de cada pregunta (T-29) y cobertura de cinco alternativas, que hoy bloquea `test_forma_de_las_preguntas_del_banco` al exigir cuatro en el seed; ruta web al recargar (T-26); representación de cita (T-27) y práctica sin conexión (HU-14). No los corrijas desde un encargo limitado a documentación.
 
 Siguen pendientes la clasificación y curación del banco real, decidir cuál copia vale, la propuesta de curarlo con IA y la autorización del repositorio público. No se escriben importadores ni se infieren metadatos. Antes de la demo, una persona del equipo revisa las 10 preguntas de lectora en d1 del seed, que no se pueden recalcular con un script (ADR-73). El aviso de diferencias de `flagCount` y medalla ya se hizo al equipo de la consola, pero no hay evidencia de corrección de ese código. Las decisiones de Max sobre cuota, formato, dificultad, alternativas, pendiente y actividad ya están confirmadas; no vuelvas a presentarlas como consultas abiertas.
 

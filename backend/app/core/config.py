@@ -4,11 +4,12 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Reglas de negocio 1 y 3. La cuota base y las medallas por acierto salen de plans (ADR-64); ningún
-# documento define estos valores, así que son configuración del backend y no se leen del entorno.
+# Reglas de negocio 1 y 3. El tope diario y las medallas por acierto salen de plans (ADR-76); la base y
+# los bonos son configuración del backend y no se leen del entorno, para que una variable mal escrita no
+# cambie la cuota sin pasar por una revisión.
+BASE_QUOTA = 10     # preguntas diarias sin bonos (ADR-76)
 SCHOOL_BONUS = 5    # preguntas extra al declarar colegio
 ADDRESS_BONUS = 5   # preguntas extra al declarar región
-QUOTA_CAP = 20      # tope diario con los bonos sumados
 UNLOCK_MEDALS = 1   # medallas de bronce por cada bono de cuota reclamado
 
 

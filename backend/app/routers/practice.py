@@ -13,8 +13,9 @@ router = APIRouter(tags=["practice"])
 async def practice_next(student: Student, db: DB) -> JSONResponse:
     """Siguiente pregunta. Reinicia y revisa la cuota sin descontarla, y entrega la pendiente o una nueva
     (ADR-72). La respuesta correcta nunca va en esta ruta."""
-    quota = await fresh_quota(db, student, await load_plan(db, student.get("plan") or "free"))
-    check_quota(quota)
+    plan = await load_plan(db, student.get("plan") or "free")
+    quota = await fresh_quota(db, student, plan)
+    check_quota(quota, plan)
     tests = student.get("selectedTests") or []
     if not tests:
         # ADR-29: con field selectedTests la app lleva al alumno a elegir sus pruebas.
