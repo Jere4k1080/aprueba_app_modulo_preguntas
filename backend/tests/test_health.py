@@ -281,7 +281,7 @@ def test_10_banco_de_demostracion_consistente():
         assert set(p["name"]) == {"es", "en"} and p["system"] is True and p["currency"] in ("USD", "CLP"), f"{p['id']}: forma inválida"
         assert isinstance(p["limits"]["qDay"], int) and p["limits"]["qDay"] >= 0, f"{p['id']}: qDay inválido"
         assert all(isinstance(p["badges"][k], int) for k in ("login", "purchase", "correct")), f"{p['id']}: badges inválidos"
-    assert plans[0]["limits"]["qDay"] > 0, "el plan gratuito necesita una base de cuota"
+    assert plans[0]["limits"]["qDay"] > 0, "el plan gratuito necesita un tope de cuota"
 
     assert sorted(u["role"] for u in users) == ["demo", "nuevo"]
     for u in users:

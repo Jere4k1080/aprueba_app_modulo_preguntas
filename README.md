@@ -207,7 +207,7 @@ Dos decisiones de diseño atraviesan todo el módulo:
 
 ### Reglas confirmadas por Max
 
-La cuota gratuita empieza en 10, suma 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope; `qDay=0` significa ilimitado. El código y el seed aún usan `qDay` como base y `free.qDay=10`; su corrección queda para planificación (ADR-76).
+La cuota gratuita empieza en 10, suma 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope; `qDay=0` significa ilimitado. Producción conserva `qDay` 10 en `plans/free` hasta la próxima carga del seed desde `main` revisada (ADR-76).
 
 La cuota se descuenta al responder. Hasta entonces debe mantenerse la misma pregunta pendiente, también entre solicitudes concurrentes (ADR-81, RNF-04). La selección respeta la dificultad sin ampliarla y avisa al agotarse (ADR-78). El facsímil requiere `mock_mode` en el plan y un orden fijo por prueba, ambos pendientes de completar en HU-12 (ADR-77 y ADR-79). Los modelos ya admiten cuatro o cinco alternativas; falta cobertura de cinco de punta a punta (ADR-80).
 
@@ -350,7 +350,7 @@ Las vistas previas y las URLs propias de cada despliegue piden iniciar sesión e
 
 ### Datos de prueba
 
-`SEED_ALLOW_REMOTE` no se define en Vercel. Una carga al proyecto real requiere `main` revisada, autorización para la carga y aceptación posterior de Martin. Se ejecuta `.venv/bin/python -m app.seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true`, `SEED_DEMO_UID`, `SEED_DEMO_NEW_UID` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque pydantic-settings carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo. El seed todavía carga `qDay` 10 en el plan `free`, una diferencia con ADR-76.
+`SEED_ALLOW_REMOTE` no se define en Vercel. Una carga al proyecto real requiere `main` revisada, autorización para la carga y aceptación posterior de Martin. Se ejecuta `.venv/bin/python -m app.seed` desde `backend/`, con `SEED_ALLOW_REMOTE=true`, `SEED_DEMO_UID`, `SEED_DEMO_NEW_UID` y `FIREBASE_SERVICE_ACCOUNT_BASE64` definidas solo para esa ejecución, y la cuenta de servicio leída desde un JSON fuera del repositorio. Se corre desde `backend/` porque pydantic-settings carga el `.env` del directorio actual. El script reescribe documentos con IDs fijos y actualiza sus marcas de tiempo. El seed carga `qDay` 20 en el plan `free` (ADR-76); producción tiene 10 hasta la próxima carga.
 
 ---
 

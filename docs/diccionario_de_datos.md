@@ -46,7 +46,7 @@ En la columna de origen, "administración" es la especificación de la consola, 
 | `users` | `authProvider`, `age`, `streak` | Administración (7) y junio | Nuevos en el diccionario. |
 | `users` | `school`, `region`, `locale` | Administración (7) y junio | Sin cambios. |
 | `users` | `sessionsRevokedAt` | Administración (7) | Nuevo. Lo escribe la consola al suspender. |
-| `users` | `quota`, `selectedTests`, `practiceFormat`, `difficulty` | Junio | Sin cambios de forma. Base 10 y bonos, con `qDay` como tope (ADR-76); el cálculo actual aún usa el campo como base. |
+| `users` | `quota`, `selectedTests`, `practiceFormat`, `difficulty` | Junio | Sin cambios de forma. Base 10 y bonos, con `qDay` como tope (ADR-76). |
 | `users` | `updatedAt` | Administración (código de 7) y junio | Nuevo en el diccionario. La consola lo actualiza al editar un alumno. |
 | `users` | `avatarColor`, `theme`, `planStatus`, `dailyReminder` | Junio | Nuevos en el diccionario. Son de módulos fuera del alcance: ni el alta ni el seed los escriben (ADR-66). |
 | `users` | `gradeId` | Supuesto (ADR-28) | Sin cambios. |
@@ -123,11 +123,11 @@ Un documento por alumno, con ID `usr_` más el UID de Firebase Authentication (A
 
 #### 2.1.1 Sub-esquema `quota`
 
-`used` (number) cuenta las preguntas respondidas en el día. Para `free`, `max` (number) debe ser 10 más 5 por colegio y 5 por región, con tope 20; `plans.free.limits.qDay=20` representa ese tope (ADR-76). Con `qDay=0`, `max` es 0 y `unlimited` es `true`. `quota_max()`, en `backend/app/services/users.py`, aún usa `min(qDay + bonos, QUOTA_CAP)` y el seed guarda `free.qDay=10`; esa diferencia requiere corregir función, dato y pruebas, sin cambiar la base a 20.
+`used` (number) cuenta las preguntas respondidas en el día. Para `free`, `max` (number) debe ser 10 más 5 por colegio y 5 por región, con tope 20; `plans.free.limits.qDay=20` representa ese tope (ADR-76). Con `qDay=0`, `max` es 0 y `unlimited` es `true`. Lo calcula `quota_max()`, en `backend/app/services/users.py`: `min(BASE_QUOTA + bonos, qDay)`.
 
 `date` (string) es el día de la cuota en `YYYY-MM-DD`, en el huso de ADR-11; el formato es supuesto de ADR-28. Si no es hoy, `used` vuelve a 0 y `date` pasa a hoy. El reinicio lo escribe `GET /practice/next`, que recalcula `max` y `unlimited`. `used` debe subir en la transacción de responder, todavía pendiente de HU-03 / T-29, nunca al entregar la pregunta (ADR-72 ratificada por ADR-81). `bonusSchool` y `bonusAddress` (boolean) marcan los bonos reclamados una sola vez. Mientras no se responda, debe conservarse una única pregunta pendiente, incluso si cambian las preferencias y ante solicitudes simultáneas (RNF-04, T-25).
 
-Los montos de los bonos no están en ningún documento y son constantes de `backend/app/core/config.py`: `SCHOOL_BONUS` 5, `ADDRESS_BONUS` 5, `QUOTA_CAP` 20 y `UNLOCK_MEDALS` 1, el bronce que da cada bono reclamado.
+Los montos de los bonos no están en ningún documento y son constantes de `backend/app/core/config.py`: `BASE_QUOTA` 10, `SCHOOL_BONUS` 5, `ADDRESS_BONUS` 5 y `UNLOCK_MEDALS` 1, el bronce que da cada bono reclamado. El tope no es una constante: es el `qDay` del plan (ADR-76).
 
 ---
 
@@ -330,15 +330,15 @@ Planes de la consola (ADR-64, con interpretación de cuota reemplazada por ADR-7
 | `createdAt` | timestamp | Sí | Alta. |
 | `updatedAt` | timestamp | Sí | Última edición. La consola lo compara con `If-Unmodified-Since` al editar. |
 
-Valores del seed actual, que conserva `free.qDay=10`, pendiente de alinear con el tope confirmado:
+Valores que carga el seed. Salen de los ejemplos de la sección 8 de la administración:
 
 | Plan | `limits.qDay` | `badges.login` | `badges.purchase` | `badges.correct` | `features` |
 |---|---:|---:|---:|---:|---|
-| `free` | 10 | 1 | 0 | 1 | `f3` |
+| `free` | 20 | 1 | 0 | 1 | `f3` |
 | `uni` | 0 | 1 | 5 | 1 | `f1`, `f3`, `f4` |
 | `all` | 0 | 2 | 10 | 2 | `f1` a `f8` |
 
-Max confirmó que `free.qDay=20` es tope; ya no es una consulta pendiente. El seed aún lleva 10 y el cálculo aún lo interpreta como base. HU-07 y HU-08 deben planificar la corrección coordinada de cálculo, dato y pruebas (ADR-76). Solo `all` incluye `f2`, la funcionalidad `mock_mode` que habilita facsímil (ADR-77); el fallback por pago cuando falta el catálogo no cumple la decisión.
+`free.qDay=20` es el tope que confirmó Max, y la base de 10 es configuración del backend (ADR-76). Producción conserva `qDay` 10 hasta la próxima carga del seed desde `main` revisada. Solo `all` incluye `f2`, la funcionalidad `mock_mode` que habilita facsímil (ADR-77); el fallback por pago cuando falta el catálogo no cumple la decisión.
 
 ---
 

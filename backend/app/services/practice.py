@@ -1,9 +1,8 @@
-"""Cuota diaria y siguiente pregunta (ADR-09, ADR-29, ADR-64, ADR-70, ADR-72 y ADR-73)."""
+"""Cuota diaria y siguiente pregunta (ADR-09, ADR-29, ADR-70, ADR-72, ADR-73 y ADR-76)."""
 import random
 
 from google.cloud.firestore import FieldFilter
 
-from app.core.config import QUOTA_CAP
 from app.core.errors import ApiError
 from app.db.firestore import COL
 from app.services.questions import sanitize_question
@@ -28,7 +27,7 @@ def has_questions(test: dict) -> bool:
 async def load_plan(db, plan_id: str) -> dict:
     plan = await db.collection(COL.plans).document(plan_id).get()
     if not plan.exists:
-        raise RuntimeError(f"Falta plans/{plan_id}: sin ese documento no hay base de cuota (ADR-64).")
+        raise RuntimeError(f"Falta plans/{plan_id}: sin ese documento no hay tope de cuota (ADR-76).")
     return plan.to_dict()
 
 
@@ -55,13 +54,14 @@ async def fresh_quota(db, user: dict, plan: dict) -> dict:
     return quota
 
 
-def check_quota(quota: dict) -> None:
+def check_quota(quota: dict, plan: dict) -> None:
     """Regla de negocio 1: los planes ilimitados no tienen tope. Al llegar al máximo, QUOTA_BASE_REACHED si
     un bono sin reclamar todavía sumaría preguntas, para que la app lleve al desbloqueo, y QUOTA_DAILY_LIMIT
-    si no. Con max en QUOTA_CAP ningún bono suma, como pasaría con qDay 20 (ADR-73)."""
+    si no. Un bono suma mientras el máximo esté bajo el tope qDay del plan (ADR-76)."""
     if quota.get("unlimited") or quota.get("used", 0) < quota.get("max", 0):
         return
-    if quota.get("max", 0) < QUOTA_CAP and (not quota.get("bonusSchool") or not quota.get("bonusAddress")):
+    bono_libre = not quota.get("bonusSchool") or not quota.get("bonusAddress")
+    if bono_libre and quota.get("max", 0) < plan["limits"]["qDay"]:
         raise ApiError(422, "QUOTA_BASE_REACHED")
     raise ApiError(422, "QUOTA_DAILY_LIMIT")
 

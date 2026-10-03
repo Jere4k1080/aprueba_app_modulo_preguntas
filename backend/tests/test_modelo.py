@@ -13,6 +13,8 @@ import app.db.firestore as firestore_db
 import app.seed as seed
 from app.core.config import get_settings
 from app.db.firestore import USER_ID_PATTERN, user_doc_id
+from app.core.errors import ApiError
+from app.services.practice import check_quota
 from app.services.questions import ELAPSED_BUCKETS, elapsed_bucket
 from app.services.users import TIERS, new_user, quota_max
 from emulador import HOST, activo, vaciar
@@ -51,7 +53,35 @@ def test_alta_de_un_alumno():
     assert new_user({"email": "a@b.cl", "name": "Ana"}, "es", free, "x")["name"] == "Ana"
     ilimitado = new_user({"email": "a@b.cl"}, "es", {"limits": {"qDay": 0}}, "x")["quota"]
     assert (ilimitado["max"], ilimitado["unlimited"]) == (0, True)
-    assert quota_max(free, True, True) == 20 and quota_max({"limits": {"qDay": 15}}, True, True) == 20, "tope de 20"
+
+
+def test_cuota_con_qday_como_tope():
+    """ADR-76: base 10 más 5 por cada bono reclamado, sin pasar del tope qDay del plan; qDay 0 es ilimitado."""
+    free = {"limits": {"qDay": 20}}
+    assert quota_max(free) == 10, "sin bonos"
+    assert quota_max(free, bonus_school=True) == quota_max(free, bonus_address=True) == 15, "con un bono"
+    assert quota_max(free, True, True) == 20, "con los dos"
+    assert quota_max({"limits": {"qDay": 12}}, True, True) == 12 and quota_max({"limits": {"qDay": 8}}) == 8, "el tope manda"
+    assert quota_max({"limits": {"qDay": 0}}, True, True) == 0, "plan ilimitado"
+
+
+def _error_de_cuota(quota: dict, plan: dict) -> str | None:
+    try:
+        check_quota(quota, plan)
+    except ApiError as e:
+        return e.code
+    return None
+
+
+def test_cuota_base_alcanzada_o_limite_diario():
+    free = {"limits": {"qDay": 20}}
+    assert _error_de_cuota({"used": 9, "max": 10}, free) is None, "quedan preguntas"
+    assert _error_de_cuota({"used": 10, "max": 10}, free) == "QUOTA_BASE_REACHED", "un bono todavía suma"
+    assert _error_de_cuota({"used": 15, "max": 15, "bonusSchool": True}, free) == "QUOTA_BASE_REACHED"
+    assert _error_de_cuota({"used": 20, "max": 20, "bonusSchool": True, "bonusAddress": True}, free) == "QUOTA_DAILY_LIMIT"
+    # Con el máximo en el tope ningún bono suma, aunque quede uno sin reclamar: no se ofrece el desbloqueo.
+    assert _error_de_cuota({"used": 10, "max": 10}, {"limits": {"qDay": 10}}) == "QUOTA_DAILY_LIMIT"
+    assert _error_de_cuota({"used": 80, "max": 0, "unlimited": True}, {"limits": {"qDay": 0}}) is None, "ilimitado"
 
 
 def test_seed_exige_los_uid_de_demostracion(monkeypatch):
@@ -78,7 +108,7 @@ def test_documentos_del_seed_para_la_administracion():
     demo, nuevo = (user_doc_id(UIDS[r]) for r in ("demo", "nuevo"))
     plans = {r.split("/")[1]: d for r, d in docs if r.startswith("plans/")}
     assert all(p["nameLower"] == p["name"]["es"].lower() for p in plans.values()), "plans sin nameLower"
-    assert plans["free"]["limits"]["qDay"] == 10, "regla de negocio 1: base de 10 en el plan gratuito (ADR-64)"
+    assert plans["free"]["limits"]["qDay"] == 20, "regla de negocio 1: qDay del plan gratuito es el tope de 20 (ADR-76)"
     for doc_id in (demo, nuevo):
         u = por_ruta[f"users/{doc_id}"]
         # La consola lee name, email y createdAt con acceso obligatorio y ordena por nameLower,
@@ -90,7 +120,7 @@ def test_documentos_del_seed_para_la_administracion():
         assert u["createdAt"] is SERVER_TIMESTAMP and u["lastActivityAt"] is SERVER_TIMESTAMP
         assert set(u["medalWallet"]) == {"bronze", "silver", "gold", "diamond", "platinum"}
         assert u["badgesTotal"] == sum(u["medalWallet"].values())
-        assert u["quota"]["max"] == plans[u["plan"]]["limits"]["qDay"] and u["quota"]["date"] == "2026-09-25"
+        assert u["quota"]["max"] == quota_max(plans[u["plan"]]) == 10 and u["quota"]["date"] == "2026-09-25"
 
     # El seed crea a los alumnos con la función del alta y agrega solo lo propio de la demo (ADR-66):
     # aprueba2@demo.cl, que no respondió nada, es el alta más sus pruebas elegidas.
