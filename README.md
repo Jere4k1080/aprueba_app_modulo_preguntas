@@ -96,7 +96,7 @@ Perfil         GET  /me
 
 Además: la lógica de cuota diaria escalonada y la economía de recompensas, el modelo de datos del módulo con su caché local sin conexión, la integración del manejo de sesión y renovación de credenciales, las pruebas unitarias y de integración, y el empaquetado en contenedores con despliegue reproducible.
 
-También se incluye el login con correo y contraseña mediante Firebase Auth, sin SMS (HU-21). El código expone cinco de esos servicios: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next`. La sonda `/health` no forma parte del conteo. `GET /questions/{id}` sigue ausente del checkout aunque T-20 figura hecha en el backlog; esa diferencia se registra en el informe.
+También se incluye el login con correo y contraseña mediante Firebase Auth, sin SMS (HU-21). El código expone seis de esos servicios: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next` y `GET /questions/{id}`. La sonda `/health` no forma parte del conteo.
 
 ### No incluido
 
@@ -209,9 +209,9 @@ Dos decisiones de diseño atraviesan todo el módulo:
 
 La cuota gratuita empieza en 10, suma 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope; `qDay=0` significa ilimitado. Producción conserva `qDay` 10 en `plans/free` hasta la próxima carga del seed desde `main` revisada (ADR-76).
 
-La cuota se descuenta al responder. Hasta entonces debe mantenerse la misma pregunta pendiente, también entre solicitudes concurrentes (ADR-81, RNF-04). La selección respeta la dificultad sin ampliarla y avisa al agotarse (ADR-78). El facsímil requiere `mock_mode` en el plan y un orden fijo por prueba, ambos pendientes de completar en HU-12 (ADR-77 y ADR-79). Los modelos ya admiten cuatro o cinco alternativas; falta cobertura de cinco de punta a punta (ADR-80).
+La cuota se descuenta al responder. Hasta entonces se mantiene la misma pregunta pendiente, también entre solicitudes simultáneas (ADR-81, ADR-84 y RNF-04). La selección respeta la dificultad sin ampliarla y avisa al agotarse (ADR-78). El facsímil requiere `mock_mode` en el plan y un orden fijo por prueba, ambos pendientes de completar en HU-12 (ADR-77 y ADR-79). Los modelos ya admiten cuatro o cinco alternativas; falta cobertura de cinco de punta a punta (ADR-80).
 
-El tiempo para el percentil debe medirse desde la entrega registrada por el servidor. El cliente aún envía el tiempo de su cronómetro; T-28 y T-30 cubren la medición y el histograma, sin consultas agregadas de Firestore (RNF-12).
+El tiempo para el percentil se mide desde `deliveredAt`, la hora en que la API entregó la pendiente, y no desde el cronómetro del cliente (ADR-84). El cálculo al responder y el histograma, sin consultas agregadas de Firestore, llegan con T-28 y T-30 (RNF-12).
 
 ---
 

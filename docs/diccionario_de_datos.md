@@ -55,7 +55,7 @@ En la columna de origen, "administración" es la especificación de la consola, 
 | `users/{id}/answers` | `testId`, `axis`, `skillId`, `sessionId`, `difficulty` | Junio | Nuevos. |
 | `users/{id}/answers` | `userId` | | Sale: el alumno está en la ruta. |
 | `users/{id}/skillMastery` | `testId`, `correct`, `total`, `percent`, `level`, `status`, `updatedAt` | Junio | Subcolección nueva en el diccionario. |
-| `users/{id}/state/practice` | `answeredQuestionIds`, `lastQuestionId`, `lastAnsweredAt`, `activeSessionId` | Extensión del módulo (ADR-09 y ADR-65) | Cambia la ruta por el ID `usr_`. |
+| `users/{id}/state/practice` | `answeredQuestionIds`, `lastQuestionId`, `deliveredAt`, `lastAnsweredAt`, `activeSessionId` | Extensión del módulo (ADR-09, ADR-65 y ADR-84) | Cambia la ruta por el ID `usr_`. `deliveredAt` es nuevo (T-28). |
 | `medalTransactions` | ID `mtx_`, `userId`, `tier`, `amount`, `reason`, `refId`, `at` | Administración (2.8) | Reemplaza a `users/{uid}/medalLedger` (ADR-59). `type` pasa a `reason`, `referenceId` a `refId` y `createdAt` a `at`. |
 | `corrections` | ID `cor_`, `userId`, `userName`, `questionId`, `testId`, `reason`, `state`, `resolvedBy`, `resolvedAt`, `note`, `rewardGranted`, `createdAt` | Administración (2.8) | `status` pasa a `state`, `reviewedAt` a `resolvedAt` y `reviewedBy` a `resolvedBy`. `reason` pasa de código a texto. `rewardGranted` pasa a `{userId, tier, amount}` (ADR-61). |
 | `corrections` | `axis`, `difficulty`, `statementPreview`, `proposedAnswer` | Administración (7.2) | Nuevos. |
@@ -165,10 +165,11 @@ Extensión del módulo que ningún documento define (ADR-09 y ADR-65). Permite e
 |---|---|:---:|---|
 | `answeredQuestionIds` | `array<string>` | Sí | IDs `qst_*` ya respondidos. |
 | `lastQuestionId` | string | No | Pregunta pendiente: la última entregada por `GET /practice/next`, hasta figurar en `answeredQuestionIds`. Debe mantenerse hasta responder (ADR-81). |
+| `deliveredAt` | timestamp | No | Hora de la API en que se entregó la pendiente. No cambia mientras siga pendiente; el tiempo de respuesta se mide desde aquí (T-28, ADR-84). |
 | `lastAnsweredAt` | timestamp | No | Hora de la última respuesta. |
 | `activeSessionId` | string | No | Sesión de estudio en curso. |
 
-La selección y escritura actuales no son transaccionales; dos solicitudes sin pendiente pueden recibir preguntas distintas. T-25 debe corregirlo. T-28 debe definir y registrar la hora de entrega para medir el tiempo en el servidor. No se añade aquí un campo de entrega como si ya existiera. El orden fijo del facsímil por prueba queda pendiente de T-32; hoy se usa `randomKey` en ambos formatos.
+La pendiente se fija con una escritura condicionada al `update_time` leído, o con `create()` si el documento no existe, así solicitudes simultáneas reciben la misma (T-25, ADR-84). El orden fijo del facsímil por prueba queda pendiente de T-32; hoy se usa `randomKey` en ambos formatos.
 
 ---
 
@@ -357,7 +358,7 @@ Catálogo de funcionalidades de la consola (secciones 2.8 y 8), con IDs fijos `f
 
 ## 3. Contrato de la API a partir de Firestore
 
-Los nombres son los del contrato que usa la app en `lib/data/models/models.dart`. Al 01/10/2026 existen cinco de los catorce servicios comprometidos: `GET /me` (HT-07), `GET /tests`, `GET` y `PUT /me/preferences` y `GET /practice/next`. `/health` no se cuenta como servicio del módulo. Las secciones 3.2 y 3.3 definen servicios pendientes. Tampoco existe `GET /questions/{id}`, aunque T-20 figure hecha en Product Backlog v2.3; debe conciliarse ese registro.
+Los nombres son los del contrato que usa la app en `lib/data/models/models.dart`. Existen seis de los catorce servicios comprometidos: `GET /me` (HT-07), `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next` y `GET /questions/{id}` (T-20). `/health` no se cuenta como servicio del módulo. Las secciones 3.2 y 3.3 definen servicios pendientes.
 
 ### 3.1 `GET /me`
 
@@ -397,7 +398,7 @@ Responden `Preferences` desde `users/usr_<UID>`: `selectedTests`, `format` desde
 
 ### 3.6 `GET /practice/next`
 
-Responde `Question` sin `correctAnswer` ni `explanation`, con `id`, `testId`, `axis`, `skillId`, `difficulty`, `statement`, `options` y `progress`. La pregunta sale de las pruebas de `selectedTests` y de la dificultad de `difficulty`, entre las `published` que no están en `state/practice.answeredQuestionIds`, y queda pendiente en `state/practice.lastQuestionId` (ADR-81). La ruta no descuenta cuota; el futuro endpoint de responder debe hacerlo. Mantener una sola pendiente entre solicitudes concurrentes requiere T-25; el orden fijo del facsímil requiere T-32.
+Responde `Question` sin `correctAnswer` ni `explanation`, con `id`, `testId`, `axis`, `skillId`, `difficulty`, `statement`, `options`, `deliveredAt` y `progress`. La pregunta sale de las pruebas de `selectedTests` y de la dificultad de `difficulty`, entre las `published` que no están en `state/practice.answeredQuestionIds`, y queda pendiente en `state/practice.lastQuestionId` (ADR-81). `deliveredAt` es la hora en que la API entregó la pendiente, en UTC con milisegundos, y se repite mientras siga pendiente (ADR-84). La ruta no descuenta cuota; el futuro endpoint de responder debe hacerlo. El orden fijo del facsímil requiere T-32.
 
 `progress.current` es `quota.used + 1` y `progress.total` es `quota.max`, o `null` en un plan ilimitado. `meta.quota` lleva `used`, `max` y `unlimited` (ADR-72 y ADR-73).
 
@@ -409,6 +410,10 @@ Responde `Question` sin `correctAnswer` ni `explanation`, con `id`, `testId`, `a
 | Sin preguntas por responder en las pruebas y la dificultad elegidas | 404 `NO_QUESTIONS_AVAILABLE` sin `field` |
 
 El último caso no amplía la dificultad: el cliente avisa que se agotaron las preguntas de las pruebas y dificultad elegidas (ADR-78).
+
+### 3.7 `GET /questions/{id}`
+
+Responde `Question` sin `correctAnswer` ni `explanation`, con los campos de `GET /practice/next` salvo `progress`. Solo entrega la pendiente del alumno, con su `deliveredAt`, o una pregunta que ya respondió, con `deliveredAt` en `null`. Cualquier otra responde 404 `NOT_FOUND`, con el mismo cuerpo exista o no (ADR-85).
 
 ---
 

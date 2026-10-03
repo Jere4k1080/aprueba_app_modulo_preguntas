@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from ..core.deps import DB, Student
 from ..core.envelope import ok
 from ..core.errors import ApiError
-from ..services.practice import check_quota, fresh_quota, load_plan, pending_or_next, question_out, quota_meta
+from ..services.practice import (check_quota, fresh_quota, load_plan, pending_or_next, question_fields, question_out,
+                                 quota_meta, student_question)
 
 router = APIRouter(tags=["practice"])
 
@@ -25,3 +26,13 @@ async def practice_next(student: Student, db: DB) -> JSONResponse:
     if question is None:
         raise ApiError(404, "NO_QUESTIONS_AVAILABLE")
     return ok(question_out(question, quota), extra_meta=quota_meta(quota))
+
+
+@router.get("/questions/{question_id}")
+async def get_question(question_id: str, student: Student, db: DB) -> JSONResponse:
+    """Pregunta por ID, sin correctAnswer ni explanation (T-20). Solo la pendiente del alumno o una que ya
+    respondió; cualquier otra da NOT_FOUND sin confirmar si existe (ADR-85)."""
+    question = await student_question(db, student, question_id)
+    if question is None:
+        raise ApiError(404, "NOT_FOUND")
+    return ok(question_fields(question))
