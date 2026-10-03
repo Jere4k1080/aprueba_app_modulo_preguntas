@@ -133,7 +133,7 @@ Los montos de los bonos no están en ningún documento y son constantes de `back
 
 ### 2.2 `users/{id}/answers`
 
-Una respuesta por documento, en la subcolección del alumno (ADR-60). La transacción prevista en HU-03 / T-29 debe crearla, descontar cuota, otorgar medallas, sumar a `questions.stats` y actualizar `skillMastery` y `state/practice`. Ese endpoint todavía no existe. Nadie modifica la respuesta después (ADR-02). El diseño prevé IDs automáticos; el seed usa `ans_` más los 10 hexadecimales de la pregunta para reescribir los mismos documentos (ADR-69). Todos los campos son del modelo de junio.
+Una respuesta por documento, en la subcolección del alumno (ADR-60). La crea `POST /questions/{id}/answer` en la misma transacción que descuenta la cuota, otorga las medallas, suma a `questions.stats` y actualiza `skillMastery` y `state/practice` (ADR-86). Nadie modifica la respuesta después (ADR-02). El ID del documento es el `qst_*` de la pregunta, así no puede haber dos respuestas a la misma; el seed usa `ans_` más los 10 hexadecimales de la pregunta para reescribir los mismos documentos (ADR-69). Todos los campos son del modelo de junio.
 
 | Campo | Tipo | Req. | Descripción |
 |---|---|:---:|---|
@@ -141,11 +141,11 @@ Una respuesta por documento, en la subcolección del alumno (ADR-60). La transac
 | `testId` | string | Sí | Prueba, copiada de la pregunta. |
 | `axis` | string | Sí | Eje, copiado de la pregunta. |
 | `skillId` | string | Sí | Habilidad, copiada de la pregunta. |
-| `selected` | string | Sí | `A` a `D` con cuatro alternativas; `A` a `E` con cinco. El servidor debe validar contra la longitud de esa pregunta (ADR-80). |
+| `selected` | string | Sí | `A` a `D` con cuatro alternativas; `A` a `E` con cinco. El servidor valida contra las alternativas de esa pregunta (ADR-80 y ADR-86). |
 | `correct` | boolean | Sí | Resultado que calcula el backend. |
-| `elapsedMs` | number | Sí | Tiempo desde la entrega registrada en el servidor, en milisegundos, mayor que 0. T-28 debe sustituir el tiempo que hoy envía el cliente. |
-| `cohortPercentile` | number | No | Percentil de rapidez al responder, de 0 a 100 (sección 5). |
-| `sessionId` | string | No | Sesión o ensayo del formato facsímil. |
+| `elapsedMs` | number | Sí | Hora de la API al responder menos `deliveredAt`, en milisegundos, mayor que 0 (T-28). El `elapsedMs` que envía la app no se usa. Es `null` si la pendiente se entregó antes de guardar `deliveredAt` (ADR-86). |
+| `cohortPercentile` | number | No | Percentil de rapidez al responder, de 0 a 100, o `null` con menos de cinco respuestas previas a la pregunta (sección 5, ADR-87). |
+| `sessionId` | string | No | Sesión o ensayo del formato facsímil. La API no lo guarda todavía (ADR-73 y ADR-86). |
 | `difficulty` | string | Sí | Dificultad, copiada de la pregunta. |
 | `answeredAt` | timestamp | Sí | Hora del servidor al guardar. |
 
@@ -153,7 +153,7 @@ Una respuesta por documento, en la subcolección del alumno (ADR-60). La transac
 
 ### 2.3 `users/{id}/skillMastery`
 
-Dominio del alumno por habilidad, con el `skillId` como ID del documento. La transacción de responder debe actualizarlo; aún no está implementada. Todos los campos son del modelo de junio: `testId` (string), `correct` (number, aciertos), `total` (number, intentos), `percent` (number, `correct` sobre `total` en porcentaje), `level` (number), `status` (`in_progress` o `mastered`) y `updatedAt` (timestamp). En el seed, `level` es el número de aciertos con tope en `maxLevel` y `status` pasa a `mastered` al llegar al tope (ADR-69).
+Dominio del alumno por habilidad, con el `skillId` como ID del documento. La transacción de responder lo crea o lo actualiza (ADR-86). Todos los campos son del modelo de junio: `testId` (string), `correct` (number, aciertos), `total` (number, intentos), `percent` (number, `correct` sobre `total` en porcentaje), `level` (number), `status` (`in_progress` o `mastered`) y `updatedAt` (timestamp). `level` es el número de aciertos con tope en `maxLevel` y `status` pasa a `mastered` al llegar al tope; la respuesta y el seed usan la misma regla, propuesta de ADR-69.
 
 ---
 
@@ -164,8 +164,8 @@ Extensión del módulo que ningún documento define (ADR-09 y ADR-65). Permite e
 | Campo | Tipo | Req. | Descripción |
 |---|---|:---:|---|
 | `answeredQuestionIds` | `array<string>` | Sí | IDs `qst_*` ya respondidos. |
-| `lastQuestionId` | string | No | Pregunta pendiente: la última entregada por `GET /practice/next`, hasta figurar en `answeredQuestionIds`. Debe mantenerse hasta responder (ADR-81). |
-| `deliveredAt` | timestamp | No | Hora de la API en que se entregó la pendiente. No cambia mientras siga pendiente; el tiempo de respuesta se mide desde aquí (T-28, ADR-84). |
+| `lastQuestionId` | string | No | Pregunta pendiente: la última entregada por `GET /practice/next`, hasta figurar en `answeredQuestionIds`. Se mantiene hasta responder; la respuesta lo borra (ADR-81 y ADR-86). |
+| `deliveredAt` | timestamp | No | Hora de la API en que se entregó la pendiente. No cambia mientras siga pendiente; el tiempo de respuesta se mide desde aquí y la respuesta lo borra (T-28, ADR-84). |
 | `lastAnsweredAt` | timestamp | No | Hora de la última respuesta. |
 | `activeSessionId` | string | No | Sesión de estudio en curso. |
 
@@ -247,7 +247,7 @@ Banco de preguntas (ADR-62). ID `qst_` más 10 hexadecimales. El módulo solo si
 | `skillId` | string | Sí | Junio | Habilidad que evalúa. |
 | `difficulty` | string | Sí | Junio | `d1`, `d2`, `d3` o `d4`. |
 | `statement` | string | Sí | Administración y junio | Enunciado en Markdown. La consola lo corrige con 10 a 4000 caracteres. |
-| `options` | `array<string>` | Sí | Administración y junio | 4 o 5 alternativas distintas (ADR-80). El cliente recorre la longitud. Las 40 preguntas del seed tienen cuatro, y `test_forma_de_las_preguntas_del_banco` exige cuatro: falta cubrir cinco de punta a punta. |
+| `options` | `array<string>` | Sí | Administración y junio | 4 o 5 alternativas distintas (ADR-80). El cliente recorre la longitud. De las 41 preguntas del seed, `qst_a998954ca4` tiene cinco; `test_forma_de_las_preguntas_del_banco` acepta cuatro o cinco y exige que el seed tenga de ambas. |
 | `correctAnswer` | string | Sí | Administración y junio | Letra de la alternativa correcta, de `A` a `E`. No sale hacia el cliente antes de responder. |
 | `explanation` | string | Sí | Administración (7.2) | Texto de 10 a 4000 caracteres. Sale hacia el cliente solo después de responder. |
 | `requiredSkillText` | string | Sí | Junio | Habilidad requerida, como texto. |
@@ -358,7 +358,7 @@ Catálogo de funcionalidades de la consola (secciones 2.8 y 8), con IDs fijos `f
 
 ## 3. Contrato de la API a partir de Firestore
 
-Los nombres son los del contrato que usa la app en `lib/data/models/models.dart`. Existen seis de los catorce servicios comprometidos: `GET /me` (HT-07), `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next` y `GET /questions/{id}` (T-20). `/health` no se cuenta como servicio del módulo. Las secciones 3.2 y 3.3 definen servicios pendientes.
+Los nombres son los del contrato que usa la app en `lib/data/models/models.dart`. Existen siete de los catorce servicios comprometidos: `GET /me` (HT-07), `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next`, `GET /questions/{id}` (T-20) y `POST /questions/{id}/answer` (T-29). `/health` no se cuenta como servicio del módulo. Las secciones 3.2 y 3.3 definen servicios pendientes.
 
 ### 3.1 `GET /me`
 
@@ -398,7 +398,7 @@ Responden `Preferences` desde `users/usr_<UID>`: `selectedTests`, `format` desde
 
 ### 3.6 `GET /practice/next`
 
-Responde `Question` sin `correctAnswer` ni `explanation`, con `id`, `testId`, `axis`, `skillId`, `difficulty`, `statement`, `options`, `deliveredAt` y `progress`. La pregunta sale de las pruebas de `selectedTests` y de la dificultad de `difficulty`, entre las `published` que no están en `state/practice.answeredQuestionIds`, y queda pendiente en `state/practice.lastQuestionId` (ADR-81). `deliveredAt` es la hora en que la API entregó la pendiente, en UTC con milisegundos, y se repite mientras siga pendiente (ADR-84). La ruta no descuenta cuota; el futuro endpoint de responder debe hacerlo. El orden fijo del facsímil requiere T-32.
+Responde `Question` sin `correctAnswer` ni `explanation`, con `id`, `testId`, `axis`, `skillId`, `difficulty`, `statement`, `options`, `deliveredAt` y `progress`. La pregunta sale de las pruebas de `selectedTests` y de la dificultad de `difficulty`, entre las `published` que no están en `state/practice.answeredQuestionIds`, y queda pendiente en `state/practice.lastQuestionId` (ADR-81). `deliveredAt` es la hora en que la API entregó la pendiente, en UTC con milisegundos, y se repite mientras siga pendiente (ADR-84). La ruta no descuenta cuota; lo hace `POST /questions/{id}/answer` (sección 3.8). El orden fijo del facsímil requiere T-32.
 
 `progress.current` es `quota.used + 1` y `progress.total` es `quota.max`, o `null` en un plan ilimitado. `meta.quota` lleva `used`, `max` y `unlimited` (ADR-72 y ADR-73).
 
@@ -415,6 +415,20 @@ El último caso no amplía la dificultad: el cliente avisa que se agotaron las p
 
 Responde `Question` sin `correctAnswer` ni `explanation`, con los campos de `GET /practice/next` salvo `progress`. Solo entrega la pendiente del alumno, con su `deliveredAt`, o una pregunta que ya respondió, con `deliveredAt` en `null`. Cualquier otra responde 404 `NOT_FOUND`, con el mismo cuerpo exista o no (ADR-85).
 
+### 3.8 `POST /questions/{id}/answer`
+
+Recibe `{"selected": "B"}`. Acepta también `sessionId` y `elapsedMs`, que la app envía, sin usarlos: el tiempo es la hora de la API menos `deliveredAt` (T-28). Responde 200 con `correct`, `correctAnswer`, `shortExplanation`, `cohortPercentile`, `medalAwarded` y `quota`. Es la única ruta que entrega `correctAnswer`, después de responder y solo en el primer nivel de `data` (RNF-02, ADR-86). `shortExplanation` es la primera línea de `explanation`, sin el número de paso y con 200 caracteres como máximo; la explicación completa llega con HU-05. `medalAwarded` es `{tier: "bronze", amount}` con el monto de `plans.<plan>.badges.correct`, o `null` si la respuesta es incorrecta. `quota` lleva `used`, `max` y `unlimited` después del descuento.
+
+| Caso, en el orden en que se revisa | Respuesta |
+|---|---|
+| Falta `selected` o sobra un campo | 400 `VALIDATION_ERROR` |
+| La pregunta ya está respondida | 409 `ALREADY_ANSWERED` |
+| No es la pendiente del alumno, exista o no, o dejó de estar publicada | 404 `NOT_FOUND`, con el mismo cuerpo |
+| La letra no existe en la pregunta: `A` a `D` con cuatro alternativas, `A` a `E` con cinco | 400 `INVALID_OPTION` |
+| Cuota del día en su máximo, salvo plan ilimitado | 422 `QUOTA_DAILY_LIMIT` |
+
+Ningún error escribe nada.
+
 ---
 
 ## 4. Alumno suspendido
@@ -427,7 +441,7 @@ La consola escribe además `sessionsRevokedAt` al suspender, y su especificació
 
 ## 5. Tramos del histograma y percentil de cohorte
 
-`questions.stats.elapsedBuckets` tiene diez tramos (ADR-63), definidos en `ELAPSED_BUCKETS`, en `backend/app/services/questions.py`. Cada tramo cuenta las respuestas con tiempo menor que su límite y mayor o igual que el límite del tramo anterior. El histograma del seed existe; `calculate_cohort_percentile()` todavía usa umbrales y falta la actualización transaccional y el cálculo descritos aquí. HT-04 / T-30 lo cubre sin agregaciones de Firestore (RNF-12). T-28 / HU-03 debe medir desde la entrega registrada en el servidor, no desde el cronómetro del cliente.
+`questions.stats.elapsedBuckets` tiene diez tramos (ADR-63), definidos en `ELAPSED_BUCKETS`, en `backend/app/services/questions.py`. Cada tramo cuenta las respuestas con tiempo menor que su límite y mayor o igual que el límite del tramo anterior. La transacción de responder suma cada respuesta a su tramo y calcula el percentil sin agregaciones de Firestore (HT-04 / T-30, RNF-12, ADR-86). El tiempo se mide desde `deliveredAt`, la entrega registrada por la API, y no desde el cronómetro del cliente (T-28).
 
 | Tramo | Tiempo de respuesta |
 |---|---|
@@ -442,7 +456,7 @@ La consola escribe además `sessionsRevokedAt` al suspender, y su especificació
 | `lt300` | De 3 min a menos de 5 min |
 | `gte300` | 5 min o más |
 
-El percentil de una respuesta nueva se calcula con el histograma de antes de sumarla: 100 × (respuestas en tramos más lentos + la mitad de las del mismo tramo) / total, redondeado. Sin respuestas previas vale 50. Por ejemplo, si una pregunta tiene 2 respuestas en `lt20`, 3 en `lt30` y 1 en `lt60`, una respuesta nueva de 25 s cae en `lt30`. Hay 1 más lenta y 3 en su tramo, así que su percentil es 100 × (1 + 1,5) / 6, que da 42.
+El percentil de una respuesta nueva se calcula con el histograma de antes de sumarla: 100 × (respuestas en tramos más lentos + la mitad de las del mismo tramo) / total, redondeado con las mitades hacia arriba. La cohorte son todas las respuestas anteriores a la misma pregunta que entraron al histograma, de cualquier alumno. Con menos de cinco no hay percentil y `cohortPercentile` es `null` (ADR-87). Por ejemplo, si una pregunta tiene 2 respuestas en `lt20`, 3 en `lt30` y 1 en `lt60`, una respuesta nueva de 25 s cae en `lt30`. Hay 1 más lenta y 3 en su tramo, así que su percentil es 100 × (1 + 1,5) / 6, que da 42.
 
 ---
 

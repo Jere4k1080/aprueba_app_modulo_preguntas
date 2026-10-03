@@ -56,7 +56,7 @@ Estas se verifican en toda auditoría. Un incumplimiento se reporta siempre, aun
 **1. Ni la respuesta correcta ni la explicación llegan antes de responder (RNF-02).**
 Se verifican estos cinco puntos:
 - `sanitize_question()` en `backend/app/services/questions.py` elimina `correctAnswer` y `explanation` antes de emitir.
-- Ninguna ruta entrega esos campos antes de responder, incluidas `GET /practice/next` y `GET /questions/{id}`. `backend/tests/test_integridad.py` recorre todas las rutas y falla si alguna respuesta trae `correctAnswer` o `explanation` en cualquier nivel del JSON.
+- Ninguna ruta entrega esos campos antes de responder, incluidas `GET /practice/next` y `GET /questions/{id}`. `backend/tests/test_integridad.py` recorre todas las rutas y falla si alguna respuesta trae `correctAnswer` o `explanation` en cualquier nivel del JSON. La única excepción es `POST /questions/{id}/answer`, que después de responder entrega `correctAnswer` en el primer nivel de `data` (ADR-86).
 - `Question.correctAnswer` y `Question.explanation` son nullable en Dart y llegan ausentes antes de responder.
 - La caché de Drift deja nulas la respuesta y la explicación al descargar y solo las completa tras responder. `test/drift_integrity_test.dart` verifica esos momentos. El cierre de sesión borra la caché.
 - `firestore.rules` niega al cliente toda lectura y escritura, así que nadie puede leer `questions` directo desde Firestore y saltarse `sanitize_question()`. Decidido en ADR-21
@@ -146,7 +146,7 @@ uv venv --python 3.12 .venv
 uv pip install --python .venv -r requirements-dev.txt
 .venv/bin/python -m app.seed     # datos de prueba; pide SEED_DEMO_UID y SEED_DEMO_NEW_UID en .env
 .venv/bin/python -m app          # API en /api/v1
-.venv/bin/python -m pytest       # 68 pruebas; sin emulador, 42 y 26 omitidas
+.venv/bin/python -m pytest       # 82 pruebas; sin emulador, 42 y 40 omitidas
 
 # Verificador sin SDK de Flutter
 python3 tool/check_static.py .
@@ -237,7 +237,7 @@ seed/README.md              lo que carga el seed, con ejemplos
 1. Cuota gratuita base 10, más 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope, y `qDay=0` es ilimitado (ADR-76). Cada bonificación se reclama una sola vez. Reinicio diario y descuento al responder. La base y los bonos son constantes de `backend/app/core/config.py`. Producción conserva `qDay` 10 en `plans/free` hasta la próxima carga del seed desde `main` revisada.
 2. Ni la respuesta correcta ni la explicación viajan antes de responder (RNF-02). La pregunta entregada queda pendiente y se repite hasta responderla, incluso si cambian las preferencias. La pendiente se fija con una escritura condicionada, así las peticiones simultáneas reciben la misma (RNF-04, ADR-81 y ADR-84).
 3. Medallas de bronce: las de cada respuesta correcta salen de `plans/{plan}.badges.correct`. Cada desbloqueo de cuota da 1, fijado en `UNLOCK_MEDALS`. Una recorrección confirmada da 250, y los otorga la administración al aprobar, no el estudiante al enviar. La medalla por ingreso diario (`badges.login`) es de un módulo fuera del alcance (ADR-68). Cada movimiento va a `medalTransactions` y suma en `users.medalWallet` y `badgesTotal` en la misma transacción (ADR-59).
-4. `cohortPercentile` compara el tiempo de respuesta contra la cohorte de esa pregunta. HT-04 / T-30 lo calcula desde `questions.stats.elapsedBuckets`, sin agregaciones (RNF-12, ADR-63). T-28 mide desde `deliveredAt`, la hora en que la API entregó la pendiente (ADR-84); el cronómetro del cliente no es la fuente. El cálculo al responder y el histograma llegan con HU-03 y HT-04.
+4. `cohortPercentile` compara el tiempo de respuesta contra la cohorte de esa pregunta. HT-04 / T-30 lo calcula desde `questions.stats.elapsedBuckets`, sin agregaciones (RNF-12, ADR-63). T-28 mide desde `deliveredAt`, la hora en que la API entregó la pendiente (ADR-84); el cronómetro del cliente no es la fuente. La transacción de responder calcula el percentil con el histograma previo y después suma la respuesta; con menos de cinco respuestas previas es `null` (ADR-86 y ADR-87).
 5. El facsímil requiere que el plan incluya `mock_mode` y presenta orden fijo por prueba, como un ensayo (ADR-77 y ADR-79). `random` es el modo libre. El código todavía selecciona al azar en ambos formatos y tiene un fallback por pago si falta la funcionalidad; HU-12 debe corregirlo. Las recorrecciones no dependen del plan.
 6. Las materias que no son PAES llegan con `hasQuestions: false`.
 7. Dificultad de `d1` a `d4`, estricta para preguntas nuevas. Si se agota en las pruebas elegidas, se avisa sin cambiarla automáticamente (ADR-78). Las preguntas admiten cuatro o cinco alternativas, y la letra enviada debe existir en esa pregunta (ADR-80).
@@ -287,6 +287,8 @@ Están en `docs/bitacora_decisiones.md`. No las vuelvas a discutir salvo que enc
 - **ADR-83** Max confirmó seguir la sección 2.8 para medallas y recorrecciones. Se avisó al equipo de la consola sobre `flagCount` y el registro de la medalla; no se da por corregido su código
 - **ADR-84** La pendiente se fija con una escritura condicionada al `update_time` leído (T-25) y guarda `deliveredAt`, la hora de la API desde la que se mide el tiempo de respuesta (T-28)
 - **ADR-85** `GET /questions/{id}` solo entrega la pendiente o una pregunta respondida; cualquier otra da `NOT_FOUND`, exista o no (RNF-04)
+- **ADR-86** `POST /questions/{id}/answer` registra la respuesta a la pendiente en una transacción: respuesta con el ID de la pregunta, cuota, medallas, histograma, `state/practice` y `skillMastery`. Otra pregunta da `NOT_FOUND` y una respondida `ALREADY_ANSWERED`. `elapsedMs` y `sessionId` del cuerpo se aceptan sin usarse. Los detalles son propuesta
+- **ADR-87** El percentil es el porcentaje de respuestas previas a la pregunta más lentas, con la mitad del propio tramo, desde el histograma previo, y es `null` con menos de cinco previas. Reemplaza el 50 sin cohorte de ADR-63
 
 ADR-11 y ADR-12, los tramos de ADR-63, las decisiones menores de ADR-69 y los detalles de ADR-71 conservan sus pendientes de ratificación cuando no hay evidencia posterior. Las aprobaciones de Jeremías del 27/09 están en la bitácora. Las confirmaciones de Max registradas en ADR-76 a ADR-83 no ratifican otros detalles de diseño ni sustituyen la aceptación de Martin.
 
@@ -326,9 +328,9 @@ La iteración 4 corresponde a la semana 8, del 28/09 al 03/10/2026. Product Back
 
 La Entrega 1 fue aceptada por Martin el 29/09/2026: T-24, ocho de ocho pasos y hallazgos H-01 a H-07. El registro acredita la recarga del seed sintético tras integrar #25 a #28.
 
-En el código existen seis servicios del módulo: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next` y `GET /questions/{id}` (T-20, ADR-85). `/health` es una sonda y no suma a los catorce. Faltan respuesta, explicación, habilidad, los dos servicios de cuota, los dos de recorrección y progreso. La implementación de cada historia necesita su aceptación; que la pantalla o el modelo exista no basta.
+En el código existen siete servicios del módulo: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next`, `GET /questions/{id}` (T-20, ADR-85) y `POST /questions/{id}/answer` (T-29, ADR-86). `/health` es una sonda y no suma a los catorce. Faltan explicación, habilidad, los dos servicios de cuota, los dos de recorrección y progreso. La implementación de cada historia necesita su aceptación; que la pantalla o el modelo exista no basta.
 
-Pendientes de implementación: cálculo del tiempo desde `deliveredAt` al responder (T-28); histograma y percentil (T-30); orden de facsímil (T-32); permiso sin fallback por pago; validación de la letra elegida contra las alternativas de cada pregunta (T-29) y cobertura de cinco alternativas, que hoy bloquea `test_forma_de_las_preguntas_del_banco` al exigir cuatro en el seed; ruta web al recargar (T-26); representación de cita (T-27) y práctica sin conexión (HU-14). No los corrijas desde un encargo limitado a documentación.
+Pendientes de implementación: orden de facsímil (T-32); permiso sin fallback por pago; ruta web al recargar (T-26); representación de cita (T-27) y práctica sin conexión (HU-14). No los corrijas desde un encargo limitado a documentación.
 
 Siguen pendientes la clasificación y curación del banco real, decidir cuál copia vale, la propuesta de curarlo con IA y la autorización del repositorio público. No se escriben importadores ni se infieren metadatos. Antes de la demo, una persona del equipo revisa las 10 preguntas de lectora en d1 del seed, que no se pueden recalcular con un script (ADR-73). El aviso de diferencias de `flagCount` y medalla ya se hizo al equipo de la consola, pero no hay evidencia de corrección de ese código. Las decisiones de Max sobre cuota, formato, dificultad, alternativas, pendiente y actividad ya están confirmadas; no vuelvas a presentarlas como consultas abiertas.
 

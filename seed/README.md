@@ -16,9 +16,9 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 |---|---:|---|
 | `plans` | 3 | `free`, `uni` y `all`, con los valores de ejemplo de la administración; `free.qDay=20` es el tope diario (ADR-76) |
 | `features` | 1 | `f2`, la funcionalidad `mock_mode` requerida para el facsímil (ADR-77) |
-| `tests` | 5 | Las pruebas PAES: `lectora` y `m1` con 14 preguntas aprobadas y las demás con 4 |
+| `tests` | 5 | Las pruebas PAES: `lectora` con 14 preguntas aprobadas, `m1` con 15 y las demás con 4 |
 | `skills` | 20 | Cuatro habilidades por prueba |
-| `questions` | 40 | Una por cada combinación de prueba y dificultad, más 10 de d1 en `lectora` y 10 en `m1` |
+| `questions` | 41 | Una por cada combinación de prueba y dificultad, más 10 de d1 en `lectora` y 11 en `m1` |
 | `users` | 2 | `usr_<UID>` de `aprueba@demo.cl` y de `aprueba2@demo.cl` |
 | `users/{id}/answers` | 5 | Respuestas de `aprueba@demo.cl` |
 | `users/{id}/skillMastery` | 5 | Dominio de `aprueba@demo.cl` en las habilidades que respondió |
@@ -26,11 +26,11 @@ Los campos de cada colección están definidos en [`docs/diccionario_de_datos.md
 | `medalTransactions` | 4 | Una por cada respuesta correcta |
 | `corrections` | 1 | Solicitud pendiente de `aprueba@demo.cl` |
 
-En total son 88 documentos.
+En total son 89 documentos.
 
-`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 10 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 35 preguntas, 22 de ellas en d1, su dificultad.
+`aprueba@demo.cl` eligió las cinco pruebas y respondió una pregunta de `lectora` en d1, otra en d2, y una de `m1`, `m2` y `hist`. Acertó cuatro, así que tiene 4 bronces, 4 movimientos en `medalTransactions` y 5 de 10 preguntas usadas hoy. La respuesta incorrecta, de `m2` en d2, tiene una solicitud de recorrección pendiente. Le quedan 36 preguntas, 23 de ellas en d1, su dificultad.
 
-`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 28 preguntas de esas dos pruebas, 22 de ellas en d1, su dificultad. Alcanzan para la cuota del día con los dos bonos, que es 20.
+`aprueba2@demo.cl` eligió `lectora` y `m1`, no tiene respuestas ni medallas y parte con 0 de 10. Le quedan las 29 preguntas de esas dos pruebas, 23 de ellas en d1, su dificultad. Alcanzan para la cuota del día con los dos bonos, que es 20.
 
 Las dos cuentas salen de la misma función del alta, y encima llevan solo sus pruebas elegidas y sus respuestas. El seed arma para cada una el mismo token que entrega Firebase Authentication, con correo, nombre visible y proveedor, así que se llaman `Estudiante Demo` y `Estudiante Nuevo`. Si se cambia el nombre visible de una cuenta, hay que cambiarlo también en `users.json`.
 
@@ -178,7 +178,7 @@ Son 20 habilidades, cuatro por prueba, con prerrequisitos dentro del árbol y re
 }
 ```
 
-Las 40 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). Todas tienen cuatro alternativas; el contrato confirmado admite cuatro o cinco (ADR-80). Falta cobertura de cinco de punta a punta, sin usar preguntas reales de la empresa. La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed. `GET /practice/next` elimina `correctAnswer` y `explanation` antes de responder (RNF-02); su presencia en Firestore no autoriza entregarlos al cliente.
+Las 41 preguntas las escribió el equipo y no vienen del banco de la empresa. `source: "seed_demo"` las separa de las reales (ADR-69). Todas tienen cuatro alternativas salvo `qst_a998954ca4`, de `m1` en d1, que tiene cinco para cubrir los dos casos del contrato (ADR-80). La explicación va en texto, con pasos numerados y una línea final de verificación. `stats` y `flagCount` ya cuentan las respuestas y la solicitud de recorrección del seed. `GET /practice/next` elimina `correctAnswer` y `explanation` antes de responder (RNF-02); su presencia en Firestore no autoriza entregarlos al cliente.
 
 El ID es `qst_` más los primeros 10 hexadecimales del SHA-1 del ID anterior, así que la equivalencia se puede recalcular (ADR-62):
 
@@ -253,13 +253,13 @@ Las 20 preguntas de d1 que se agregaron el 2026-09-27 para la demo, 10 de `lecto
   "selected": "C",
   "correct": true,
   "elapsedMs": 24000,
-  "cohortPercentile": 50,
+  "cohortPercentile": null,
   "difficulty": "d1",
   "answeredAt": "<hora del servidor>"
 }
 ```
 
-El ID es `ans_` más los 10 hexadecimales de la pregunta. `cohortPercentile` vale 50 porque cada respuesta del seed es la primera de su pregunta (ADR-63).
+El ID es `ans_` más los 10 hexadecimales de la pregunta. `cohortPercentile` es `null` porque cada respuesta del seed es la primera de su pregunta y el percentil necesita cinco previas (ADR-87). Las respuestas que registra la API usan como ID el de la pregunta (ADR-86).
 
 ---
 

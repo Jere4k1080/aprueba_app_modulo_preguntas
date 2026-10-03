@@ -96,7 +96,7 @@ Perfil         GET  /me
 
 Además: la lógica de cuota diaria escalonada y la economía de recompensas, el modelo de datos del módulo con su caché local sin conexión, la integración del manejo de sesión y renovación de credenciales, las pruebas unitarias y de integración, y el empaquetado en contenedores con despliegue reproducible.
 
-También se incluye el login con correo y contraseña mediante Firebase Auth, sin SMS (HU-21). El código expone seis de esos servicios: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next` y `GET /questions/{id}`. La sonda `/health` no forma parte del conteo.
+También se incluye el login con correo y contraseña mediante Firebase Auth, sin SMS (HU-21). El código expone siete de esos servicios: `GET /me`, `GET /tests`, `GET` y `PUT /me/preferences`, `GET /practice/next`, `GET /questions/{id}` y `POST /questions/{id}/answer`. La sonda `/health` no forma parte del conteo.
 
 ### No incluido
 
@@ -203,15 +203,15 @@ En caso de error, `data` es `null` y `error` contiene `code` (identificador esta
 Dos decisiones de diseño atraviesan todo el módulo:
 
 - **Los códigos de error de negocio se traducen a estados de interfaz, no a mensajes genéricos.** Alcanzar la cuota base conduce a la pantalla de desbloqueo; no produce un error.
-- La respuesta correcta y la explicación no viajan al cliente antes de responder (RNF-02). `GET /practice/next` ya elimina ambos campos. El mismo control debe aplicarse al futuro `GET /questions/{id}` y a cualquier otra ruta; la prueba general aún solo detecta `correctAnswer`.
+- La respuesta correcta y la explicación no viajan al cliente antes de responder (RNF-02). `GET /practice/next` y `GET /questions/{id}` eliminan ambos campos, y `test_integridad.py` busca los dos en todas las rutas. Solo `POST /questions/{id}/answer` entrega `correctAnswer`, después de responder (ADR-86).
 
 ### Reglas confirmadas por Max
 
 La cuota gratuita empieza en 10, suma 5 por colegio y 5 por región, con tope 20. `plans.free.limits.qDay=20` representa el tope; `qDay=0` significa ilimitado. Producción conserva `qDay` 10 en `plans/free` hasta la próxima carga del seed desde `main` revisada (ADR-76).
 
-La cuota se descuenta al responder. Hasta entonces se mantiene la misma pregunta pendiente, también entre solicitudes simultáneas (ADR-81, ADR-84 y RNF-04). La selección respeta la dificultad sin ampliarla y avisa al agotarse (ADR-78). El facsímil requiere `mock_mode` en el plan y un orden fijo por prueba, ambos pendientes de completar en HU-12 (ADR-77 y ADR-79). Los modelos ya admiten cuatro o cinco alternativas; falta cobertura de cinco de punta a punta (ADR-80).
+La cuota se descuenta al responder. Hasta entonces se mantiene la misma pregunta pendiente, también entre solicitudes simultáneas (ADR-81, ADR-84 y RNF-04). La selección respeta la dificultad sin ampliarla y avisa al agotarse (ADR-78). El facsímil requiere `mock_mode` en el plan y un orden fijo por prueba, ambos pendientes de completar en HU-12 (ADR-77 y ADR-79). Los modelos admiten cuatro o cinco alternativas, la respuesta valida la letra contra las de cada pregunta y el seed tiene una pregunta de cinco (ADR-80 y ADR-86).
 
-El tiempo para el percentil se mide desde `deliveredAt`, la hora en que la API entregó la pendiente, y no desde el cronómetro del cliente (ADR-84). El cálculo al responder y el histograma, sin consultas agregadas de Firestore, llegan con T-28 y T-30 (RNF-12).
+El tiempo para el percentil se mide desde `deliveredAt`, la hora en que la API entregó la pendiente, y no desde el cronómetro del cliente (ADR-84). La respuesta calcula el percentil con el histograma de la pregunta, sin consultas agregadas de Firestore (T-30, RNF-12), y lo deja en `null` con menos de cinco respuestas previas (ADR-87).
 
 ---
 
