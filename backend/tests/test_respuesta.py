@@ -2,10 +2,13 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 
+from google.api_core import exceptions
 from google.cloud import firestore
+from google.cloud.firestore_v1.async_transaction import AsyncTransaction
 
 from app import seed
 from app.core.errors import ApiError
+from app.services import answers
 from app.services.answers import register_answer
 from app.services.users import quota_day
 
@@ -203,9 +206,9 @@ def test_despues_de_responder_llega_otra_pregunta(banco):
     assert vista["deliveredAt"] is None, "la respondida se puede ver, sin hora de entrega"
 
 
-def test_envios_simultaneos_no_registran_dos_veces(banco):
-    """Dos envíos a la vez de la misma pendiente nunca registran dos respuestas ni dan dos veces las medallas. El
-    emulador a veces aborta las dos transacciones tras cinco intentos y no registra ninguna (ADR-86)."""
+def test_envios_simultaneos_registran_uno_y_rechazan_el_otro(banco):
+    """Dos envíos a la vez de la misma pendiente: uno se registra y el otro, al reintentar tras el aborto de su
+    transacción, da ALREADY_ANSWERED (ADR-86)."""
     pendiente(banco, CINCO)
 
     async def enviar():
@@ -216,9 +219,24 @@ def test_envios_simultaneos_no_registran_dos_veces(banco):
 
     resultados = asyncio.run(enviar())
     registradas = [r for r in resultados if isinstance(r, dict)]
-    assert len(registradas) <= 1, resultados
-    for r in resultados:
-        assert isinstance(r, dict) or (isinstance(r, ApiError) and r.code == "ALREADY_ANSWERED") or \
-            "Failed to commit transaction" in str(r), r
-    assert len(medallas(banco, CINCO)) == len(registradas)
-    assert banco.user.get().to_dict()["quota"]["used"] == 5 + len(registradas)
+    rechazadas = [r for r in resultados if isinstance(r, ApiError)]
+    assert len(registradas) == 1 and len(rechazadas) == 1, resultados
+    assert rechazadas[0].code == "ALREADY_ANSWERED"
+    assert len(medallas(banco, CINCO)) == 1 and banco.user.get().to_dict()["quota"]["used"] == 6
+
+
+def test_reintentos_agotados_dan_conflict_y_no_registran(banco, monkeypatch):
+    """Si Firestore aborta la transacción en cada intento, la API responde CONFLICT 409 con el envelope, nunca 500."""
+    commits = []
+
+    async def abortar(self, *_a, **_k):
+        commits.append(1)
+        raise exceptions.Aborted("contención simulada")
+
+    monkeypatch.setattr(AsyncTransaction, "_commit", abortar)
+    monkeypatch.setattr(answers, "RETRY_WAIT", 0)
+    pendiente(banco, CINCO)
+    res = responder(banco, CINCO, "B")
+    assert error(res) == (409, "CONFLICT") and res.json()["data"] is None and res.json()["error"]["message"]
+    assert len(commits) == answers.ANSWER_ATTEMPTS
+    assert not respuesta(banco, CINCO).exists and banco.estado.get().to_dict()["lastQuestionId"] == CINCO

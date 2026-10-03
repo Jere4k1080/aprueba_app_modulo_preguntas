@@ -1,8 +1,11 @@
 """Registro de la respuesta del alumno: POST /questions/{id}/answer (HU-03, T-28, T-29, HT-04 y T-30; ADR-86 y
 ADR-87)."""
+import asyncio
+import random
 import secrets
 from datetime import datetime, timezone
 
+from google.api_core import exceptions
 from google.cloud import firestore
 from google.cloud.firestore import DELETE_FIELD, SERVER_TIMESTAMP, ArrayUnion, Increment
 
@@ -12,6 +15,9 @@ from app.services.practice import day_quota, load_plan, pending_id, practice_sta
 from app.services.questions import cohort_percentile, elapsed_bucket, short_explanation
 
 LETTERS = "ABCDE"
+# Intentos de la transacción de responder, y espera máxima en segundos antes del segundo; cada reintento la dobla.
+ANSWER_ATTEMPTS = 5
+RETRY_WAIT = 0.2
 
 
 def skill_mastery(correct: int, total: int, max_level: int) -> dict:
@@ -106,4 +112,17 @@ async def register_answer(db, student: dict, question_id: str, selected: str) ->
             "quota": quota_meta(quota)["quota"],
         }
 
-    return await responder(db.transaction())
+    # Dos envíos simultáneos chocan en la transacción y Firestore aborta uno o los dos. Cada intento es una
+    # transacción de un solo commit, y antes de reintentar se espera un tiempo al azar para no volver a chocar.
+    # En el reintento la respuesta ya existe y corresponde ALREADY_ANSWERED. Agotados los intentos, CONFLICT 409
+    # y nunca un 500 (ADR-86).
+    for intento in range(ANSWER_ATTEMPTS):
+        if intento:
+            await asyncio.sleep(random.uniform(0, RETRY_WAIT * 2 ** (intento - 1)))
+        try:
+            return await responder(db.transaction(max_attempts=1))
+        except (exceptions.Aborted, ValueError) as exc:
+            # El SDK envuelve en ValueError el Aborted del commit; un Aborted en una lectura llega sin envolver.
+            if not isinstance(exc, exceptions.Aborted) and not isinstance(exc.__cause__, exceptions.Aborted):
+                raise
+    raise ApiError(409, "CONFLICT")
