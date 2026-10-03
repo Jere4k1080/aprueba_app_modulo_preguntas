@@ -301,7 +301,7 @@ En el seed, `level` es el número de aciertos con tope en `maxLevel` (ADR-69).
 
 El de `aprueba2@demo.cl` solo tiene `answeredQuestionIds` vacío.
 
-La misma pendiente debe mantenerse hasta responder, incluso con solicitudes concurrentes; la cuota se descuenta al responder (ADR-81). La implementación aún selecciona y escribe sin transacción y no registra la hora de entrega para medir el tiempo desde el servidor. T-25 cubre concurrencia, T-28 la medición y T-29 la respuesta. Este ejemplo conserva los campos que existen, sin inventar un campo de entrega ya implementado.
+La misma pendiente debe mantenerse hasta responder, incluso con solicitudes concurrentes; la cuota se descuenta al responder (ADR-81). `GET /practice/next` guarda con la pendiente su `deliveredAt`, desde el que se mide el tiempo de respuesta (ADR-84). El seed no lo escribe: la última pregunta de `aprueba@demo.cl` ya está respondida, así que no queda pendiente.
 
 ---
 

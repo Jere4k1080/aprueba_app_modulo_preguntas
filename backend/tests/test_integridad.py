@@ -1,10 +1,12 @@
-"""Regla 1 de CLAUDE.md: ninguna ruta entrega correctAnswer, en ningún nivel del JSON, antes de responder.
+"""Regla 1 de CLAUDE.md y RNF-02: ninguna ruta entrega correctAnswer ni explanation, en ningún nivel del JSON,
+antes de responder.
 
 Recorre todas las rutas registradas, así que una ruta nueva entra sola en la prueba. POST
-/questions/{id}/answer, de la iteración 4, será la única que la devuelva, después de responder, y tendrá
-que quedar como excepción explícita."""
+/questions/{id}/answer, de la iteración 4, será la única que devuelva correctAnswer, después de responder, y
+tendrá que quedar como excepción explícita."""
 
 BEARER = {"Authorization": "Bearer token.de.firebase"}
+PROHIBIDAS = {"correctAnswer", "explanation"}
 # Cuerpos válidos para las rutas que los piden; las demás reciben {}.
 CUERPOS = {("PUT", "/api/v1/me/preferences"): {"selectedTests": ["m2"], "format": "random", "difficulty": "d1"}}
 
@@ -30,19 +32,25 @@ def claves(x):
             yield from claves(v)
 
 
-def test_ninguna_ruta_entrega_correct_answer(banco):
+def test_ninguna_ruta_entrega_la_respuesta_ni_la_explicacion(banco):
     vistas = rutas(banco.app)
     esperadas = {("GET", "/api/v1/health"), ("GET", "/api/v1/me"), ("GET", "/api/v1/tests"),
-                 ("GET", "/api/v1/me/preferences"), ("PUT", "/api/v1/me/preferences"), ("GET", "/api/v1/practice/next")}
+                 ("GET", "/api/v1/me/preferences"), ("PUT", "/api/v1/me/preferences"), ("GET", "/api/v1/practice/next"),
+                 ("GET", "/api/v1/questions/{question_id}")}
     assert esperadas <= set(vistas), f"faltan rutas en el recorrido: {esperadas - set(vistas)}"
+    # El parámetro de las rutas de pregunta es la pendiente del alumno, la única que puede pedir por ID (ADR-85).
+    pendiente = banco.cliente.get("/api/v1/practice/next", headers=BEARER).json()["data"]["id"]
     estados = {}
     for metodo, ruta in vistas:
-        assert "{" not in ruta, f"{ruta}: agrega aquí un valor de prueba para su parámetro"
+        url = ruta.replace("{question_id}", pendiente)
+        assert "{" not in url, f"{ruta}: agrega aquí un valor de prueba para su parámetro"
         cuerpo = CUERPOS.get((metodo, ruta), {}) if metodo in ("POST", "PUT", "PATCH") else None
-        res = banco.cliente.request(metodo, ruta, headers=BEARER, json=cuerpo)
+        res = banco.cliente.request(metodo, url, headers=BEARER, json=cuerpo)
         estados[(metodo, ruta)] = res.status_code
         if "json" in res.headers.get("content-type", ""):
-            assert "correctAnswer" not in set(claves(res.json())), f"{metodo} {ruta} entrega correctAnswer"
-    # Si la pregunta no llegara, la prueba no estaría revisando la respuesta que importa.
+            entregadas = PROHIBIDAS & set(claves(res.json()))
+            assert not entregadas, f"{metodo} {ruta} entrega {entregadas}"
+    # Si la pregunta no llegara, la prueba no estaría revisando las respuestas que importan.
     assert estados[("GET", "/api/v1/practice/next")] == 200
+    assert estados[("GET", "/api/v1/questions/{question_id}")] == 200
     assert estados[("PUT", "/api/v1/me/preferences")] == 200

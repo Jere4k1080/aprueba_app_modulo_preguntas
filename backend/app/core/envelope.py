@@ -14,10 +14,14 @@ def new_request_id() -> str:
     return f"req_{uuid.uuid4().hex[:12]}"
 
 
+def iso_ms(d: datetime) -> str:
+    """UTC con milisegundos y Z, como toISOString() en Node; isoformat() a secas omite la fracción cuando es cero."""
+    return d.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
 def meta(extra: dict | None = None) -> dict:
     return {"requestId": request_id_var.get() or new_request_id(),
-            # Milisegundos, como toISOString() en Node; isoformat() a secas omite la fracción cuando es cero.
-            "timestamp": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            "timestamp": iso_ms(datetime.now(timezone.utc)),
             **(extra or {})}
 
 

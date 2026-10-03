@@ -1,16 +1,19 @@
-"""GET /tests, GET y PUT /me/preferences y GET /practice/next contra el emulador (ADR-72 y ADR-73)."""
+"""GET /tests, GET y PUT /me/preferences, GET /practice/next y GET /questions/{id} contra el emulador (ADR-72, ADR-73,
+ADR-84 y ADR-85)."""
 import asyncio
+from datetime import datetime
 
 from google.cloud import firestore
 
 from app import seed
-from app.services.practice import pick_question
+from app.services.practice import pending_or_next, pick_question
 from app.services.users import quota_day
 
 BEARER = {"Authorization": "Bearer token.de.firebase"}
 PREFS = "/api/v1/me/preferences"
 NEXT = "/api/v1/practice/next"
 RESPONDIDAS = {a["questionId"] for a in seed.load("answers")["demo"]}
+PREGUNTAS = seed.load("questions")
 
 
 def put(banco, **cambios):
@@ -74,7 +77,8 @@ def test_practice_next_entrega_una_pregunta_sin_la_respuesta(banco):
     assert res.status_code == 200, res.text
     pregunta, meta = res.json()["data"], res.json()["meta"]
     assert "correctAnswer" not in res.text and "explanation" not in pregunta
-    assert set(pregunta) == {"id", "testId", "axis", "skillId", "difficulty", "statement", "options", "progress"}
+    assert set(pregunta) == {"id", "testId", "axis", "skillId", "difficulty", "statement", "options", "deliveredAt",
+                             "progress"}
     assert pregunta["id"] not in RESPONDIDAS and pregunta["difficulty"] == "d1"
     assert pregunta["progress"] == {"current": 6, "total": 10}, "progress sale de la cuota del día"
     assert meta["quota"] == {"used": 5, "max": 10, "unlimited": False}
@@ -91,6 +95,58 @@ def test_la_pendiente_se_repite_sin_gastar_cuota(banco):
     banco.estado.update({"answeredQuestionIds": firestore.ArrayUnion([primera["data"]["id"]])})
     tercera = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
     assert tercera["id"] != primera["data"]["id"]
+
+
+def test_la_pendiente_conserva_su_hora_de_entrega(banco):
+    """T-28 y H-03: deliveredAt se guarda al elegir la pregunta y no cambia al pedirla de nuevo, así recargar no
+    reinicia el tiempo de respuesta (ADR-84)."""
+    primera = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
+    segunda = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
+    assert primera["deliveredAt"] == segunda["deliveredAt"] and primera["deliveredAt"].endswith("Z")
+    guardada = banco.estado.get().to_dict()["deliveredAt"]
+    assert isinstance(guardada, datetime) and guardada.isoformat(timespec="milliseconds")[:23] == primera["deliveredAt"][:23]
+
+
+def test_una_pendiente_sin_hora_de_entrega_la_recibe_al_pedirla(banco):
+    """Una pendiente guardada antes de deliveredAt empieza a contar desde el siguiente pedido."""
+    pendiente = next(q["id"] for q in PREGUNTAS if q["testId"] == "lectora" and q["difficulty"] == "d1"
+                     and q["id"] not in RESPONDIDAS)
+    banco.estado.update({"lastQuestionId": pendiente})
+    data = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
+    assert data["id"] == pendiente and data["deliveredAt"]
+    assert banco.estado.get().to_dict()["deliveredAt"] is not None
+
+
+def test_solicitudes_simultaneas_reciben_la_misma_pendiente(banco):
+    """T-25 y CP-04: sin pendiente, cinco pedidos a la vez eligen y guardan una sola, con una sola hora."""
+    async def pedir():
+        db = firestore.AsyncClient(project=banco.db.project)
+        alumno = {"id": banco.user.id, "difficulty": "d1"}
+        return await asyncio.gather(*(pending_or_next(db, alumno, ["lectora", "m1"]) for _ in range(5)))
+
+    elegidas = asyncio.run(pedir())
+    assert len({q["id"] for q in elegidas}) == 1, "cada pedido recibió otra pregunta"
+    assert len({q["deliveredAt"] for q in elegidas}) == 1
+    assert banco.estado.get().to_dict()["lastQuestionId"] == elegidas[0]["id"]
+
+
+def test_pregunta_por_id_solo_la_pendiente_o_una_respondida(banco):
+    """T-20 y ADR-85: GET /questions/{id} entrega la pendiente o una respondida, sin la respuesta ni la
+    explicación; cualquier otra da NOT_FOUND, exista o no."""
+    pendiente = banco.cliente.get(NEXT, headers=BEARER).json()["data"]
+    vista = banco.cliente.get(f"/api/v1/questions/{pendiente['id']}", headers=BEARER)
+    assert vista.status_code == 200, vista.text
+    assert vista.json()["data"] == {k: v for k, v in pendiente.items() if k != "progress"}, "misma pregunta y misma hora"
+    respondida = sorted(RESPONDIDAS)[0]
+    vieja = banco.cliente.get(f"/api/v1/questions/{respondida}", headers=BEARER)
+    assert vieja.status_code == 200 and vieja.json()["data"]["id"] == respondida
+    assert vieja.json()["data"]["deliveredAt"] is None and "correctAnswer" not in vieja.text
+    otra = next(q["id"] for q in PREGUNTAS if q["id"] not in RESPONDIDAS and q["id"] != pendiente["id"])
+    existente = banco.cliente.get(f"/api/v1/questions/{otra}", headers=BEARER)
+    inexistente = banco.cliente.get("/api/v1/questions/qst_0000000000", headers=BEARER)
+    for res in (existente, inexistente):
+        assert res.status_code == 404 and res.json()["error"]["code"] == "NOT_FOUND"
+    assert existente.json()["error"] == inexistente.json()["error"], "no confirma que la pregunta existe"
 
 
 def test_una_pendiente_que_dejo_de_estar_publicada_se_reemplaza(banco):

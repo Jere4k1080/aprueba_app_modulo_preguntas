@@ -1,8 +1,12 @@
-"""Cuota diaria y siguiente pregunta (ADR-09, ADR-29, ADR-70, ADR-72, ADR-73 y ADR-76)."""
+"""Cuota diaria, siguiente pregunta y pregunta por ID (ADR-09, ADR-29, ADR-70, ADR-72, ADR-73, ADR-76, ADR-84
+y ADR-85)."""
 import random
+from datetime import datetime, timezone
 
+from google.api_core import exceptions
 from google.cloud.firestore import FieldFilter
 
+from app.core.envelope import iso_ms
 from app.core.errors import ApiError
 from app.db.firestore import COL
 from app.services.questions import sanitize_question
@@ -84,31 +88,89 @@ async def pick_question(db, tests: list[str], difficulty: str, answered: set[str
     return None
 
 
-async def pending_or_next(db, user: dict, tests: list[str]) -> dict | None:
-    """La pregunta pendiente o una nueva (ADR-72). La entregada queda en state/practice.lastQuestionId y se
-    vuelve a entregar mientras no esté en answeredQuestionIds, así pedir otra no recorre el banco sin gastar
-    cuota. Solo la transacción de responder, de la iteración 4, la saca de pendiente."""
-    state_ref = db.collection(COL.users).document(user["id"]).collection(COL.state).document("practice")
-    state = (await state_ref.get()).to_dict() or {}
-    answered = set(state.get("answeredQuestionIds") or [])
+def practice_state(db, user_id: str):
+    """users/usr_<UID>/state/practice: respondidas, pendiente y hora de entrega (ADR-09, ADR-72 y ADR-84)."""
+    return db.collection(COL.users).document(user_id).collection(COL.state).document("practice")
+
+
+def pending_id(state: dict) -> str | None:
+    """La pendiente es lastQuestionId mientras no figure entre las respondidas (ADR-72)."""
     pending = state.get("lastQuestionId")
-    if pending and pending not in answered:
-        snap = await db.collection(COL.questions).document(pending).get()
-        if snap.exists and (snap.to_dict() or {}).get("status") == "published":
-            return {"id": snap.id, **snap.to_dict()}
+    return pending if pending and pending not in (state.get("answeredQuestionIds") or []) else None
+
+
+async def _published(db, question_id: str) -> dict | None:
+    snap = await db.collection(COL.questions).document(question_id).get()
+    data = snap.to_dict() if snap.exists else None
+    return {"id": snap.id, **data} if data and data.get("status") == "published" else None
+
+
+PENDING_ATTEMPTS = 5
+
+
+async def pending_or_next(db, user: dict, tests: list[str]) -> dict | None:
+    """La pregunta pendiente o una nueva (ADR-72). La entregada queda en lastQuestionId con deliveredAt, la hora
+    de la API desde la que se mide el tiempo de respuesta (T-28). Solo la transacción de responder la saca de
+    pendiente.
+
+    T-25 y ADR-84: la pendiente se fija con una escritura condicionada a que state/practice no haya cambiado
+    desde que se leyó (o a que no exista). Si otra solicitud escribió antes, se relee y se entrega la suya, así
+    las solicitudes simultáneas reciben la misma pregunta. Una transacción del SDK, que bloquea el documento
+    leído, dejaba a cinco solicitudes simultáneas esperándose entre sí hasta agotar sus intentos."""
+    state_ref = practice_state(db, user["id"])
+    for _ in range(PENDING_ATTEMPTS):
+        snap = await state_ref.get()
+        state = snap.to_dict() or {}
+        pending = pending_id(state)
         # Si la pendiente dejó de estar publicada, se elige otra (ADR-73).
-    question = await pick_question(db, tests, user.get("difficulty") or "d1", answered)
-    if question is not None:
-        # ponytail: sin transacción, dos pedidos simultáneos pueden elegir preguntas distintas y queda la
-        # última como pendiente. La respuesta de la iteración 4 puede exigir que sea la pendiente.
-        await state_ref.set({"lastQuestionId": question["id"]}, merge=True)
-    return question
+        question = await _published(db, pending) if pending else None
+        if question and state.get("deliveredAt"):
+            return {**question, "deliveredAt": state["deliveredAt"]}
+        if question is None:
+            question = await pick_question(db, tests, user.get("difficulty") or "d1",
+                                           set(state.get("answeredQuestionIds") or []))
+            if question is None:
+                return None
+        # Una pendiente guardada antes de deliveredAt empieza a contar ahora.
+        cambios = {"lastQuestionId": question["id"], "deliveredAt": datetime.now(timezone.utc)}
+        try:
+            if snap.exists:
+                await state_ref.update(cambios, option=db.write_option(last_update_time=snap.update_time))
+            else:
+                await state_ref.create(cambios)
+        except (exceptions.FailedPrecondition, exceptions.Conflict):
+            continue  # otra solicitud fijó la pendiente entre la lectura y la escritura
+        return {**question, "deliveredAt": cambios["deliveredAt"]}
+    raise RuntimeError("No se pudo fijar la pregunta pendiente: state/practice cambió en cada intento.")
+
+
+async def student_question(db, user: dict, question_id: str) -> dict | None:
+    """Pregunta que el alumno puede pedir por ID (T-20, ADR-85): su pendiente, con su deliveredAt, o una que ya
+    respondió, con deliveredAt en None. Cualquier otra da None, exista o no: entregar cualquier pregunta por ID
+    permitiría recorrer el banco sin gastar cuota (RNF-04)."""
+    state = (await practice_state(db, user["id"]).get()).to_dict() or {}
+    if question_id in (state.get("answeredQuestionIds") or []):
+        delivered = None
+    elif question_id == pending_id(state):
+        delivered = state.get("deliveredAt")
+    else:
+        return None
+    snap = await db.collection(COL.questions).document(question_id).get()
+    return {"id": snap.id, **snap.to_dict(), "deliveredAt": delivered} if snap.exists else None
+
+
+def question_fields(question: dict) -> dict:
+    """Pregunta para el alumno: pasa por sanitize_question() y se proyecta a QUESTION_FIELDS, más deliveredAt."""
+    limpia = sanitize_question(question)
+    out = {campo: limpia.get(campo) for campo in QUESTION_FIELDS}
+    delivered = question.get("deliveredAt")
+    out["deliveredAt"] = iso_ms(delivered) if delivered else None
+    return out
 
 
 def question_out(question: dict, quota: dict) -> dict:
-    """Pregunta para el alumno: pasa por sanitize_question() y lleva el progreso del día (ADR-72)."""
-    limpia = sanitize_question(question)
-    out = {campo: limpia.get(campo) for campo in QUESTION_FIELDS}
+    """Respuesta de GET /practice/next: la pregunta con su hora de entrega y el progreso del día (ADR-72)."""
+    out = question_fields(question)
     out["progress"] = {"current": quota.get("used", 0) + 1,
                        "total": None if quota.get("unlimited") else quota.get("max", 0)}
     return out

@@ -99,6 +99,8 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 81. [ADR-81: Descuento al responder y protección de la pregunta pendiente (Confirmada por Max)](#adr-81-descuento-al-responder-y-protección-de-la-pregunta-pendiente)
 82. [ADR-82: Actividad del alumno limitada a lastActivityAt (Confirmada por Max)](#adr-82-actividad-del-alumno-limitada-a-lastactivityat)
 83. [ADR-83: Medallas y recorrecciones según la sección 2.8 (Confirmada por Max)](#adr-83-medallas-y-recorrecciones-según-la-sección-28)
+84. [ADR-84: Pendiente fijada con escritura condicionada y hora de entrega (Decidida por Jeremías; detalles en propuesta)](#adr-84-pendiente-fijada-con-escritura-condicionada-y-hora-de-entrega)
+85. [ADR-85: `GET /questions/{id}` solo para la pendiente o una respondida (Decidida por Jeremías)](#adr-85-get-questionsid-solo-para-la-pendiente-o-una-respondida)
 
 ---
 
@@ -232,7 +234,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 
 ### ADR-12: Proyección y sanitización centralizada de correctAnswer
 
-Actualización vigente (01/10/2026): RNF-02 exige excluir también `explanation` antes de responder. `sanitize_question()` ya quita ambos campos; la prueba de todas las rutas aún solo busca `correctAnswer`. Completar esa cobertura corresponde a RT-01, RT-02 y T-13. La ratificación del diseño general sigue pendiente.
+Actualización vigente (01/10/2026): RNF-02 exige excluir también `explanation` antes de responder. `sanitize_question()` ya quita ambos campos; desde el 03/10/2026 la prueba de todas las rutas busca los dos (rama `feature/pendiente-transaccion`). La ratificación del diseño general sigue pendiente.
 
 * **Estado:** **PROPUESTA PARA RATIFICACIÓN**
 * **Decisión:** Implementar la función `sanitizeQuestion(questionDoc)` en la capa de servicios del backend (`backend/src/services/questionService.js`).
@@ -1170,6 +1172,8 @@ La elección debe conservar una sola pendiente también con peticiones simultán
 
 Se descarta descontar tanto al entregar como al responder. También se descarta dar por satisfecha RNF-04 solo con dos solicitudes consecutivas: falta comprobar concurrencia. Los campos de almacenamiento que necesiten T-25 y T-28 se definen en esas tareas.
 
+Implementación (03/10/2026): la pendiente se fija de forma atómica y guarda `deliveredAt` (ADR-84). El descuento al responder llega con T-29.
+
 ---
 
 ### ADR-82: Actividad del alumno limitada a lastActivityAt
@@ -1191,3 +1195,33 @@ El módulo sigue la sección 2.8 de la API de administración para medallas y re
 Por respuesta correcta, el monto sale de `plans.badges.correct`; cada bono da un bronce. La consola otorga los 250 bronces al confirmar una recorrección. Los movimientos del módulo se escriben junto con la actualización de la billetera y el total en la misma transacción. HU-03 / T-29, HU-08, HU-09 y HU-10 cubren las implementaciones restantes.
 
 Se descarta copiar las dos diferencias de la consola al módulo o compensarlas con escrituras fuera del alcance. Esta confirmación no ratifica todos los detalles propuestos de ADR-69 ni amplía el trabajo a la consola.
+
+---
+
+### ADR-84: Pendiente fijada con escritura condicionada y hora de entrega
+
+Estado: decidida por Jeremías en el encargo de la iteración 4 (T-25 y T-28). La escritura condicionada en lugar de una transacción del SDK, la hora de la API y el trato de una pendiente sin `deliveredAt` son propuestas que se ratifican en la sesión del equipo. Fecha de registro: 03/10/2026.
+
+`GET /practice/next` fija la pregunta pendiente de forma atómica, para que solicitudes simultáneas del mismo alumno reciban la misma (T-25, caso CP-04 y RNF-04). Lee `users/usr_<UID>/state/practice` y, si no hay una pendiente publicada, elige una pregunta y la escribe con una precondición: la actualización exige que el documento conserve el `update_time` leído, y si el documento no existe se crea con `create()`, que falla si otra solicitud lo creó antes. Cuando la escritura falla porque otra solicitud ganó, se relee el estado y se entrega la pendiente de esa solicitud, con un máximo de cinco intentos.
+
+Junto con la pendiente se guarda `deliveredAt`, la hora en que la API la entregó (T-28, hallazgo H-03 de T-24). La respuesta la devuelve y no cambia mientras la pregunta siga pendiente, así recargar la app no reinicia el tiempo. Al responder, el tiempo será la hora de la API menos `deliveredAt`. Una pendiente guardada antes de este cambio, sin `deliveredAt`, lo recibe en el siguiente pedido.
+
+El encargo pedía elegir dentro de una transacción. Con `async_transactional` del SDK, cinco solicitudes simultáneas sobre el mismo documento se esperaban entre sí: cada transacción leía el documento y después quería escribirlo, y la prueba fallaba en 5 de 8 corridas con `Transaction lock timeout`. La escritura condicionada es el control optimista que usan los SDK móviles de Firestore. No deja bloqueos tomados mientras corren las consultas de selección, y la misma prueba pasó 10 de 10 corridas. Sin la precondición, cinco solicitudes recibieron 4 o 5 preguntas distintas. Si el equipo prefiere la transacción del SDK, el costo es esa contención.
+
+`deliveredAt` usa la hora de la API y no `SERVER_TIMESTAMP`, porque el tiempo de respuesta se calcula con el mismo reloj al entregar y al responder, y `GET /practice/next` puede devolver el valor sin otra lectura. Se descarta `SERVER_TIMESTAMP`: mezclaría el reloj de Firestore con el de la API y obligaría a releer el documento. En la respuesta va en UTC con milisegundos y `Z`, como `meta.timestamp`.
+
+Se mantiene que la pendiente no cambie aunque cambien las preferencias y que se reemplace si deja de estar publicada (ADR-73).
+
+---
+
+### ADR-85: `GET /questions/{id}` solo para la pendiente o una respondida
+
+Estado: decidida por Jeremías en el encargo de la iteración 4 (T-20). Que una respondida se entregue aunque la hayan retirado y que la respuesta no lleve `progress` son propuestas. Fecha de registro: 03/10/2026.
+
+`GET /questions/{id}` entrega la pregunta sin `correctAnswer` ni `explanation`, con los campos de `GET /practice/next` salvo `progress`, solo si es la pendiente del alumno o una que ya respondió. La pendiente lleva su `deliveredAt`; una respondida, `deliveredAt` en `null`. Cualquier otra pregunta responde `NOT_FOUND` 404 con el mismo cuerpo exista o no, así la ruta no confirma qué IDs hay en el banco.
+
+Si la ruta entregara cualquier pregunta por ID, un alumno podría leer el banco entero sin pasar por `GET /practice/next` ni gastar cuota, que es lo que prohíbe RNF-04.
+
+Se descarta responder `AUTH_FORBIDDEN` 403 o `CONFLICT` 409 a una pregunta que existe pero no le corresponde: confirmarían que existe, y la app trata el 403 como un problema de sesión (ADR-13). Una respondida se entrega aunque después la retiren del banco, porque es parte del historial del alumno. La pendiente se entrega mientras exista; si dejó de estar publicada, el siguiente `GET /practice/next` la reemplaza (ADR-73).
+
+Con este cambio existe en el código T-20, que el Product Backlog v2.3 marca hecha desde la iteración 3.
