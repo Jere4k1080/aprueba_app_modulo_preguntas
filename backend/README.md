@@ -2,11 +2,11 @@
 
 API REST del módulo de práctica de Aprueba, escrita en Python 3.12 con FastAPI sobre Firestore. Reemplazó al backend Node y Express por decisión de la contraparte (ADR-30) y sigue las convenciones del backend de administración que especificó Max (ADR-31).
 
-Estado revisado al 01/10/2026, después de la aceptación de Entrega 1 por Martin el 29/09 (T-24). La API expone `GET /api/v1/me`, `GET /api/v1/tests`, `GET` y `PUT /api/v1/me/preferences`, `GET /api/v1/practice/next` y `GET /api/v1/questions/{id}`: seis de los catorce servicios comprometidos, incluidos los trece del contrato y el perfil `GET /me` de HT-07. `/health` es una sonda adicional y no se cuenta como servicio del módulo.
+Estado revisado al 01/10/2026, después de la aceptación de Entrega 1 por Martin el 29/09 (T-24). La API expone `GET /api/v1/me`, `GET /api/v1/tests`, `GET` y `PUT /api/v1/me/preferences`, `GET /api/v1/practice/next`, `GET /api/v1/questions/{id}` y `POST /api/v1/questions/{id}/answer`: siete de los catorce servicios comprometidos, incluidos los trece del contrato y el perfil `GET /me` de HT-07. `/health` es una sonda adicional y no se cuenta como servicio del módulo.
 
-Los restantes son `POST /questions/{id}/answer`, `GET /questions/{id}/explanation`, `GET /questions/{id}/skill`, `GET /me/quota`, `POST /me/quota/unlock`, `POST /corrections`, `GET /corrections` y `GET /me/progress`.
+Los restantes son `GET /questions/{id}/explanation`, `GET /questions/{id}/skill`, `GET /me/quota`, `POST /me/quota/unlock`, `POST /corrections`, `GET /corrections` y `GET /me/progress`.
 
-`GET /practice/next` pasa cada pregunta por `sanitize_question()`, de `app/services/questions.py`, que elimina `correctAnswer` y `explanation`. `calculate_cohort_percentile()`, en el mismo archivo, aún usa umbrales; ninguna ruta la usa. HT-04 / T-30 debe implementar el histograma de `elapsedBuckets`, sin agregaciones de Firestore (RNF-12).
+`GET /practice/next` y `GET /questions/{id}` pasan cada pregunta por `sanitize_question()`, de `app/services/questions.py`, que elimina `correctAnswer` y `explanation`. En el mismo archivo, `cohort_percentile()` calcula el percentil con el histograma `elapsedBuckets`, sin agregaciones de Firestore (RNF-12, ADR-87).
 
 ## Stack
 
@@ -184,7 +184,7 @@ Todas llevan el envelope. `get_optional_user` devuelve `None` sin cabecera `Auth
 
 ## Práctica
 
-`GET /practice/next` reinicia la cuota si cambió el día y la revisa sin descontarla. El descuento debe ocurrir al responder (ADR-72 ratificada por ADR-81), pero el endpoint de respuesta todavía no existe. Con la cuota llena responde 422 `QUOTA_BASE_REACHED` o `QUOTA_DAILY_LIMIT`. Si no, entrega la pregunta pendiente de `users/usr_<UID>/state/practice` o elige una nueva al azar entre las `published` de las pruebas elegidas y de la dificultad preferida, sin las respondidas, y la deja pendiente con `deliveredAt`, la hora de la API, que la respuesta devuelve (T-28, ADR-84). La respuesta pasa por `sanitize_question()` y la proyección de `QUESTION_FIELDS`.
+`GET /practice/next` reinicia la cuota si cambió el día y la revisa sin descontarla. El descuento ocurre al responder (ADR-72 ratificada por ADR-81). Con la cuota llena responde 422 `QUOTA_BASE_REACHED` o `QUOTA_DAILY_LIMIT`. Si no, entrega la pregunta pendiente de `users/usr_<UID>/state/practice` o elige una nueva al azar entre las `published` de las pruebas elegidas y de la dificultad preferida, sin las respondidas, y la deja pendiente con `deliveredAt`, la hora de la API, que la respuesta devuelve (T-28, ADR-84). La respuesta pasa por `sanitize_question()` y la proyección de `QUESTION_FIELDS`.
 
 La dificultad ya se respeta sin ampliarla: al agotarse responde `NO_QUESTIONS_AVAILABLE`, y la pantalla avisa que no quedan preguntas de esas pruebas en la dificultad elegida (ADR-78). Pedidos sucesivos sin responder recuperan la misma pendiente y el mismo `deliveredAt`. La pendiente se fija con una escritura condicionada al `update_time` leído, así solicitudes simultáneas reciben la misma (T-25, CP-04 y ADR-84).
 
@@ -202,9 +202,9 @@ El tiempo de respuesta se calculará al responder con `deliveredAt` (T-28); hoy 
 .venv/bin/python -m pytest
 ```
 
-Son 68: 22 en `tests/test_core.py`, 10 en `tests/test_health.py`, 12 en `tests/test_modelo.py`, 7 en `tests/test_alumno.py`, 16 en `tests/test_practica.py` y 1 en `tests/test_integridad.py`. 26 necesitan el emulador en `127.0.0.1:8080`: la paginación, la carga del seed, las siete del alumno actual, las dieciséis de práctica y la de integridad. Sin él, pytest informa 42 aprobadas y 26 omitidas; eso no cuenta como validación completa. `tests/emulador.py` reconoce al emulador porque responde 200 y "Ok" en la raíz: si otro programa ocupa el puerto, esas pruebas se omiten en vez de fallar. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. El Plan de pruebas v1.0 registra las 62 aprobadas con el emulador al cierre de la iteración 3.
+Son 83: 22 en `tests/test_core.py`, 10 en `tests/test_health.py`, 12 en `tests/test_modelo.py`, 7 en `tests/test_alumno.py`, 16 en `tests/test_practica.py`, 15 en `tests/test_respuesta.py` y 1 en `tests/test_integridad.py`. 41 necesitan el emulador en `127.0.0.1:8080`: la paginación, la carga del seed, las siete del alumno actual, las dieciséis de práctica, las quince de la respuesta y la de integridad. Sin él, pytest informa 42 aprobadas y 41 omitidas; eso no cuenta como validación completa. `tests/emulador.py` reconoce al emulador porque responde 200 y "Ok" en la raíz: si otro programa ocupa el puerto, esas pruebas se omiten en vez de fallar. Las pruebas no leen el `.env` local: `tests/conftest.py` fija su propio entorno y quita `FIREBASE_AUTH_EMULATOR_HOST`. El Plan de pruebas v1.0 registra las 62 aprobadas con el emulador al cierre de la iteración 3.
 
-`tests/test_integridad.py` recorre las rutas registradas y falla si alguna respuesta trae `correctAnswer` o `explanation` en cualquier nivel del JSON (RNF-02 y regla 1 de `CLAUDE.md`). Una ruta nueva entra sola. El parámetro `{question_id}` toma la pendiente del alumno; otro parámetro necesita un valor de prueba, y una ruta que pide cuerpo lo necesita en `CUERPOS`.
+`tests/test_integridad.py` recorre las rutas registradas y falla si alguna respuesta trae `correctAnswer` o `explanation` en cualquier nivel del JSON (RNF-02 y regla 1 de `CLAUDE.md`). Una ruta nueva entra sola. El parámetro `{question_id}` toma la pendiente del alumno; otro parámetro necesita un valor de prueba, y una ruta que pide cuerpo lo necesita en `CUERPOS`. `POST /questions/{id}/answer` va al final y es la única excepción: después de responder, `correctAnswer` puede ir en el primer nivel de `data` (ADR-86).
 
 Las pruebas de autenticación están en `tests/test_core.py` y montan rutas de sonda (`/api/v1/_yo` y `/api/v1/_opcional`) solo dentro de la prueba. Casi todas reemplazan `verify_id_token` con `monkeypatch` y comprueban que corra fuera del event loop:
 

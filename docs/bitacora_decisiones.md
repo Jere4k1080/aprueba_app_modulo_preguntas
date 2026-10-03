@@ -101,6 +101,9 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 83. [ADR-83: Medallas y recorrecciones según la sección 2.8 (Confirmada por Max)](#adr-83-medallas-y-recorrecciones-según-la-sección-28)
 84. [ADR-84: Pendiente fijada con escritura condicionada y hora de entrega (Decidida por Jeremías; detalles en propuesta)](#adr-84-pendiente-fijada-con-escritura-condicionada-y-hora-de-entrega)
 85. [ADR-85: `GET /questions/{id}` solo para la pendiente o una respondida (Decidida por Jeremías)](#adr-85-get-questionsid-solo-para-la-pendiente-o-una-respondida)
+86. [ADR-86: Registro de la respuesta a la pendiente (Decidida por Jeremías; detalles en propuesta)](#adr-86-registro-de-la-respuesta-a-la-pendiente)
+87. [ADR-87: Percentil de cohorte con mínimo de cinco respuestas previas (Decidida por Jeremías; detalles en propuesta)](#adr-87-percentil-de-cohorte-con-mínimo-de-cinco-respuestas-previas)
+88. [ADR-88: Orden del facsímil por prueba y `randomKey` (Supuesto aceptado por Jeremías)](#adr-88-orden-del-facsímil-por-prueba-y-randomkey)
 
 ---
 
@@ -562,6 +565,7 @@ Actualización vigente (01/10/2026): la interpretación de `qDay` como base, añ
 * **Impacto:** el percentil solo cambia cuando el documento trae umbrales inválidos. `test_02_calculate_cohort_percentile` lo cubre.
 
 * **Actualización (2026-09-25):** ADR-63 reemplaza los umbrales por el histograma de `questions.stats`. `calculate_cohort_percentile` sigue en el código hasta la iteración 4, y esta decisión queda sin objeto cuando la función salga.
+* **Actualización (2026-10-03):** la función salió del código con ADR-87 y esta decisión quedó sin objeto.
 ---
 
 ### ADR-38: Claims que `get_current_user` no verifica
@@ -894,14 +898,14 @@ Ratificación vigente (01/10/2026): Max confirmó seguir la sección 2.8, regist
 
 ### ADR-63: Percentil de cohorte con el histograma de `questions.stats`
 
-Trazabilidad vigente (01/10/2026): HT-04, RNF-12 y T-30 requieren cálculo desde el histograma, sin agregaciones. T-28 requiere medir el tiempo desde la entrega registrada por el servidor. `calculate_cohort_percentile()` todavía usa umbrales; la presencia del histograma en el seed no completa HT-04 ni su aceptación. Los tramos propuestos abajo siguen sin ratificar.
+Trazabilidad vigente (01/10/2026): HT-04, RNF-12 y T-30 requieren cálculo desde el histograma, sin agregaciones. T-28 requiere medir el tiempo desde la entrega registrada por el servidor. Desde el 03/10 la transacción de responder actualiza el histograma y calcula el percentil (ADR-86 y ADR-87); la aceptación de HT-04 es de Martin. Los tramos propuestos abajo siguen sin ratificar.
 
 * **Estado:** **DECIDIDA POR EL EQUIPO (2026-09-25). LOS TRAMOS SON PROPUESTA. EL CÁLCULO SE IMPLEMENTA EN LA ITERACIÓN 4**
 * **Decisión:** el percentil sale de `questions.stats.elapsedBuckets`, el histograma de tiempos del modelo de junio. `stats` se actualiza dentro de la transacción de responder, la misma que descuenta la cuota y otorga las medallas (ADR-59). El proyecto está en el plan Spark, sin Cloud Functions, así que esa transacción corre en el backend.
 * **Tramos:** diez, en segundos: `lt10`, `lt20`, `lt30`, `lt45`, `lt60`, `lt90`, `lt120`, `lt180`, `lt300` y `gte300`. Cada tramo cuenta las respuestas con tiempo menor que su límite y mayor o igual que el límite anterior. Están en `ELAPSED_BUCKETS`, en `backend/app/services/questions.py`. Son más finos en el primer minuto y más gruesos después de dos. Sus nombres empiezan con letra para servir como ruta de campo en Firestore, por ejemplo `stats.elapsedBuckets.lt30`.
-* **Cálculo:** percentil = 100 × (respuestas en tramos más lentos + la mitad de las del mismo tramo) / total, redondeado, con el histograma de antes de sumar la respuesta nueva. Sin respuestas previas vale 50.
+* **Cálculo:** percentil = 100 × (respuestas en tramos más lentos + la mitad de las del mismo tramo) / total, redondeado, con el histograma de antes de sumar la respuesta nueva. Sin respuestas previas vale 50. ADR-87 lo reemplaza: con menos de cinco previas el percentil es `null`.
 * **Alternativa descartada:** los umbrales `cohortSpeedThresholds` de ADR-10, recalculados por un cron diario (ADR-23). Necesitaban un proceso aparte y quedaban desfasados hasta el recálculo siguiente.
-* **Consecuencias:** ADR-10 y ADR-23 quedan sustituidas. `calculate_cohort_percentile`, que usa los umbrales (ADR-37), sigue en el código hasta la iteración 4.
+* **Consecuencias:** ADR-10 y ADR-23 quedan sustituidas. `calculate_cohort_percentile`, que usaba los umbrales (ADR-37), salió del código el 03/10 (ADR-87).
 
 ---
 
@@ -1160,6 +1164,8 @@ El módulo acepta preguntas de cuatro o cinco alternativas. La letra correcta y 
 
 El modelo Dart usa una lista y las pantallas la recorren por longitud, así que ya muestran cuatro o cinco. Las 40 preguntas del seed tienen cuatro. `test_10_banco_de_demostracion_consistente`, en `test_health.py`, acepta cuatro o cinco, pero `test_forma_de_las_preguntas_del_banco`, en `test_modelo.py`, exige cuatro y fallaría con una pregunta de cinco en el seed. Faltan la prueba de cinco de punta a punta y la validación de la letra al responder, HU-03 / T-29. HU-20 / T-08, HU-02 y RT-02 deben conservar la compatibilidad. Se descarta exigir cinco a todas las preguntas o completar con una alternativa inventada. La decisión no autoriza importar el banco real ni inferir sus metadatos.
 
+Implementación (03/10/2026): la respuesta valida la letra contra las alternativas de cada pregunta (ADR-86). El seed suma `qst_a998954ca4`, una pregunta sintética de `m1` con cinco alternativas, y `test_forma_de_las_preguntas_del_banco` acepta cuatro o cinco y exige que el seed tenga de ambas.
+
 ---
 
 ### ADR-81: Descuento al responder y protección de la pregunta pendiente
@@ -1172,7 +1178,7 @@ La elección debe conservar una sola pendiente también con peticiones simultán
 
 Se descarta descontar tanto al entregar como al responder. También se descarta dar por satisfecha RNF-04 solo con dos solicitudes consecutivas: falta comprobar concurrencia. Los campos de almacenamiento que necesiten T-25 y T-28 se definen en esas tareas.
 
-Implementación (03/10/2026): la pendiente se fija de forma atómica y guarda `deliveredAt` (ADR-84). El descuento al responder llega con T-29.
+Implementación (03/10/2026): la pendiente se fija de forma atómica y guarda `deliveredAt` (ADR-84). La respuesta descuenta la cuota y saca la pregunta de pendiente (ADR-86).
 
 ---
 
@@ -1200,13 +1206,13 @@ Se descarta copiar las dos diferencias de la consola al módulo o compensarlas c
 
 ### ADR-84: Pendiente fijada con escritura condicionada y hora de entrega
 
-Estado: decidida por Jeremías en el encargo de la iteración 4 (T-25 y T-28). La escritura condicionada en lugar de una transacción del SDK, la hora de la API y el trato de una pendiente sin `deliveredAt` son propuestas que se ratifican en la sesión del equipo. Fecha de registro: 03/10/2026.
+Estado: decidida por Jeremías en el encargo de la iteración 4 (T-25 y T-28). El 03/10/2026 Jeremías ratificó la escritura condicionada en lugar de una transacción del SDK, porque cumple lo que busca T-25: que la elección sea atómica. La hora de la API y el trato de una pendiente sin `deliveredAt` siguen como propuestas que se ratifican en la sesión del equipo. Fecha de registro: 03/10/2026.
 
 `GET /practice/next` fija la pregunta pendiente de forma atómica, para que solicitudes simultáneas del mismo alumno reciban la misma (T-25, caso CP-04 y RNF-04). Lee `users/usr_<UID>/state/practice` y, si no hay una pendiente publicada, elige una pregunta y la escribe con una precondición: la actualización exige que el documento conserve el `update_time` leído, y si el documento no existe se crea con `create()`, que falla si otra solicitud lo creó antes. Cuando la escritura falla porque otra solicitud ganó, se relee el estado y se entrega la pendiente de esa solicitud, con un máximo de cinco intentos.
 
 Junto con la pendiente se guarda `deliveredAt`, la hora en que la API la entregó (T-28, hallazgo H-03 de T-24). La respuesta la devuelve y no cambia mientras la pregunta siga pendiente, así recargar la app no reinicia el tiempo. Al responder, el tiempo será la hora de la API menos `deliveredAt`. Una pendiente guardada antes de este cambio, sin `deliveredAt`, lo recibe en el siguiente pedido.
 
-El encargo pedía elegir dentro de una transacción. Con `async_transactional` del SDK, cinco solicitudes simultáneas sobre el mismo documento se esperaban entre sí: cada transacción leía el documento y después quería escribirlo, y la prueba fallaba en 5 de 8 corridas con `Transaction lock timeout`. La escritura condicionada es el control optimista que usan los SDK móviles de Firestore. No deja bloqueos tomados mientras corren las consultas de selección, y la misma prueba pasó 10 de 10 corridas. Sin la precondición, cinco solicitudes recibieron 4 o 5 preguntas distintas. Si el equipo prefiere la transacción del SDK, el costo es esa contención.
+El encargo pedía elegir dentro de una transacción. Con `async_transactional` del SDK, cinco solicitudes simultáneas sobre el mismo documento se esperaban entre sí: cada transacción leía el documento y después quería escribirlo, y la prueba fallaba en 5 de 8 corridas con `Transaction lock timeout`. La escritura condicionada es el control optimista que usan los SDK móviles de Firestore. No deja bloqueos tomados mientras corren las consultas de selección, y la misma prueba pasó 10 de 10 corridas. Sin la precondición, cinco solicitudes recibieron 4 o 5 preguntas distintas.
 
 `deliveredAt` usa la hora de la API y no `SERVER_TIMESTAMP`, porque el tiempo de respuesta se calcula con el mismo reloj al entregar y al responder, y `GET /practice/next` puede devolver el valor sin otra lectura. Se descarta `SERVER_TIMESTAMP`: mezclaría el reloj de Firestore con el de la API y obligaría a releer el documento. En la respuesta va en UTC con milisegundos y `Z`, como `meta.timestamp`.
 
@@ -1225,3 +1231,55 @@ Si la ruta entregara cualquier pregunta por ID, un alumno podría leer el banco 
 Se descarta responder `AUTH_FORBIDDEN` 403 o `CONFLICT` 409 a una pregunta que existe pero no le corresponde: confirmarían que existe, y la app trata el 403 como un problema de sesión (ADR-13). Una respondida se entrega aunque después la retiren del banco, porque es parte del historial del alumno. La pendiente se entrega mientras exista; si dejó de estar publicada, el siguiente `GET /practice/next` la reemplaza (ADR-73).
 
 Con este cambio existe en el código T-20, que el Product Backlog v2.3 marca hecha desde la iteración 3.
+
+---
+
+### ADR-86: Registro de la respuesta a la pendiente
+
+Estado: decidida por Jeremías en el encargo de la iteración 4 (HU-03, T-28, T-29 y HT-04 / T-30). El 03/10/2026 Jeremías ratificó el orden de las validaciones, que revisa las respondidas antes que la pendiente, y decidió que un envío simultáneo nunca termine en 500. Son propuestas, para ratificar en la sesión del equipo, `NOT_FOUND` para una pregunta que no es la pendiente, el ID de los documentos que crea la respuesta, la explicación breve, la regla de dominio por habilidad y el trato de una pendiente sin `deliveredAt`. Fecha de registro: 03/10/2026.
+
+`POST /questions/{id}/answer` registra la respuesta a la pregunta pendiente del alumno. El cuerpo es `{"selected": "B"}`. También acepta `sessionId` y `elapsedMs`, que la app envía, y no los usa: el esquema rechaza campos desconocidos y sin ellos la app recibiría `VALIDATION_ERROR`. El tiempo es la hora de la API menos `deliveredAt`, en milisegundos y como mínimo 1 (T-28, ADR-84). `sessionId` no se guarda mientras el facsímil no lo use (ADR-73).
+
+Las validaciones van en este orden. Una pregunta que figura en `answeredQuestionIds`, o que ya tiene documento en `answers`, da 409 `ALREADY_ANSWERED`. Cualquier otra que no sea la pendiente da 404 `NOT_FOUND`, con el mismo cuerpo exista o no, como `GET /questions/{id}` (ADR-85). Lo mismo pasa con una pendiente que dejó de estar publicada. Una letra que no existe en la pregunta da 400 `INVALID_OPTION`: de `A` a `D` con cuatro alternativas y de `A` a `E` con cinco, en mayúscula (ADR-80). Por último la cuota se reinicia si cambió el día, como en `GET /practice/next`, y con `used` igual a `max` la respuesta es 422 `QUOTA_DAILY_LIMIT`, salvo en un plan ilimitado. Ningún error escribe nada.
+
+El encargo ponía la pendiente antes que `ALREADY_ANSWERED`. Una pregunta respondida nunca es la pendiente, así que con ese orden el 409 no se alcanzaría y la app no podría reconocer un doble envío. Para una pregunta ajena se descarta `CONFLICT` 409, que confirmaría que existe. El tope de cuota al responder solo aparece si la cuota cambió después de entregar la pendiente, por ejemplo porque la consola cambió el plan, ya que `GET /practice/next` no entrega preguntas con la cuota llena.
+
+Todo se escribe en una transacción del SDK. Se crea `users/usr_<UID>/answers/{questionId}`, con el ID de la pregunta como ID del documento, así un segundo registro de la misma pregunta falla aunque fallara la revisión de `answeredQuestionIds`. La cuota del día suma 1 en `used`. Si la respuesta es correcta, el monto de `plans.<plan>.badges.correct` se suma a `medalWallet.bronze` y a `badgesTotal`, y se crea `medalTransactions/mtx_<10 hexadecimales al azar>` con `reason` `answer_correct` y la pregunta en `refId` (ADR-59 y ADR-83). `questions.stats` suma la respuesta a `timesAnswered`, `timesCorrect`, `sumElapsedMs` y su tramo de `elapsedBuckets` (ADR-63). `state/practice` agrega la pregunta a `answeredQuestionIds`, borra `lastQuestionId` y `deliveredAt` y marca `lastAnsweredAt`. `skillMastery/{skillId}` suma el intento y el acierto con la regla que ya usaba el seed: el nivel es el número de aciertos con tope en `maxLevel` (ADR-69). El plan se lee fuera de la transacción, porque la consola lo cambia muy de vez en cuando.
+
+El seed conserva sus IDs `ans_` y sus `mtx_` derivados de un hash, para reescribir los mismos documentos en cada carga (ADR-69). La API no reescribe. La revisión de respondidas lee `answeredQuestionIds`, así que los dos formatos conviven.
+
+La respuesta es 200 con `correct`, `correctAnswer`, `shortExplanation`, `cohortPercentile`, `medalAwarded` y `quota`. Es la única ruta que entrega `correctAnswer`, después de responder y solo en el primer nivel de `data`; `test_integridad.py` admite esa excepción y ninguna otra (RNF-02). `shortExplanation` es la primera línea no vacía de `explanation`, sin el número de paso y cortada en una palabra con "…" si pasa de 200 caracteres. La explicación completa llega con HU-05. `medalAwarded` es `{"tier": "bronze", "amount": n}`, o `null` si la respuesta no da medallas. `quota` lleva `used`, `max` y `unlimited` después del descuento.
+
+Una pendiente entregada antes de T-28, sin `deliveredAt`, se registra con `elapsedMs` y `cohortPercentile` en `null` y no entra al histograma, porque no hay tiempo que medir. `GET /practice/next` le pone hora al pedirla (ADR-84), así que el caso solo aparece si el alumno responde sin volver a pedirla.
+
+Dos envíos simultáneos de la misma pendiente chocan en la transacción. Con los cinco intentos internos del SDK, que reintenta sin esperar, en el emulador 6 de 10 corridas abortaron las dos transacciones, con `Failed to commit transaction in 5 attempts`. Ninguna se registró y las dos solicitudes habrían terminado en 500. Es la misma contención de bloqueos de ADR-84.
+
+Jeremías decidió que un 500 no puede quedar. Cada intento es ahora una transacción de un solo commit (`max_attempts=1`). Si Firestore la aborta por contención, se espera un tiempo al azar y se reintenta: hasta 0,2 s antes del segundo intento, y el doble antes de cada uno de los siguientes. En el reintento la respuesta ya existe y corresponde `ALREADY_ANSWERED` 409. Si se agotan los cinco intentos, la respuesta es `CONFLICT` 409 con el envelope. `test_envios_simultaneos_registran_uno_y_rechazan_el_otro` exige un 200 y un 409, y pasó 15 de 15 corridas. `test_reintentos_agotados_dan_conflict_y_no_registran` simula el aborto en cada intento. En la vista previa del #32 del 03/10, sobre Firestore real, dos POST simultáneos a la misma pendiente dieron un 200 y un 409 `ALREADY_ANSWERED`, y quedaron una sola respuesta y un solo movimiento de medallas.
+
+Con este cambio existen en el código T-29, el tiempo de T-28 al responder y T-30. Su aceptación es de Martin (T-35).
+
+---
+
+### ADR-87: Percentil de cohorte con mínimo de cinco respuestas previas
+
+Estado: decidida por Jeremías en el encargo de la iteración 4 (HT-04 / T-30). El percentil es el porcentaje de respuestas previas a la misma pregunta que fueron más lentas, sale del histograma de antes de sumar la respuesta y es `null` con menos de cinco previas. La mitad del propio tramo y el redondeo son propuestas. Fecha de registro: 03/10/2026.
+
+La cohorte de una respuesta son todas las respuestas anteriores a la misma pregunta que entraron a `questions.stats.elapsedBuckets`, de cualquier alumno y plan, incluidas las del seed. El histograma no guarda el plan ni la fecha, así que filtrar más pediría otra lectura, y RNF-12 descarta las agregaciones.
+
+El cálculo es 100 × (previas en tramos más lentos + la mitad de las previas del mismo tramo) / total de previas, redondeado al entero con las mitades hacia arriba. El histograma no ordena las respuestas dentro de un tramo, por eso cuenta la mitad del propio, como ya proponía ADR-63. Un percentil alto indica una respuesta más rápida que la mayoría. Con 2 previas en `lt20`, 3 en `lt30` y 1 en `lt60`, una respuesta de 25 s cae en `lt30` y su percentil es 100 × (1 + 1,5) / 6, que da 42.
+
+Con menos de cinco respuestas previas, el valor de `MIN_COHORT` en `backend/app/services/questions.py`, `cohortPercentile` es `null` en la respuesta y en `answers`. Reemplaza el "sin respuestas previas vale 50" de ADR-63: un 50 sin cohorte mostraría una comparación que no existe. La app debe tratar el `null` como percentil sin datos.
+
+`calculate_cohort_percentile()`, que usaba umbrales, salió del código, y ADR-37 queda sin objeto. El seed escribe `cohortPercentile` en `null` en sus respuestas, que son la primera de cada pregunta. `round()` de Python lleva las mitades al par, por eso el cálculo usa enteros.
+
+---
+
+### ADR-88: Orden del facsímil por prueba y `randomKey`
+
+Estado: supuesto propuesto en el encargo de la iteración 4 y aceptado por Jeremías el 03/10/2026. Se implementa en la iteración 5 con T-32 (HU-12). Fecha de registro: 03/10/2026.
+
+El modelo de datos no define el criterio del orden fijo del facsímil (ADR-79). Supuesto: las pruebas se recorren en el orden de `selectedTests` y, dentro de cada una, las preguntas `published` por `randomKey` ascendente, sin las respondidas y con la dificultad elegida, que no se amplía (ADR-78). Todos los alumnos ven la misma secuencia en cada prueba. La consulta usa el índice compuesto que ya existe de `testId`, `status`, `difficulty` y `randomKey`, así que no pide uno nuevo.
+
+Sin `mock_mode` en el catálogo de funcionalidades, el facsímil se niega. Sale el fallback por plan de pago que hoy tiene `mock_mode_allowed()` (ADR-70).
+
+Se descarta esperar a que la empresa defina un orden propio, porque bloquearía HU-12. Si lo define, reemplaza este supuesto. Hasta la iteración 5, el código elige al azar en los dos formatos y conserva el fallback.

@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 from ..core.deps import DB, Student
 from ..core.envelope import ok
 from ..core.errors import ApiError
+from ..schemas.practice import AnswerIn
+from ..services.answers import register_answer
 from ..services.practice import (check_quota, fresh_quota, load_plan, pending_or_next, question_fields, question_out,
                                  quota_meta, student_question)
 
@@ -36,3 +38,10 @@ async def get_question(question_id: str, student: Student, db: DB) -> JSONRespon
     if question is None:
         raise ApiError(404, "NOT_FOUND")
     return ok(question_fields(question))
+
+
+@router.post("/questions/{question_id}/answer")
+async def answer_question(question_id: str, body: AnswerIn, student: Student, db: DB) -> JSONResponse:
+    """Registra la respuesta a la pendiente (HU-03). Es la única ruta que entrega correctAnswer, después de
+    responder; la explicación detallada llega con HU-05 (ADR-86)."""
+    return ok(await register_answer(db, student, question_id, body.selected))

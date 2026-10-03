@@ -1204,6 +1204,50 @@
     "version": 1
   },
   {
+    "id": "qst_a998954ca4",
+    "testId": "m1",
+    "axis": "Números",
+    "skillId": "sk_demo_m1_operatoria",
+    "difficulty": "d1",
+    "statement": "En la feria, Antonia compra 3 kilos de manzanas a $1.350 el kilo y paga con un billete de $5.000. ¿Cuánto dinero le devuelven?",
+    "options": [
+      "$850",
+      "$950",
+      "$1.050",
+      "$4.050",
+      "$4.150"
+    ],
+    "correctAnswer": "B",
+    "explanation": "1. Primero se calcula lo que cuestan las manzanas: 3 · $1.350 = $4.050.\n2. Después se resta ese total del billete con que paga: $5.000 − $4.050 = $950.\n3. D es lo que cuestan las manzanas, no el vuelto. A, C y E no salen de la operación.\nVerificación: $4.050 + $950 = $5.000, el billete con que paga Antonia.",
+    "requiredSkillText": "Operatoria con números enteros",
+    "status": "published",
+    "reviewStatus": "approved",
+    "flagCount": 0,
+    "randomKey": 0.731907,
+    "stats": {
+      "timesAnswered": 0,
+      "timesCorrect": 0,
+      "sumElapsedMs": 0,
+      "elapsedBuckets": {
+        "lt10": 0,
+        "lt20": 0,
+        "lt30": 0,
+        "lt45": 0,
+        "lt60": 0,
+        "lt90": 0,
+        "lt120": 0,
+        "lt180": 0,
+        "lt300": 0,
+        "gte300": 0
+      }
+    },
+    "source": "seed_demo",
+    "countryId": "cl",
+    "examId": "cl_paes",
+    "origin": "manual",
+    "version": 1
+  },
+  {
     "id": "qst_17392f3fb1",
     "testId": "m2",
     "axis": "Números",

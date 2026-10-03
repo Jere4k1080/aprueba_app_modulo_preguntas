@@ -19,7 +19,7 @@ import app.seed as seed
 from app.core.config import get_settings
 from app.core.errors import ERROR_STATUS, MESSAGES, ApiError
 from app.main import app, create_app
-from app.services.questions import ELAPSED_BUCKETS, calculate_cohort_percentile, sanitize_question
+from app.services.questions import ELAPSED_BUCKETS, cohort_percentile, sanitize_question, short_explanation
 
 client = TestClient(app)
 
@@ -40,19 +40,21 @@ def test_01_sanitize_question_elimina_correct_answer_y_explanation():
     assert sanitize_question(None) is None
 
 
-def test_02_calculate_cohort_percentile():
-    thresholds = {"p25": 15000, "p50": 25000, "p75": 45000, "p90": 60000}
-    assert calculate_cohort_percentile(thresholds, 10000) == 90
-    assert calculate_cohort_percentile(thresholds, 20000) == 75
-    assert calculate_cohort_percentile(thresholds, 40000) == 50
-    assert calculate_cohort_percentile(thresholds, 55000) == 25
-    assert calculate_cohort_percentile(thresholds, 70000) == 10
-    assert calculate_cohort_percentile(None, 10000) == 50
-    assert calculate_cohort_percentile(thresholds, "10000") == 50
-    # Un documento mal cargado no revienta: umbral nulo o de texto toma su valor por defecto.
-    assert calculate_cohort_percentile({**thresholds, "p25": None}, 10000) == 90
-    assert calculate_cohort_percentile({"p90": "60000"}, 59000) == 25
-    assert calculate_cohort_percentile(0, 10000) == 50
+def test_02_percentil_de_cohorte_y_explicacion_breve():
+    # Ejemplo de la sección 5 del diccionario: 2 en lt20, 3 en lt30 y 1 en lt60; 25 s cae en lt30 (ADR-87).
+    histograma = {"lt20": 2, "lt30": 3, "lt60": 1}
+    assert cohort_percentile(histograma, 25_000) == 42, "100 × (1 + 3/2) / 6"
+    assert cohort_percentile(histograma, 5_000) == 100, "más rápida que todas las anteriores"
+    assert cohort_percentile(histograma, 400_000) == 0, "más lenta que todas"
+    assert cohort_percentile({"lt10": 2, "lt20": 2}, 12_000) is None, "con 4 previas no hay percentil"
+    assert cohort_percentile(None, 12_000) is None
+    assert cohort_percentile({"lt10": "3", "lt20": None, "lt30": 2}, 15_000) == 40, "conteos guardados como texto o nulo"
+    # Explicación breve de la pantalla Resultado: la primera línea, sin el número de paso (ADR-86).
+    assert short_explanation("1. Primero se suman los gastos.\n2. Luego se restan.\nVerificación: cuadra.") == \
+        "Primero se suman los gastos."
+    assert short_explanation(None) == "" and short_explanation("\n\n") == ""
+    breve = short_explanation("palabra " * 40)
+    assert breve.endswith("…") and len(breve) <= 201 and "palabr…" not in breve, "se corta en una palabra"
 
 
 def test_03_catalogo_de_errores():
