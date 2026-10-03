@@ -18,14 +18,15 @@ from google.cloud.firestore import SERVER_TIMESTAMP
 
 from app.core.config import get_settings
 from app.db.firestore import COL, USER_ID_PATTERN, get_db, user_doc_id
+from app.services.answers import skill_mastery
 from app.services.questions import elapsed_bucket
 from app.services.users import new_user
 
 DATA = Path(__file__).parent / "data"
 # Cuenta de demostración -> variable de entorno con su UID
 ROLES = {"demo": "SEED_DEMO_UID", "nuevo": "SEED_DEMO_NEW_UID"}
-# Percentil que recibe una respuesta sin cohorte previa en el histograma (ADR-63)
-SIN_COHORTE = 50
+# Cada respuesta del seed es la primera de su pregunta: sin cinco respuestas previas no hay percentil (ADR-87).
+SIN_COHORTE = None
 
 
 def load(name: str):
@@ -115,11 +116,9 @@ def build_documents(uids: dict[str, str], today: str) -> list[tuple[str, dict]]:
 
         for skill_id, c in mastery.items():
             skill = skill_by_id[skill_id]
-            level = min(skill["maxLevel"], c["correct"])
             docs.append((f"{COL.users}/{doc_id}/{COL.skill_mastery}/{skill_id}", {
-                "testId": skill["testId"], "correct": c["correct"], "total": c["total"],
-                "percent": round(100 * c["correct"] / c["total"]), "level": level,
-                "status": "mastered" if level == skill["maxLevel"] else "in_progress", "updatedAt": SERVER_TIMESTAMP,
+                "testId": skill["testId"], **skill_mastery(c["correct"], c["total"], skill["maxLevel"]),
+                "updatedAt": SERVER_TIMESTAMP,
             }))
 
         practice = {"answeredQuestionIds": answered}

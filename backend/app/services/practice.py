@@ -45,16 +45,22 @@ async def mock_mode_allowed(db, plan_id: str) -> bool:
     return features[0].id in ((await load_plan(db, plan_id)).get("features") or [])
 
 
-async def fresh_quota(db, user: dict, plan: dict) -> dict:
-    """Cuota del día. Si quota.date no es hoy la reinicia y la guarda, con el máximo recalculado desde el
-    plan por si la consola lo cambió (ADR-73). No descuenta: eso lo hace la respuesta (ADR-72)."""
-    quota = dict(user.get("quota") or {})
+def day_quota(quota: dict | None, plan: dict) -> dict:
+    """Cuota del día, sin escribirla. Si quota.date no es hoy, used vuelve a 0 y max y unlimited se recalculan
+    desde el plan con los bonos ya reclamados, por si la consola lo cambió (ADR-73)."""
+    quota = dict(quota or {})
     today = quota_day()
-    if quota.get("date") == today:
-        return quota
-    quota.update(used=0, date=today, unlimited=plan["limits"]["qDay"] == 0,
-                 max=quota_max(plan, quota.get("bonusSchool", False), quota.get("bonusAddress", False)))
-    await db.collection(COL.users).document(user["id"]).update({"quota": quota})
+    if quota.get("date") != today:
+        quota.update(used=0, date=today, unlimited=plan["limits"]["qDay"] == 0,
+                     max=quota_max(plan, quota.get("bonusSchool", False), quota.get("bonusAddress", False)))
+    return quota
+
+
+async def fresh_quota(db, user: dict, plan: dict) -> dict:
+    """Cuota del día; si cambió el día, guarda el reinicio. No descuenta: eso lo hace la respuesta (ADR-72)."""
+    quota = day_quota(user.get("quota"), plan)
+    if quota["date"] != (user.get("quota") or {}).get("date"):
+        await db.collection(COL.users).document(user["id"]).update({"quota": quota})
     return quota
 
 

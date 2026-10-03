@@ -189,10 +189,12 @@ def test_forma_de_las_preguntas_del_banco():
     habilidades = {s["id"]: s for s in seed.load("skills")}
     ejes = {t["id"]: set(t["axes"]) for t in seed.load("tests")}
     for q in PREGUNTAS:
-        assert len(set(q["options"])) == len(q["options"]) == 4 and q["correctAnswer"] in ("A", "B", "C", "D"), q["id"]
+        assert len(set(q["options"])) == len(q["options"]) in (4, 5), q["id"]
+        assert q["correctAnswer"] in tuple("ABCDE"[:len(q["options"])]), q["id"]
         assert q["axis"] in ejes[q["testId"]] and habilidades[q["skillId"]]["testId"] == q["testId"], q["id"]
         assert (q["status"], q["reviewStatus"], q["source"]) == ("published", "approved", "seed_demo"), q["id"]
         assert q["explanation"].startswith("1. ") and "\nVerificación: " in q["explanation"], q["id"]
+    assert {len(q["options"]) for q in PREGUNTAS} == {4, 5}, "el seed cubre preguntas de 4 y de 5 alternativas (ADR-80)"
 
 
 def test_el_banco_alcanza_un_dia_de_cuota_en_d1():
@@ -227,6 +229,7 @@ RESPUESTAS_M1_D1 = {
     "qst_a3b859282d": Fraction(5, 3 + 5 + 2),                             # bolita azul
     "qst_543c93e1d4": Fraction(sum(cara > 4 for cara in range(1, 7)), 6),  # dado mayor que 4
     "qst_7afdd2173d": _hipotenusa(6, 8),                                  # catetos de 6 y 8 cm
+    "qst_a998954ca4": Fraction(5_000 - 3 * 1_350),                       # vuelto de Antonia, cinco alternativas
 }
 
 
@@ -236,7 +239,7 @@ def test_respuestas_de_m1_en_d1_recalculadas():
     assert set(m1_d1) == set(RESPUESTAS_M1_D1), "cada pregunta de m1 en d1 necesita su cálculo"
     for q_id, valor in RESPUESTAS_M1_D1.items():
         q = m1_d1[q_id]
-        coinciden = [letra for letra, alternativa in zip("ABCD", q["options"]) if _valor(alternativa) == valor]
+        coinciden = [letra for letra, alternativa in zip("ABCDE", q["options"]) if _valor(alternativa) == valor]
         assert coinciden == [q["correctAnswer"]], f"{q_id}: coinciden {coinciden} y la marcada es {q['correctAnswer']}"
 
 
@@ -261,7 +264,7 @@ def test_seed_contra_el_emulador(monkeypatch):
 
     try:
         conteo, usuario = asyncio.run(sembrar_y_leer())
-        assert conteo == {"questions": 40, "plans": 3, "features": 1, "users": 2, "tests": 5, "skills": 20,
+        assert conteo == {"questions": 41, "plans": 3, "features": 1, "users": 2, "tests": 5, "skills": 20,
                           "medalTransactions": 4, "corrections": 1, "answers": 5}
         assert isinstance(usuario["createdAt"], datetime) and isinstance(usuario["lastActivityAt"], datetime)
         assert usuario["badgesTotal"] == 4 and usuario["quota"]["used"] == 5

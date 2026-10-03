@@ -24,6 +24,15 @@ class PreferencesIn(CamelModel):
     grade_id: str | None = Field(default=None, min_length=1, max_length=40)
 
 
+class AnswerIn(CamelModel):
+    """Cuerpo de POST /questions/{id}/answer. sessionId y elapsedMs se aceptan porque los manda la app y los lista
+    el contrato, pero no se usan: el tiempo lo mide el servidor desde deliveredAt (T-28, ADR-86). La letra se
+    valida contra las alternativas de la pregunta, con INVALID_OPTION."""
+    selected: str
+    session_id: str | None = None
+    elapsed_ms: int | None = None
+
+
 class PreferencesOut(CamelModel):
     selected_tests: list[str]
     format: str

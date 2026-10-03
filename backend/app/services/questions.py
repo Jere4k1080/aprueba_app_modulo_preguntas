@@ -1,12 +1,13 @@
-"""Capa de servicios de preguntas: regla de integridad (ADR-12) y percentil de cohorte.
-
-calculate_cohort_percentile usa los umbrales de ADR-10, que ADR-63 reemplaza por el histograma de
-questions.stats.elapsedBuckets; el cálculo con el histograma llega en la iteración 4."""
+"""Capa de servicios de preguntas: regla de integridad (ADR-12), percentil de cohorte (ADR-87) y explicación breve."""
+import re
 
 # Tramos de questions.stats.elapsedBuckets (ADR-63). Cada tramo cuenta las respuestas con tiempo menor
 # que su límite en segundos y mayor o igual que el límite anterior; gte300 no tiene límite superior.
 ELAPSED_BUCKETS = (("lt10", 10), ("lt20", 20), ("lt30", 30), ("lt45", 45), ("lt60", 60),
                    ("lt90", 90), ("lt120", 120), ("lt180", 180), ("lt300", 300), ("gte300", None))
+# Respuestas previas que necesita una pregunta para entregar percentil; con menos, cohortPercentile es null.
+MIN_COHORT = 5
+SHORT_EXPLANATION_MAX = 200
 
 
 def elapsed_bucket(elapsed_ms: int) -> str:
@@ -27,18 +28,25 @@ def sanitize_question(question: dict | None) -> dict | None:
     return sanitized
 
 
-def _es_numero(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool)
+def cohort_percentile(buckets: dict | None, elapsed_ms: int) -> int | None:
+    """Porcentaje de las respuestas anteriores a la misma pregunta que fueron más lentas (ADR-87). Sale del
+    histograma de antes de sumar esta respuesta: cuentan los tramos más lentos y la mitad del propio, porque el
+    histograma no ordena las respuestas de un mismo tramo. None con menos de MIN_COHORT respuestas previas."""
+    conteos = [int((buckets or {}).get(tramo) or 0) for tramo, _ in ELAPSED_BUCKETS]
+    total = sum(conteos)
+    if total < MIN_COHORT:
+        return None
+    i = [tramo for tramo, _ in ELAPSED_BUCKETS].index(elapsed_bucket(elapsed_ms))
+    # 100 × (más lentas + mitad del tramo) / total, redondeado con las mitades hacia arriba y sin flotantes.
+    numerador, denominador = 200 * sum(conteos[i + 1:]) + 100 * conteos[i], 2 * total
+    return (2 * numerador + denominador) // (2 * denominador)
 
 
-def calculate_cohort_percentile(thresholds: dict | None, elapsed_ms) -> int:
-    """Percentil de rapidez contra los umbrales {p25, p50, p75, p90} en milisegundos.
-    Un umbral ausente o no numérico toma su valor por defecto, para que un documento mal
-    cargado no termine en 500."""
-    if not isinstance(thresholds, dict) or not _es_numero(elapsed_ms):
-        return 50
-    for percentil, campo, por_defecto in ((90, "p25", 15000), (75, "p50", 25000), (50, "p75", 45000), (25, "p90", 60000)):
-        umbral = thresholds.get(campo)
-        if elapsed_ms <= (umbral if _es_numero(umbral) else por_defecto):
-            return percentil
-    return 10
+def short_explanation(explanation: str | None) -> str:
+    """Explicación breve de la pantalla Resultado (ADR-86): la primera línea de la explicación, sin el número de
+    paso y cortada en una palabra si pasa de SHORT_EXPLANATION_MAX caracteres. La completa llega con HU-05."""
+    linea = next((l.strip() for l in (explanation or "").splitlines() if l.strip()), "")
+    linea = re.sub(r"^\d+\.\s*", "", linea)
+    if len(linea) <= SHORT_EXPLANATION_MAX:
+        return linea
+    return linea[:SHORT_EXPLANATION_MAX].rsplit(" ", 1)[0].rstrip(",;:") + "…"

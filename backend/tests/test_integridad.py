@@ -2,13 +2,15 @@
 antes de responder.
 
 Recorre todas las rutas registradas, así que una ruta nueva entra sola en la prueba. POST
-/questions/{id}/answer, de la iteración 4, será la única que devuelva correctAnswer, después de responder, y
-tendrá que quedar como excepción explícita."""
+/questions/{id}/answer es la única excepción: después de responder entrega correctAnswer, y solo en el primer
+nivel de data (ADR-86)."""
 
 BEARER = {"Authorization": "Bearer token.de.firebase"}
 PROHIBIDAS = {"correctAnswer", "explanation"}
+RESPONDER = ("POST", "/api/v1/questions/{question_id}/answer")
 # Cuerpos válidos para las rutas que los piden; las demás reciben {}.
-CUERPOS = {("PUT", "/api/v1/me/preferences"): {"selectedTests": ["m2"], "format": "random", "difficulty": "d1"}}
+CUERPOS = {("PUT", "/api/v1/me/preferences"): {"selectedTests": ["m2"], "format": "random", "difficulty": "d1"},
+           RESPONDER: {"selected": "A"}}
 
 
 def rutas(app) -> list[tuple[str, str]]:
@@ -18,8 +20,8 @@ def rutas(app) -> list[tuple[str, str]]:
                 yield from recorrer(r.original_router.routes, prefijo + r.include_context.prefix)
             elif getattr(r, "methods", None):
                 yield from ((m, prefijo + r.path) for m in r.methods if m not in ("HEAD", "OPTIONS"))
-    # Primero los GET, para que la pregunta se pida con las preferencias del seed.
-    return sorted(set(recorrer(app.routes)), key=lambda mr: (mr[0] != "GET", mr[1]))
+    # Primero los GET, para que la pregunta se pida con las preferencias del seed; responder va al final.
+    return sorted(set(recorrer(app.routes)), key=lambda mr: (mr == RESPONDER, mr[0] != "GET", mr[1]))
 
 
 def claves(x):
@@ -36,9 +38,9 @@ def test_ninguna_ruta_entrega_la_respuesta_ni_la_explicacion(banco):
     vistas = rutas(banco.app)
     esperadas = {("GET", "/api/v1/health"), ("GET", "/api/v1/me"), ("GET", "/api/v1/tests"),
                  ("GET", "/api/v1/me/preferences"), ("PUT", "/api/v1/me/preferences"), ("GET", "/api/v1/practice/next"),
-                 ("GET", "/api/v1/questions/{question_id}")}
+                 ("GET", "/api/v1/questions/{question_id}"), RESPONDER}
     assert esperadas <= set(vistas), f"faltan rutas en el recorrido: {esperadas - set(vistas)}"
-    # El parámetro de las rutas de pregunta es la pendiente del alumno, la única que puede pedir por ID (ADR-85).
+    # El parámetro de las rutas de pregunta es la pendiente del alumno, la única que puede pedir y responder.
     pendiente = banco.cliente.get("/api/v1/practice/next", headers=BEARER).json()["data"]["id"]
     estados = {}
     for metodo, ruta in vistas:
@@ -47,10 +49,16 @@ def test_ninguna_ruta_entrega_la_respuesta_ni_la_explicacion(banco):
         cuerpo = CUERPOS.get((metodo, ruta), {}) if metodo in ("POST", "PUT", "PATCH") else None
         res = banco.cliente.request(metodo, url, headers=BEARER, json=cuerpo)
         estados[(metodo, ruta)] = res.status_code
-        if "json" in res.headers.get("content-type", ""):
-            entregadas = PROHIBIDAS & set(claves(res.json()))
-            assert not entregadas, f"{metodo} {ruta} entrega {entregadas}"
-    # Si la pregunta no llegara, la prueba no estaría revisando las respuestas que importan.
+        if "json" not in res.headers.get("content-type", ""):
+            continue
+        cuerpo_json = res.json()
+        if (metodo, ruta) == RESPONDER and res.status_code == 200:
+            # Después de responder, correctAnswer va solo en el primer nivel de data.
+            assert cuerpo_json["data"].pop("correctAnswer") in "ABCDE"
+        entregadas = PROHIBIDAS & set(claves(cuerpo_json))
+        assert not entregadas, f"{metodo} {ruta} entrega {entregadas}"
+    # Si la pregunta no llegara o no se respondiera, la prueba no estaría revisando las respuestas que importan.
     assert estados[("GET", "/api/v1/practice/next")] == 200
     assert estados[("GET", "/api/v1/questions/{question_id}")] == 200
     assert estados[("PUT", "/api/v1/me/preferences")] == 200
+    assert estados[RESPONDER] == 200
