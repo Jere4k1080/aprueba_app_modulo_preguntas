@@ -103,6 +103,7 @@ Este documento registra las decisiones de diseño tomadas durante la definición
 85. [ADR-85: `GET /questions/{id}` solo para la pendiente o una respondida (Decidida por Jeremías)](#adr-85-get-questionsid-solo-para-la-pendiente-o-una-respondida)
 86. [ADR-86: Registro de la respuesta a la pendiente (Decidida por Jeremías; detalles en propuesta)](#adr-86-registro-de-la-respuesta-a-la-pendiente)
 87. [ADR-87: Percentil de cohorte con mínimo de cinco respuestas previas (Decidida por Jeremías; detalles en propuesta)](#adr-87-percentil-de-cohorte-con-mínimo-de-cinco-respuestas-previas)
+88. [ADR-88: Orden del facsímil por prueba y `randomKey` (Supuesto aceptado por Jeremías)](#adr-88-orden-del-facsímil-por-prueba-y-randomkey)
 
 ---
 
@@ -1205,13 +1206,13 @@ Se descarta copiar las dos diferencias de la consola al módulo o compensarlas c
 
 ### ADR-84: Pendiente fijada con escritura condicionada y hora de entrega
 
-Estado: decidida por Jeremías en el encargo de la iteración 4 (T-25 y T-28). La escritura condicionada en lugar de una transacción del SDK, la hora de la API y el trato de una pendiente sin `deliveredAt` son propuestas que se ratifican en la sesión del equipo. Fecha de registro: 03/10/2026.
+Estado: decidida por Jeremías en el encargo de la iteración 4 (T-25 y T-28). El 03/10/2026 Jeremías ratificó la escritura condicionada en lugar de una transacción del SDK, porque cumple lo que busca T-25: que la elección sea atómica. La hora de la API y el trato de una pendiente sin `deliveredAt` siguen como propuestas que se ratifican en la sesión del equipo. Fecha de registro: 03/10/2026.
 
 `GET /practice/next` fija la pregunta pendiente de forma atómica, para que solicitudes simultáneas del mismo alumno reciban la misma (T-25, caso CP-04 y RNF-04). Lee `users/usr_<UID>/state/practice` y, si no hay una pendiente publicada, elige una pregunta y la escribe con una precondición: la actualización exige que el documento conserve el `update_time` leído, y si el documento no existe se crea con `create()`, que falla si otra solicitud lo creó antes. Cuando la escritura falla porque otra solicitud ganó, se relee el estado y se entrega la pendiente de esa solicitud, con un máximo de cinco intentos.
 
 Junto con la pendiente se guarda `deliveredAt`, la hora en que la API la entregó (T-28, hallazgo H-03 de T-24). La respuesta la devuelve y no cambia mientras la pregunta siga pendiente, así recargar la app no reinicia el tiempo. Al responder, el tiempo será la hora de la API menos `deliveredAt`. Una pendiente guardada antes de este cambio, sin `deliveredAt`, lo recibe en el siguiente pedido.
 
-El encargo pedía elegir dentro de una transacción. Con `async_transactional` del SDK, cinco solicitudes simultáneas sobre el mismo documento se esperaban entre sí: cada transacción leía el documento y después quería escribirlo, y la prueba fallaba en 5 de 8 corridas con `Transaction lock timeout`. La escritura condicionada es el control optimista que usan los SDK móviles de Firestore. No deja bloqueos tomados mientras corren las consultas de selección, y la misma prueba pasó 10 de 10 corridas. Sin la precondición, cinco solicitudes recibieron 4 o 5 preguntas distintas. Si el equipo prefiere la transacción del SDK, el costo es esa contención.
+El encargo pedía elegir dentro de una transacción. Con `async_transactional` del SDK, cinco solicitudes simultáneas sobre el mismo documento se esperaban entre sí: cada transacción leía el documento y después quería escribirlo, y la prueba fallaba en 5 de 8 corridas con `Transaction lock timeout`. La escritura condicionada es el control optimista que usan los SDK móviles de Firestore. No deja bloqueos tomados mientras corren las consultas de selección, y la misma prueba pasó 10 de 10 corridas. Sin la precondición, cinco solicitudes recibieron 4 o 5 preguntas distintas.
 
 `deliveredAt` usa la hora de la API y no `SERVER_TIMESTAMP`, porque el tiempo de respuesta se calcula con el mismo reloj al entregar y al responder, y `GET /practice/next` puede devolver el valor sin otra lectura. Se descarta `SERVER_TIMESTAMP`: mezclaría el reloj de Firestore con el de la API y obligaría a releer el documento. En la respuesta va en UTC con milisegundos y `Z`, como `meta.timestamp`.
 
@@ -1235,7 +1236,7 @@ Con este cambio existe en el código T-20, que el Product Backlog v2.3 marca hec
 
 ### ADR-86: Registro de la respuesta a la pendiente
 
-Estado: decidida por Jeremías en el encargo de la iteración 4 (HU-03, T-28, T-29 y HT-04 / T-30). Son propuestas, para ratificar en la sesión del equipo, el orden que revisa las respondidas antes que la pendiente, `NOT_FOUND` para una pregunta que no es la pendiente, el ID de los documentos que crea la respuesta, la explicación breve, la regla de dominio por habilidad y el trato de una pendiente sin `deliveredAt`. Fecha de registro: 03/10/2026.
+Estado: decidida por Jeremías en el encargo de la iteración 4 (HU-03, T-28, T-29 y HT-04 / T-30). El 03/10/2026 Jeremías ratificó el orden de las validaciones, que revisa las respondidas antes que la pendiente, y decidió que un envío simultáneo nunca termine en 500. Son propuestas, para ratificar en la sesión del equipo, `NOT_FOUND` para una pregunta que no es la pendiente, el ID de los documentos que crea la respuesta, la explicación breve, la regla de dominio por habilidad y el trato de una pendiente sin `deliveredAt`. Fecha de registro: 03/10/2026.
 
 `POST /questions/{id}/answer` registra la respuesta a la pregunta pendiente del alumno. El cuerpo es `{"selected": "B"}`. También acepta `sessionId` y `elapsedMs`, que la app envía, y no los usa: el esquema rechaza campos desconocidos y sin ellos la app recibiría `VALIDATION_ERROR`. El tiempo es la hora de la API menos `deliveredAt`, en milisegundos y como mínimo 1 (T-28, ADR-84). `sessionId` no se guarda mientras el facsímil no lo use (ADR-73).
 
@@ -1251,7 +1252,9 @@ La respuesta es 200 con `correct`, `correctAnswer`, `shortExplanation`, `cohortP
 
 Una pendiente entregada antes de T-28, sin `deliveredAt`, se registra con `elapsedMs` y `cohortPercentile` en `null` y no entra al histograma, porque no hay tiempo que medir. `GET /practice/next` le pone hora al pedirla (ADR-84), así que el caso solo aparece si el alumno responde sin volver a pedirla.
 
-Dos envíos simultáneos de la misma pendiente nunca registran dos respuestas. En el emulador, 6 de 10 corridas abortaron las dos transacciones después de cinco intentos, con `Failed to commit transaction in 5 attempts`: ninguna se registró y las dos solicitudes habrían terminado en 500. Es la misma contención de bloqueos de ADR-84. Según la documentación de Firestore, el servicio resuelve ese conflicto abortando la transacción más reciente, que el SDK reintenta, así que en producción se espera un 200 y un 409. No está verificado en el entorno desplegado. `test_envios_simultaneos_no_registran_dos_veces` comprueba que no haya dos registros, no cuál gana. Si la contención aparece con alumnos reales, la alternativa es la escritura condicionada de ADR-84: un lote que exija el `update_time` leído de `state/practice`.
+Dos envíos simultáneos de la misma pendiente chocan en la transacción. Con los cinco intentos internos del SDK, que reintenta sin esperar, en el emulador 6 de 10 corridas abortaron las dos transacciones, con `Failed to commit transaction in 5 attempts`. Ninguna se registró y las dos solicitudes habrían terminado en 500. Es la misma contención de bloqueos de ADR-84.
+
+Jeremías decidió que un 500 no puede quedar. Cada intento es ahora una transacción de un solo commit (`max_attempts=1`). Si Firestore la aborta por contención, se espera un tiempo al azar y se reintenta: hasta 0,2 s antes del segundo intento, y el doble antes de cada uno de los siguientes. En el reintento la respuesta ya existe y corresponde `ALREADY_ANSWERED` 409. Si se agotan los cinco intentos, la respuesta es `CONFLICT` 409 con el envelope. `test_envios_simultaneos_registran_uno_y_rechazan_el_otro` exige un 200 y un 409, y pasó 15 de 15 corridas. `test_reintentos_agotados_dan_conflict_y_no_registran` simula el aborto en cada intento.
 
 Con este cambio existen en el código T-29, el tiempo de T-28 al responder y T-30. Su aceptación es de Martin (T-35).
 
@@ -1268,3 +1271,15 @@ El cálculo es 100 × (previas en tramos más lentos + la mitad de las previas d
 Con menos de cinco respuestas previas, el valor de `MIN_COHORT` en `backend/app/services/questions.py`, `cohortPercentile` es `null` en la respuesta y en `answers`. Reemplaza el "sin respuestas previas vale 50" de ADR-63: un 50 sin cohorte mostraría una comparación que no existe. La app debe tratar el `null` como percentil sin datos.
 
 `calculate_cohort_percentile()`, que usaba umbrales, salió del código, y ADR-37 queda sin objeto. El seed escribe `cohortPercentile` en `null` en sus respuestas, que son la primera de cada pregunta. `round()` de Python lleva las mitades al par, por eso el cálculo usa enteros.
+
+---
+
+### ADR-88: Orden del facsímil por prueba y `randomKey`
+
+Estado: supuesto propuesto en el encargo de la iteración 4 y aceptado por Jeremías el 03/10/2026. Se implementa en la iteración 5 con T-32 (HU-12). Fecha de registro: 03/10/2026.
+
+El modelo de datos no define el criterio del orden fijo del facsímil (ADR-79). Supuesto: las pruebas se recorren en el orden de `selectedTests` y, dentro de cada una, las preguntas `published` por `randomKey` ascendente, sin las respondidas y con la dificultad elegida, que no se amplía (ADR-78). Todos los alumnos ven la misma secuencia en cada prueba. La consulta usa el índice compuesto que ya existe de `testId`, `status`, `difficulty` y `randomKey`, así que no pide uno nuevo.
+
+Sin `mock_mode` en el catálogo de funcionalidades, el facsímil se niega. Sale el fallback por plan de pago que hoy tiene `mock_mode_allowed()` (ADR-70).
+
+Se descarta esperar a que la empresa defina un orden propio, porque bloquearía HU-12. Si lo define, reemplaza este supuesto. Hasta la iteración 5, el código elige al azar en los dos formatos y conserva el fallback.

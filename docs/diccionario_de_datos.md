@@ -169,7 +169,7 @@ Extensión del módulo que ningún documento define (ADR-09 y ADR-65). Permite e
 | `lastAnsweredAt` | timestamp | No | Hora de la última respuesta. |
 | `activeSessionId` | string | No | Sesión de estudio en curso. |
 
-La pendiente se fija con una escritura condicionada al `update_time` leído, o con `create()` si el documento no existe, así solicitudes simultáneas reciben la misma (T-25, ADR-84). El orden fijo del facsímil por prueba queda pendiente de T-32; hoy se usa `randomKey` en ambos formatos.
+La pendiente se fija con una escritura condicionada al `update_time` leído, o con `create()` si el documento no existe, así solicitudes simultáneas reciben la misma (T-25, ADR-84). El orden fijo del facsímil por prueba queda pendiente de T-32, en la iteración 5, con el criterio de ADR-88; hoy se usa `randomKey` al azar en ambos formatos.
 
 ---
 
@@ -426,8 +426,9 @@ Recibe `{"selected": "B"}`. Acepta también `sessionId` y `elapsedMs`, que la ap
 | No es la pendiente del alumno, exista o no, o dejó de estar publicada | 404 `NOT_FOUND`, con el mismo cuerpo |
 | La letra no existe en la pregunta: `A` a `D` con cuatro alternativas, `A` a `E` con cinco | 400 `INVALID_OPTION` |
 | Cuota del día en su máximo, salvo plan ilimitado | 422 `QUOTA_DAILY_LIMIT` |
+| Firestore abortó la transacción por contención en los cinco intentos | 409 `CONFLICT` |
 
-Ningún error escribe nada.
+Ningún error escribe nada. Con dos envíos simultáneos, uno se registra y el otro recibe `ALREADY_ANSWERED` (ADR-86).
 
 ---
 
